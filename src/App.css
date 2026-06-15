@@ -1,0 +1,2 @@
+/* App-specific minimal CSS. Most styles live in Tailwind + index.css */
+.App { height: 100%; }
