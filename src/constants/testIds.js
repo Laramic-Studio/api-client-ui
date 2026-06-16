@@ -67,6 +67,7 @@ export const ENV = {
   newEnv: "env-new-button",
   envItem: (id) => `env-item-${id}`,
   varAdd: "env-var-add",
+  varSecret: (index) => `env-var-secret-${index}`,
 };
 
 export const MOCK = {

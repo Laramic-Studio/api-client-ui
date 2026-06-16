@@ -2,6 +2,7 @@ import * as authApi from "@/lib/api/auth-api";
 import { mapApiUser, teamToWorkspace } from "@/lib/api/map-user";
 import { userIsOnboarded, userIsVerified } from "@/lib/auth/user-state";
 import { clearAccessToken } from "@/lib/auth/tokens";
+import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
 import { useAppStore } from "@/store/useAppStore";
 
 function mergeUser(mapped, existing) {
@@ -104,7 +105,14 @@ export function applyTeamSwitch(currentTeam) {
 export async function fetchSession() {
   const data = await authApi.me();
   const teams = await authApi.listTeams().catch(() => []);
-  return applySession({ ...data, teams });
+  const user = applySession({ ...data, teams });
+  const teamId = useAppStore.getState().activeWorkspaceId;
+
+  if (teamId) {
+    await refreshEnvironmentsInStore(teamId).catch(() => []);
+  }
+
+  return user;
 }
 
 export function clearSession() {

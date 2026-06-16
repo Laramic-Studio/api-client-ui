@@ -1,7 +1,8 @@
+import EnvironmentVariablesTable from "@/components/environments/EnvironmentVariablesTable";
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections, selectWorkspaceEnvironments } from "@/lib/store/selectors";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Trash2, Copy, Check, Box, Globe, Folder } from "lucide-react";
+import { Loader2, Trash2, Copy, Check, Box, Globe, Folder } from "lucide-react";
 import { ENV } from "@/constants/testIds";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -218,53 +219,23 @@ export default function Environments() {
             </div>
 
             <div className="flex-1 overflow-auto p-4">
-              <div className="rounded-md border border-border bg-card overflow-hidden">
-                <div className="grid grid-cols-[24px_1fr_1fr_28px] gap-1 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-mono border-b border-border">
-                  <div></div>
-                  <div>Variable</div>
-                  <div>Value</div>
-                  <div></div>
-                </div>
-                {selected.variables.map((v, i) => (
-                  <div key={v.id || i} className="grid grid-cols-[24px_1fr_1fr_28px] gap-1 px-3 py-1.5 items-center border-b border-border last:border-b-0">
-                    <input
-                      type="checkbox"
-                      checked={v.enabled !== false}
-                      onChange={(e) => updateVar(i, { enabled: e.target.checked })}
-                      className="accent-[hsl(var(--brand))] mx-auto"
-                    />
-                    <input
-                      value={v.key}
-                      onChange={(e) => updateVar(i, { key: e.target.value })}
-                      className="h-8 px-2 rounded bg-muted border border-border text-[12.5px] font-mono"
-                    />
-                    <input
-                      value={v.value}
-                      onChange={(e) => updateVar(i, { value: e.target.value })}
-                      className="h-8 px-2 rounded bg-muted border border-border text-[12.5px] font-mono"
-                    />
-                    <button
-                      onClick={() => patchEnvironment(selected.id, { variables: selected.variables.filter((_, idx) => idx !== i) })}
-                      className="h-8 w-8 grid place-items-center rounded text-muted-foreground hover:text-[hsl(var(--danger))] hover:bg-accent/50"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={() => patchEnvironment(selected.id, { variables: [...selected.variables, { key: "", value: "", enabled: true }] })}
-                  data-testid={ENV.varAdd}
-                  className="w-full text-left px-3 py-2 text-[12.5px] text-muted-foreground hover:bg-accent/50 inline-flex items-center gap-2"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add variable
-                </button>
-              </div>
+              <EnvironmentVariablesTable
+                variables={selected.variables}
+                onUpdate={updateVar}
+                onRemove={(idx) => patchEnvironment(selected.id, {
+                  variables: selected.variables.filter((_, i) => i !== idx),
+                })}
+                onAdd={() => patchEnvironment(selected.id, {
+                  variables: [...selected.variables, { key: "", value: "", enabled: true, secret: false }],
+                })}
+              />
 
               <div className="mt-6 rounded-md border border-border bg-card p-4">
                 <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono mb-2">Scope & hierarchy</div>
                 <p className="text-[12.5px] text-muted-foreground leading-relaxed">
                   Workspace-wide environments are available to all collections in the active workspace.
                   Collection-scoped environments override variables of the same name for requests inside that collection.
+                  Mark sensitive values as <span className="font-mono text-foreground/85">secret</span> — they are encrypted in the cloud and masked in the UI.
                   Reference variables anywhere with <span className="font-mono text-[hsl(var(--brand))]">{"[[VAR_NAME]]"}</span> (legacy <span className="font-mono">{"{{VAR}}"}</span> is still supported).
                 </p>
               </div>
