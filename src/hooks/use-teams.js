@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getErrorMessage } from "@/hooks/use-auth";
-import { teamKeys } from "@/lib/api/query-keys";
+import { teamKeys, invitationKeys, envKeys } from "@/lib/api/query-keys";
 import * as teamsApi from "@/lib/api/teams-api";
 import {
   applyTeamSwitch,
   refreshTeamsInStore,
 } from "@/lib/api/session";
+import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
 import { useAppStore } from "@/store/useAppStore";
 
 export function useTeams() {
@@ -46,7 +47,9 @@ export function useSwitchTeam() {
     onSuccess: async (data) => {
       applyTeamSwitch(data.current_team);
       await refreshTeamsInStore();
+      await refreshEnvironmentsInStore(String(data.current_team?.id));
       invalidateTeamQueries(queryClient, data.current_team?.id);
+      queryClient.invalidateQueries({ queryKey: envKeys.list(String(data.current_team?.id)) });
     },
   });
 }
@@ -86,6 +89,42 @@ export function useDeleteTeam() {
       }
       await refreshTeamsInStore();
       invalidateTeamQueries(queryClient);
+    },
+  });
+}
+
+export function useDuplicateTeam() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ teamId, name }) => teamsApi.duplicateTeam(teamId, name ? { name } : {}),
+    onSuccess: async () => {
+      await refreshTeamsInStore();
+      invalidateTeamQueries(queryClient);
+    },
+  });
+}
+
+export function useInvitation(code) {
+  return useQuery({
+    queryKey: invitationKeys.detail(code),
+    queryFn: () => teamsApi.getInvitation(code),
+    enabled: Boolean(code),
+    retry: false,
+  });
+}
+
+export function useAcceptInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (code) => teamsApi.acceptInvitation(code),
+    onSuccess: async (data) => {
+      applyTeamSwitch(data.current_team);
+      await refreshTeamsInStore();
+      await refreshEnvironmentsInStore(String(data.current_team?.id));
+      invalidateTeamQueries(queryClient, data.current_team?.id);
+      queryClient.invalidateQueries({ queryKey: envKeys.list(String(data.current_team?.id)) });
     },
   });
 }

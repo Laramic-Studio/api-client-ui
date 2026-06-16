@@ -54,7 +54,7 @@ export default function DeleteWorkspaceDialog({
             }}
             className="bg-[hsl(var(--danger))] hover:bg-[hsl(var(--danger))]/90"
           >
-            Delete
+            {isDeleting ? "Deleting…" : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

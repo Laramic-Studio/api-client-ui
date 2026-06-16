@@ -25,6 +25,7 @@ import Documentation from "@/pages/Documentation";
 import History from "@/pages/History";
 import Monitoring from "@/pages/Monitoring";
 import Workspaces from "@/pages/Workspaces";
+import AcceptInvitation from "@/pages/AcceptInvitation";
 import Settings from "@/pages/Settings";
 import Team from "@/pages/Team";
 import Conduits from "@/pages/Conduits";
@@ -40,6 +41,7 @@ export default function AppRoutes() {
       <Route path="/verify-email" element={<VerifyEmailRoute><VerifyEmail /></VerifyEmailRoute>} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
+      <Route path="/accept-invitation/:code" element={<ProtectedRoute><AcceptInvitation /></ProtectedRoute>} />
       <Route path="/p/docs/:shareId" element={<PublicDocs />} />
 
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

@@ -8,8 +8,11 @@ import {
   fetchSession,
   refreshTeamsInStore,
 } from "@/lib/api/session";
+import * as environmentsApi from "@/lib/api/environments-api";
+import { mapEnvironmentToApi } from "@/lib/api/map-environment";
 import * as teamsApi from "@/lib/api/teams-api";
 import { useAppStore } from "@/store/useAppStore";
+import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
 
 export { applySession, fetchSession, clearSession };
 
@@ -54,8 +57,10 @@ export const fetchClient = {
     return teamToWorkspace(data.team);
   },
 
-  async duplicateWorkspace() {
-    throw new Error("Duplicate workspace is not available yet. It will copy data via sync in a later release.");
+  async duplicateWorkspace(id) {
+    const data = await teamsApi.duplicateTeam(id);
+    await refreshTeamsInStore();
+    return teamToWorkspace(data.team);
   },
 
   async deleteWorkspace(id, name) {
@@ -71,5 +76,48 @@ export const fetchClient = {
     if (!teamId) return [];
     const data = await teamsApi.getTeam(teamId);
     return data.members || [];
+  },
+
+  async listEnvironments(opts) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    if (!teamId) return [];
+    await refreshEnvironmentsInStore(teamId);
+    return useAppStore.getState().getEnvironments(opts);
+  },
+
+  async createEnvironment(payload) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    const data = await environmentsApi.createEnvironment(teamId, {
+      name: payload?.name || "New Environment",
+      collection_id: payload?.collectionId || null,
+    });
+    await refreshEnvironmentsInStore(teamId);
+    return data.environment;
+  },
+
+  async updateEnvironment(id, patch) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    const data = await environmentsApi.updateEnvironment(teamId, id, mapEnvironmentToApi(patch));
+    await refreshEnvironmentsInStore(teamId);
+    return data.environment;
+  },
+
+  async duplicateEnvironment(id) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    const data = await environmentsApi.duplicateEnvironment(teamId, id);
+    await refreshEnvironmentsInStore(teamId);
+    return data.environment;
+  },
+
+  async deleteEnvironment(id) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    await environmentsApi.deleteEnvironment(teamId, id);
+    await refreshEnvironmentsInStore(teamId);
+  },
+
+  async setActiveEnvironment(id) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    await environmentsApi.activateEnvironment(teamId, id);
+    await refreshEnvironmentsInStore(teamId);
   },
 };

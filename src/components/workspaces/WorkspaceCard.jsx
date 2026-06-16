@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Briefcase, Check, Copy, Edit, Trash2, Users } from "lucide-react";
+import { Briefcase, Check, Copy, Edit, Loader2, Trash2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DeleteWorkspaceDialog from "@/components/workspaces/DeleteWorkspaceDialog";
 
@@ -10,7 +10,10 @@ export default function WorkspaceCard({
   onRename,
   onDuplicate,
   onDelete,
+  isActivating,
+  isRenaming,
   isDeleting,
+  isDuplicating,
 }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(ws.name);
@@ -35,12 +38,13 @@ export default function WorkspaceCard({
                 autoFocus
                 value={val}
                 onChange={(e) => setVal(e.target.value)}
+                disabled={isRenaming}
                 onBlur={() => {
                   onRename(val || ws.name);
                   setEditing(false);
                 }}
                 onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                className="bg-transparent text-[14px] font-medium outline-none w-full"
+                className="bg-transparent text-[14px] font-medium outline-none w-full disabled:opacity-60"
               />
             ) : (
               <div className="text-[14px] font-medium truncate">{ws.name}</div>
@@ -65,23 +69,27 @@ export default function WorkspaceCard({
           {!isActive && (
             <button
               onClick={onActivate}
-              className="h-7 px-2.5 rounded text-[12px] border border-border hover:bg-accent/50"
+              disabled={isActivating}
+              className="h-7 px-2.5 rounded text-[12px] border border-border hover:bg-accent/50 inline-flex items-center gap-1.5 disabled:opacity-60"
             >
-              Activate
+              {isActivating && <Loader2 className="h-3 w-3 animate-spin" />}
+              {isActivating ? "Switching…" : "Activate"}
             </button>
           )}
           <button
             onClick={() => setEditing(true)}
-            className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-foreground/85"
+            disabled={isRenaming}
+            className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-foreground/85 disabled:opacity-50"
           >
             <Edit className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={onDuplicate}
-            className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-foreground/85"
-            title="Duplicate via sync — coming soon"
+            disabled={isDuplicating}
+            className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-foreground/85 disabled:opacity-50"
+            title="Duplicate workspace"
           >
-            <Copy className="h-3.5 w-3.5" />
+            {isDuplicating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
           </button>
           {!ws.isPersonal && (
             <button

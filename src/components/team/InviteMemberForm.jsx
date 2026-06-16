@@ -1,13 +1,20 @@
-import { useState } from "react";
-import { Mail, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, Mail, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getErrorMessage, useInviteMember } from "@/hooks/use-teams";
 
 export default function InviteMemberForm({ teamId, canInvite, availableRoles }) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState(availableRoles[0]?.value || "member");
+  const defaultRole = availableRoles.find((r) => r.value === "developer")?.value
+    || availableRoles[0]?.value
+    || "developer";
+  const [role, setRole] = useState(defaultRole);
   const invite = useInviteMember(teamId);
+
+  useEffect(() => {
+    setRole(defaultRole);
+  }, [defaultRole]);
 
   if (!canInvite) return null;
 
@@ -39,11 +46,12 @@ export default function InviteMemberForm({ teamId, canInvite, availableRoles }) 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="teammate@company.com"
-            className="w-full h-9 pl-8 pr-2 rounded-md bg-muted border border-border text-[13px] placeholder:text-muted-foreground"
+            disabled={invite.isPending}
+            className="w-full h-9 pl-8 pr-2 rounded-md bg-muted border border-border text-[13px] placeholder:text-muted-foreground disabled:opacity-60"
             data-testid="invite-email"
           />
         </div>
-        <Select value={role} onValueChange={setRole}>
+        <Select value={role} onValueChange={setRole} disabled={invite.isPending}>
           <SelectTrigger className="h-9 w-40 bg-muted border-border text-[13px]" data-testid="invite-role">
             <SelectValue />
           </SelectTrigger>
@@ -59,7 +67,12 @@ export default function InviteMemberForm({ teamId, canInvite, availableRoles }) 
           className="h-9 px-3 rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground text-[13px] font-medium inline-flex items-center gap-2 disabled:opacity-60"
           data-testid="invite-button"
         >
-          <Plus className="h-3.5 w-3.5" /> Invite
+          {invite.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Plus className="h-3.5 w-3.5" />
+          )}
+          {invite.isPending ? "Inviting…" : "Invite"}
         </button>
       </div>
     </div>

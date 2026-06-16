@@ -21,6 +21,10 @@ export async function deleteTeam(teamId, { name }) {
   return apiRequest(`/teams/${teamId}`, { method: "DELETE", body: { name } });
 }
 
+export async function duplicateTeam(teamId, payload = {}) {
+  return apiRequest(`/teams/${teamId}/duplicate`, { method: "POST", body: payload });
+}
+
 export async function switchTeam(teamId) {
   return authApi.switchTeam(teamId);
 }
@@ -38,6 +42,10 @@ export async function cancelInvitation(teamId, code) {
 
 export async function acceptInvitation(code) {
   return apiRequest(`/invitations/${code}/accept`, { method: "POST" });
+}
+
+export async function getInvitation(code) {
+  return apiRequest(`/invitations/${code}`);
 }
 
 export async function updateMemberRole(teamId, memberId, { role }) {

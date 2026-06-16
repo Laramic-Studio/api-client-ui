@@ -8,6 +8,7 @@ import {
   ChevronDown,
   LogOut,
   User as UserIcon,
+  Loader2,
   Check,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
@@ -60,6 +61,7 @@ export default function Topbar() {
 
   const unread = notifications.filter((n) => !n.read).length;
   const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
+  const switchingId = setActive.isPending ? String(setActive.variables) : null;
 
   return (
     <div className="h-14 shrink-0 flex items-center gap-2 px-3 border-b border-border bg-background">
@@ -67,13 +69,20 @@ export default function Topbar() {
         <DropdownMenuTrigger asChild>
           <button
             data-testid={NAV.workspaceSwitcher + "-top"}
-            className="inline-flex items-center gap-2 h-9 px-2.5 rounded-md hover:bg-accent/50 text-foreground/90"
+            disabled={setActive.isPending}
+            className="inline-flex items-center gap-2 h-9 px-2.5 rounded-md hover:bg-accent/50 text-foreground/90 disabled:opacity-60"
           >
             <div className="h-5 w-5 rounded bg-gradient-to-br from-[#6366F1] to-[#4F46E5] grid place-items-center text-[10px] font-semibold text-foreground">
               {activeWs?.name?.[0] || "N"}
             </div>
-            <span className="text-[13px] font-medium">{activeWs?.name || "Workspace"}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[13px] font-medium">
+              {setActive.isPending ? "Switching…" : (activeWs?.name || "Workspace")}
+            </span>
+            {setActive.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -86,8 +95,9 @@ export default function Topbar() {
           {workspaces.map((w) => (
             <DropdownMenuItem
               key={w.id}
+              disabled={setActive.isPending}
               onClick={() => {
-                if (w.id === activeWorkspaceId) return;
+                if (w.id === activeWorkspaceId || setActive.isPending) return;
                 setActive.mutate(w.id, {
                   onError: (err) => toast.error(getErrorMessage(err, "Could not switch workspace.")),
                 });
@@ -99,7 +109,11 @@ export default function Topbar() {
                 {w.name[0]}
               </div>
               <span className="flex-1 truncate">{w.name}</span>
-              {w.id === activeWorkspaceId && <Check className="h-3.5 w-3.5 text-[hsl(var(--brand))]" />}
+              {switchingId === w.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              ) : w.id === activeWorkspaceId ? (
+                <Check className="h-3.5 w-3.5 text-[hsl(var(--brand))]" />
+              ) : null}
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator className="bg-accent" />

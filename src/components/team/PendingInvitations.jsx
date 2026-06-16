@@ -1,5 +1,6 @@
-import { Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { getErrorMessage, useCancelInvitation } from "@/hooks/use-teams";
 
 export default function PendingInvitations({ teamId, invitations, canCancel }) {
@@ -13,29 +14,39 @@ export default function PendingInvitations({ teamId, invitations, canCancel }) {
         Pending invitations
       </div>
       <div className="divide-y divide-border">
-        {invitations.map((inv) => (
-          <div key={inv.code} className="flex items-center gap-3 px-4 py-2 hover:bg-accent/50">
-            <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-medium truncate">{inv.email}</div>
-              <div className="text-[11px] text-muted-foreground font-mono capitalize">
-                {inv.roleLabel || inv.role}
+        {invitations.map((inv) => {
+          const isCancelling = cancel.isPending && cancel.variables === inv.code;
+
+          return (
+            <div key={inv.code} className="flex items-center gap-3 px-4 py-2 hover:bg-accent/50">
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium truncate">{inv.email}</div>
+                <div className="text-[11px] text-muted-foreground font-mono">
+                  {inv.roleLabel || inv.role}
+                </div>
               </div>
+              {canCancel && (
+                <button
+                  onClick={() => {
+                    cancel.mutate(inv.code, {
+                      onSuccess: () => toast.success("Invitation cancelled"),
+                      onError: (err) => toast.error(getErrorMessage(err, "Could not cancel invitation.")),
+                    });
+                  }}
+                  disabled={isCancelling}
+                  className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))] disabled:opacity-50"
+                  aria-label={isCancelling ? "Cancelling invitation" : "Cancel invitation"}
+                >
+                  {isCancelling ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              )}
             </div>
-            {canCancel && (
-              <button
-                onClick={() => {
-                  cancel.mutate(inv.code, {
-                    onSuccess: () => toast.success("Invitation cancelled"),
-                    onError: (err) => toast.error(getErrorMessage(err, "Could not cancel invitation.")),
-                  });
-                }}
-                className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

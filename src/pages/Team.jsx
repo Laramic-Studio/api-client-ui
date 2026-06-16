@@ -2,6 +2,7 @@ import { ShieldCheck } from "lucide-react";
 import InviteMemberForm from "@/components/team/InviteMemberForm";
 import MembersTable from "@/components/team/MembersTable";
 import PendingInvitations from "@/components/team/PendingInvitations";
+import TeamPageSkeleton from "@/components/team/TeamPageSkeleton";
 import { useActiveTeamId, useTeamDetail } from "@/hooks/use-teams";
 
 export default function Team() {
@@ -17,11 +18,7 @@ export default function Team() {
   }
 
   if (isLoading) {
-    return (
-      <div className="h-full grid place-items-center text-muted-foreground text-[13px]">
-        Loading team…
-      </div>
-    );
+    return <TeamPageSkeleton />;
   }
 
   if (isError || !data) {
@@ -41,7 +38,7 @@ export default function Team() {
           <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// collaboration</div>
           <h1 className="mt-1 text-2xl font-medium tracking-tight">Team</h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Invite people, manage roles, and collaborate in {data.team?.name || "this workspace"}.
+            Invite people, manage roles, and collaborate in real-time.
           </p>
         </div>
       </div>
@@ -72,8 +69,9 @@ export default function Team() {
           <div className="font-medium">Role permissions</div>
           <div className="text-muted-foreground mt-1">
             <span className="font-mono text-foreground/85">Owner</span> — full control.{" "}
-            <span className="font-mono text-foreground/85">Admin</span> — manage workspace & invitations.{" "}
-            <span className="font-mono text-foreground/85">Member</span> — collaborate on collections.
+            <span className="font-mono text-foreground/85">Admin</span> — manage workspace & members.{" "}
+            <span className="font-mono text-foreground/85">Developer</span> — read/write collections.{" "}
+            <span className="font-mono text-foreground/85">Viewer</span> — read-only.
           </div>
         </div>
       </div>

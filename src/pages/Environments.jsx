@@ -1,24 +1,35 @@
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections, selectWorkspaceEnvironments } from "@/lib/store/selectors";
-import { useMemo, useState } from "react";
-import { Plus, Trash2, Copy, Check, Box, Globe, Folder } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, Plus, Trash2, Copy, Check, Box, Globe, Folder } from "lucide-react";
 import { ENV } from "@/constants/testIds";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
+import { getErrorMessage } from "@/hooks/use-auth";
+import {
+  useActivateEnvironment,
+  useCreateEnvironment,
+  useDebouncedEnvironmentUpdate,
+  useDeleteEnvironment,
+  useDuplicateEnvironment,
+  useEnvironments,
+} from "@/hooks/use-environments";
 
 export default function Environments() {
   const envs = useAppStore(selectWorkspaceEnvironments);
   const collections = useAppStore(selectWorkspaceCollections);
-  const create = useAppStore((s) => s.createEnvironment);
-  const update = useAppStore((s) => s.updateEnvironment);
-  const dup = useAppStore((s) => s.duplicateEnvironment);
-  const del = useAppStore((s) => s.deleteEnvironment);
-  const setActive = useAppStore((s) => s.setActiveEnvironment);
+  const updateLocal = useAppStore((s) => s.updateEnvironment);
+  const { isLoading } = useEnvironments();
+  const createEnv = useCreateEnvironment();
+  const deleteEnv = useDeleteEnvironment();
+  const duplicateEnv = useDuplicateEnvironment();
+  const activateEnv = useActivateEnvironment();
+  const savePatch = useDebouncedEnvironmentUpdate(700);
 
-  const [scope, setScope] = useState("all"); // "all" | "workspace" | collectionId
+  const [scope, setScope] = useState("all");
   const filtered = useMemo(() => {
     if (scope === "all") return envs;
     if (scope === "workspace") return envs.filter((e) => !e.collectionId);
@@ -28,18 +39,48 @@ export default function Environments() {
   const [selectedId, setSelectedId] = useState(filtered[0]?.id);
   const selected = filtered.find((e) => e.id === selectedId) || filtered[0];
 
+  useEffect(() => {
+    if (!filtered.some((e) => e.id === selectedId)) {
+      setSelectedId(filtered[0]?.id);
+    }
+  }, [filtered, selectedId]);
+
+  const patchEnvironment = (id, patch) => {
+    updateLocal(id, patch);
+    savePatch(id, patch);
+  };
+
   const updateVar = (idx, patch) => {
     if (!selected) return;
     const next = selected.variables.map((v, i) => (i === idx ? { ...v, ...patch } : v));
-    update(selected.id, { variables: next });
+    patchEnvironment(selected.id, { variables: next });
   };
 
   const createInScope = () => {
     const collectionId = scope !== "all" && scope !== "workspace" ? scope : null;
-    const e = create({ name: collectionId ? "Collection Env" : "New Environment", collectionId });
-    setSelectedId(e.id);
-    toast.success(`Created ${e.name}`);
+    createEnv.mutate(
+      {
+        name: collectionId ? "Collection Env" : "New Environment",
+        collection_id: collectionId,
+      },
+      {
+        onSuccess: (data) => {
+          setSelectedId(data.environment.id);
+          toast.success(`Created ${data.environment.name}`);
+        },
+        onError: (err) => toast.error(getErrorMessage(err, "Could not create environment.")),
+      },
+    );
   };
+
+  if (isLoading && envs.length === 0) {
+    return (
+      <div className="h-full grid place-items-center text-muted-foreground text-[13px]">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Loading environments…
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-hidden grid grid-cols-[320px_1fr]">
@@ -48,11 +89,12 @@ export default function Environments() {
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Environments</div>
           <button
             onClick={createInScope}
+            disabled={createEnv.isPending}
             data-testid={ENV.newEnv}
-            className="ml-auto h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+            className="ml-auto h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
             title="New environment"
           >
-            <Plus className="h-3.5 w-3.5" />
+            {createEnv.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
           </button>
         </div>
         <div className="p-2 border-b border-border">
@@ -84,7 +126,7 @@ export default function Environments() {
                 data-testid={ENV.envItem(e.id)}
                 className={cn(
                   "w-full flex items-center gap-2 h-10 px-2 rounded text-[13px] hover:bg-accent/50",
-                  selectedId === e.id && "bg-accent text-foreground"
+                  selectedId === e.id && "bg-accent text-foreground",
                 )}
               >
                 {col ? <Folder className="h-3.5 w-3.5 text-[hsl(var(--warning))]" /> : <Globe className="h-3.5 w-3.5 text-[hsl(var(--brand))]" />}
@@ -108,12 +150,12 @@ export default function Environments() {
               <Box className={cn("h-4 w-4", selected.active ? "text-[hsl(var(--brand))]" : "text-muted-foreground")} />
               <input
                 value={selected.name}
-                onChange={(e) => update(selected.id, { name: e.target.value })}
+                onChange={(e) => patchEnvironment(selected.id, { name: e.target.value })}
                 className="bg-transparent text-[15px] font-medium outline-none"
               />
               <Select
                 value={selected.collectionId || "__ws__"}
-                onValueChange={(v) => update(selected.id, { collectionId: v === "__ws__" ? null : v })}
+                onValueChange={(v) => patchEnvironment(selected.id, { collectionId: v === "__ws__" ? null : v })}
               >
                 <SelectTrigger className="h-8 w-56 bg-muted border-border text-[12px] ml-3">
                   <SelectValue />
@@ -128,23 +170,49 @@ export default function Environments() {
               <div className="ml-auto flex items-center gap-1">
                 {!selected.active && (
                   <button
-                    onClick={() => { setActive(selected.id); toast.success(`Activated ${selected.name}`); }}
-                    className="h-8 px-2.5 rounded-md border border-border text-[12.5px] hover:bg-accent/50 inline-flex items-center gap-1.5"
+                    onClick={() => {
+                      activateEnv.mutate(selected.id, {
+                        onSuccess: () => toast.success(`Activated ${selected.name}`),
+                        onError: (err) => toast.error(getErrorMessage(err, "Could not activate environment.")),
+                      });
+                    }}
+                    disabled={activateEnv.isPending}
+                    className="h-8 px-2.5 rounded-md border border-border text-[12.5px] hover:bg-accent/50 inline-flex items-center gap-1.5 disabled:opacity-60"
                   >
-                    <Check className="h-3.5 w-3.5" /> Activate
+                    {activateEnv.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    {activateEnv.isPending ? "Activating…" : "Activate"}
                   </button>
                 )}
                 <button
-                  onClick={() => dup(selected.id)}
-                  className="h-8 w-8 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    duplicateEnv.mutate(selected.id, {
+                      onSuccess: (data) => {
+                        setSelectedId(data.environment.id);
+                        toast.success("Environment duplicated");
+                      },
+                      onError: (err) => toast.error(getErrorMessage(err, "Could not duplicate environment.")),
+                    });
+                  }}
+                  disabled={duplicateEnv.isPending}
+                  className="h-8 w-8 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
                 >
-                  <Copy className="h-3.5 w-3.5" />
+                  {duplicateEnv.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
                 </button>
                 <button
-                  onClick={() => { if (envs.length > 1) { del(selected.id); setSelectedId(envs.find((e) => e.id !== selected.id)?.id); toast.success("Deleted"); } }}
-                  className="h-8 w-8 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]"
+                  onClick={() => {
+                    if (envs.length <= 1) return;
+                    deleteEnv.mutate(selected.id, {
+                      onSuccess: () => {
+                        setSelectedId(envs.find((e) => e.id !== selected.id)?.id);
+                        toast.success("Deleted");
+                      },
+                      onError: (err) => toast.error(getErrorMessage(err, "Could not delete environment.")),
+                    });
+                  }}
+                  disabled={deleteEnv.isPending || envs.length <= 1}
+                  className="h-8 w-8 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))] disabled:opacity-50"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  {deleteEnv.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>
@@ -158,7 +226,7 @@ export default function Environments() {
                   <div></div>
                 </div>
                 {selected.variables.map((v, i) => (
-                  <div key={i} className="grid grid-cols-[24px_1fr_1fr_28px] gap-1 px-3 py-1.5 items-center border-b border-border last:border-b-0">
+                  <div key={v.id || i} className="grid grid-cols-[24px_1fr_1fr_28px] gap-1 px-3 py-1.5 items-center border-b border-border last:border-b-0">
                     <input
                       type="checkbox"
                       checked={v.enabled !== false}
@@ -176,7 +244,7 @@ export default function Environments() {
                       className="h-8 px-2 rounded bg-muted border border-border text-[12.5px] font-mono"
                     />
                     <button
-                      onClick={() => update(selected.id, { variables: selected.variables.filter((_, idx) => idx !== i) })}
+                      onClick={() => patchEnvironment(selected.id, { variables: selected.variables.filter((_, idx) => idx !== i) })}
                       className="h-8 w-8 grid place-items-center rounded text-muted-foreground hover:text-[hsl(var(--danger))] hover:bg-accent/50"
                     >
                       ×
@@ -184,7 +252,7 @@ export default function Environments() {
                   </div>
                 ))}
                 <button
-                  onClick={() => update(selected.id, { variables: [...selected.variables, { key: "", value: "", enabled: true }] })}
+                  onClick={() => patchEnvironment(selected.id, { variables: [...selected.variables, { key: "", value: "", enabled: true }] })}
                   data-testid={ENV.varAdd}
                   className="w-full text-left px-3 py-2 text-[12.5px] text-muted-foreground hover:bg-accent/50 inline-flex items-center gap-2"
                 >
