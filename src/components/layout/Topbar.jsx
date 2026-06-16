@@ -11,6 +11,8 @@ import {
   Check,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { useLogout } from "@/hooks/use-auth";
+import { getErrorMessage, useSwitchTeam } from "@/hooks/use-teams";
 import { NAV, AUTH } from "@/constants/testIds";
 import { useNavigate } from "react-router-dom";
 import {
@@ -28,17 +30,18 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function Topbar() {
   const user = useAppStore((s) => s.user);
-  const logout = useAppStore((s) => s.logout);
   const setCommandOpen = useAppStore((s) => s.setCommandOpen);
   const notifications = useAppStore((s) => s.notifications);
   const markAllRead = useAppStore((s) => s.markAllRead);
   const workspaces = useAppStore((s) => s.workspaces);
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
-  const setActive = useAppStore((s) => s.setActiveWorkspace);
+  const setActive = useSwitchTeam();
   const navigate = useNavigate();
+  const logout = useLogout();
 
   const [dark, setDark] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -83,7 +86,12 @@ export default function Topbar() {
           {workspaces.map((w) => (
             <DropdownMenuItem
               key={w.id}
-              onClick={() => setActive(w.id)}
+              onClick={() => {
+                if (w.id === activeWorkspaceId) return;
+                setActive.mutate(w.id, {
+                  onError: (err) => toast.error(getErrorMessage(err, "Could not switch workspace.")),
+                });
+              }}
               className="cursor-pointer focus:bg-accent/50"
               data-testid={`topbar-ws-${w.id}`}
             >
@@ -202,7 +210,11 @@ export default function Topbar() {
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-accent" />
             <DropdownMenuItem
-              onClick={() => { logout(); navigate("/login"); }}
+              onClick={() => {
+                logout.mutate(undefined, {
+                  onSettled: () => navigate("/login"),
+                });
+              }}
               className="focus:bg-accent/50 text-red-400"
               data-testid={AUTH.logout}
             >

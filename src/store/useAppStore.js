@@ -4,11 +4,13 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { buildInitialState } from "@/lib/mockData";
 import { nanoUid } from "@/lib/generators";
+import { saveOnboarding } from "@/lib/auth/onboarding";
+import { EMPTY_ARRAY } from "@/lib/store/empty";
 
 const ensureSeed = (state) => {
   if (state.seeded) return state;
-  const init = buildInitialState();
-  return { ...state, ...init, seeded: true };
+  const { user: _ignoredUser, ...seedData } = buildInitialState();
+  return { ...state, ...seedData, seeded: true };
 };
 
 export const useAppStore = create(
@@ -18,6 +20,8 @@ export const useAppStore = create(
 
       // ===== Auth =====
       user: null,
+      currentTeam: null,
+      authBootstrapped: false,
       login: ({ email, name, provider, accountType, company, avatar }) => {
         const u = {
           id: nanoUid("u"),
@@ -33,11 +37,25 @@ export const useAppStore = create(
         set({ user: u });
         return u;
       },
+      setAuthSession: ({ user, currentTeam, workspaces, activeWorkspaceId, collectionsMap, environmentsMap }) => set({
+        user,
+        currentTeam: currentTeam || null,
+        workspaces: workspaces || [],
+        activeWorkspaceId: activeWorkspaceId || null,
+        ...(collectionsMap ? { collectionsMap } : {}),
+        ...(environmentsMap ? { environmentsMap } : {}),
+      }),
+      clearAuthSession: () => set({ user: null, currentTeam: null }),
+      finishAuthBootstrap: () => set({ authBootstrapped: true }),
       updateUser: (patch) => set((s) => ({ user: s.user ? { ...s.user, ...patch } : null })),
-      completeOnboarding: ({ accountType, company }) => set((s) => ({
-        user: s.user ? { ...s.user, accountType, company, onboarded: true } : null,
-      })),
-      logout: () => set({ user: null }),
+      completeOnboarding: ({ accountType, company }) => set((s) => {
+        if (!s.user) return {};
+        saveOnboarding(s.user.id, { accountType, company });
+        return {
+          user: { ...s.user, accountType, company: company || null, onboarded: true },
+        };
+      }),
+      logout: () => set({ user: null, currentTeam: null }),
 
       // ===== AI settings =====
       aiSettings: {
@@ -185,7 +203,7 @@ export const useAppStore = create(
       }),
 
       // ===== Collections =====
-      getCollections: () => get().collectionsMap[get().activeWorkspaceId] || [],
+      getCollections: () => get().collectionsMap[get().activeWorkspaceId] ?? EMPTY_ARRAY,
       findRequest: (requestId) => {
         const cols = get().collectionsMap[get().activeWorkspaceId] || [];
         for (const c of cols) {
@@ -413,12 +431,12 @@ export const useAppStore = create(
 
       // ===== Environments =====
       getEnvironments: (opts = {}) => {
-        const list = get().environmentsMap[get().activeWorkspaceId] || [];
+        const list = get().environmentsMap[get().activeWorkspaceId] ?? EMPTY_ARRAY;
         if (opts.collectionId === undefined) return list;
         return list.filter((e) => (e.collectionId || null) === (opts.collectionId || null));
       },
       getActiveEnvironment: () => {
-        const list = get().environmentsMap[get().activeWorkspaceId] || [];
+        const list = get().environmentsMap[get().activeWorkspaceId] ?? EMPTY_ARRAY;
         return list.find((e) => e.active) || list[0];
       },
       setActiveEnvironment: (envId) => {
@@ -523,10 +541,11 @@ export const useAppStore = create(
     {
       name: "noidr-web-store",
       storage: createJSONStorage(() => localStorage),
-      version: 3,
+      version: 4,
       partialize: (s) => ({
         seeded: s.seeded,
         user: s.user,
+        currentTeam: s.currentTeam,
         aiSettings: s.aiSettings,
         aiPromptHistory: s.aiPromptHistory,
         shareLinks: s.shareLinks,

@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronRight, Folder, FolderPlus, FilePlus, Plus, Search, Trash2, Edit3, Copy, FolderOpen,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import MethodBadge from "@/components/shared/MethodBadge";
 import { COLL } from "@/constants/testIds";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/context-menu";
 
 export default function CollectionsExplorer({ activeRequestId, onOpenRequest }) {
-  const collections = useAppStore((s) => s.collectionsMap[s.activeWorkspaceId] || []);
+  const collections = useAppStore(selectWorkspaceCollections);
   const createCollection = useAppStore((s) => s.createCollection);
   const updateCollection = useAppStore((s) => s.updateCollection);
   const deleteCollection = useAppStore((s) => s.deleteCollection);

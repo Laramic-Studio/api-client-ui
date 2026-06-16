@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
+import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import { useNavigate } from "react-router-dom";
 import MethodBadge from "@/components/shared/MethodBadge";
 import {
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/context-menu";
 
 export default function Collections() {
-  const collections = useAppStore((s) => s.collectionsMap[s.activeWorkspaceId] || []);
+  const collections = useAppStore(selectWorkspaceCollections);
   const create = useAppStore((s) => s.createCollection);
   const del = useAppStore((s) => s.deleteCollection);
   const dup = useAppStore((s) => s.duplicateCollection);

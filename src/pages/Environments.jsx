@@ -1,4 +1,5 @@
 import { useAppStore } from "@/store/useAppStore";
+import { selectWorkspaceCollections, selectWorkspaceEnvironments } from "@/lib/store/selectors";
 import { useMemo, useState } from "react";
 import { Plus, Trash2, Copy, Check, Box, Globe, Folder } from "lucide-react";
 import { ENV } from "@/constants/testIds";
@@ -9,8 +10,8 @@ import {
 } from "@/components/ui/select";
 
 export default function Environments() {
-  const envs = useAppStore((s) => s.environmentsMap[s.activeWorkspaceId] || []);
-  const collections = useAppStore((s) => s.collectionsMap[s.activeWorkspaceId] || []);
+  const envs = useAppStore(selectWorkspaceEnvironments);
+  const collections = useAppStore(selectWorkspaceCollections);
   const create = useAppStore((s) => s.createEnvironment);
   const update = useAppStore((s) => s.updateEnvironment);
   const dup = useAppStore((s) => s.duplicateEnvironment);

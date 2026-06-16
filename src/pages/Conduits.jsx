@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
+import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import MethodBadge from "@/components/shared/MethodBadge";
 import { Plus, Workflow, ArrowRight, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -13,7 +14,7 @@ const STARTER = [
 
 export default function Conduits() {
   const [conduits, setConduits] = useState([{ id: "c1", name: "Auth → Profile → Orders", nodes: STARTER }]);
-  const collections = useAppStore((s) => s.collectionsMap[s.activeWorkspaceId] || []);
+  const collections = useAppStore(selectWorkspaceCollections);
 
   const newConduit = () => setConduits((c) => [...c, { id: `c${Date.now()}`, name: "Untitled conduit", nodes: [] }]);
   const addNode = (cid, fromReq) => {

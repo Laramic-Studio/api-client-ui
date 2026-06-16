@@ -13,6 +13,7 @@ import AskAIDialog from "@/components/builder/AskAIDialog";
 import ExplainPanel from "@/components/builder/ExplainPanel";
 
 import { useAppStore } from "@/store/useAppStore";
+import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import { getClient } from "@/lib/api/client";
 import { interpolate } from "@/lib/mockEngine";
 import { toast } from "sonner";
@@ -39,7 +40,7 @@ export default function ApiBuilder() {
   const navigate = useNavigate();
   const client = getClient();
 
-  const collections = useAppStore((s) => s.collectionsMap[s.activeWorkspaceId] || []);
+  const collections = useAppStore(selectWorkspaceCollections);
   const findRequest = useAppStore((s) => s.findRequest);
   const activeTabIdFromStore = useAppStore((s) => s.activeTabId);
   const openTabsFromStore = useAppStore((s) => s.openTabs);

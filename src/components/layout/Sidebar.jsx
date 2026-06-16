@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   LayoutGrid,
   FolderTree,
@@ -18,6 +18,7 @@ import {
   ChevronsRight,
   Search,
   PanelsTopLeft,
+  Lock,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { NAV } from "@/constants/testIds";
@@ -34,28 +35,26 @@ const NAV_ITEMS = [
   { to: "/documentation", icon: BookOpenText, label: "Documentation", key: "documentation" },
   { to: "/history", icon: HistoryIcon, label: "History", key: "history" },
   { to: "/monitoring", icon: Activity, label: "Monitoring", key: "monitoring" },
-  { to: "/workspaces", icon: Briefcase, label: "Workspaces", key: "workspaces" },
+  { to: "/workspaces", icon: Briefcase, label: "Workspaces", key: "workspaces", enabled: true },
 ];
 
 const SECONDARY = [
-  { to: "/team", icon: Users, label: "Team", key: "team" },
+  { to: "/team", icon: Users, label: "Team", key: "team", enabled: true },
   { to: "/conduits", icon: Workflow, label: "Conduits", key: "conduits" },
   { to: "/generators", icon: Sparkles, label: "Generators", key: "generators" },
   { to: "/import", icon: Upload, label: "Import API", key: "import" },
-  { to: "/settings", icon: SettingsIcon, label: "Settings", key: "settings" },
+  { to: "/settings", icon: SettingsIcon, label: "Settings", key: "settings", enabled: true },
 ];
+
+const LOCKED_REASON = "Not available yet. This module is still being built for the web app.";
+
+const isNavEnabled = (item) => item.enabled === true;
 
 export default function Sidebar({ collapsed }) {
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
-  const workspaces = useAppStore((s) => s.workspaces);
-  const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
-  const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
-  const setActive = useAppStore((s) => s.setActiveWorkspace);
   const companyLogo = useAppStore((s) => s.user?.company?.logo);
   const companyName = useAppStore((s) => s.user?.company?.name);
   const [q, setQ] = useState("");
-  const navigate = useNavigate();
-  const setCommandOpen = useAppStore((s) => s.setCommandOpen);
 
   const all = useMemo(() => [...NAV_ITEMS, ...SECONDARY], []);
   const filtered = q ? all.filter((n) => n.label.toLowerCase().includes(q.toLowerCase())) : null;
@@ -65,8 +64,8 @@ export default function Sidebar({ collapsed }) {
       {/* Logo + collapse */}
       <div className={cn("h-14 flex items-center border-b border-border", collapsed ? "px-2 justify-center" : "px-3 gap-1")}>
         <button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 group"
+          type="button"
+          className="flex items-center gap-2 group cursor-default"
           data-testid="brand-logo"
           title="Noidr Web"
         >
@@ -114,24 +113,7 @@ export default function Sidebar({ collapsed }) {
         </Tooltip>
       )}
 
-      {/* Workspace switcher */}
-      {!collapsed && (
-        <div className="px-3 pt-3">
-          <button
-            onClick={() => setCommandOpen(true)}
-            data-testid={NAV.workspaceSwitcher}
-            className="w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-md bg-accent/50 hover:bg-accent border border-border transition-colors"
-          >
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground leading-none">Workspace</div>
-              <div className="text-[13px] font-medium truncate mt-0.5">{activeWs?.name || "Select workspace"}</div>
-            </div>
-            <kbd className="kbd">⌘K</kbd>
-          </button>
-        </div>
-      )}
-
+     
       {/* Search */}
       {!collapsed && (
         <div className="px-3 pt-3">
@@ -163,7 +145,7 @@ export default function Sidebar({ collapsed }) {
       </nav>
 
       {/* Workspace mini list */}
-      {!collapsed && (
+      {/* {!collapsed && (
         <div className="border-t border-border p-2 max-h-44 overflow-y-auto">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1">Switch workspace</div>
           {workspaces.slice(0, 5).map((w) => (
@@ -181,40 +163,79 @@ export default function Sidebar({ collapsed }) {
             </button>
           ))}
         </div>
-      )}
+      )} */}
     </div>
   );
 }
 
 function NavRow({ item, collapsed }) {
+  const enabled = isNavEnabled(item);
   const Icon = item.icon;
-  const link = (
-    <NavLink
-      to={item.to}
-      data-testid={NAV.item(item.key)}
-      className={({ isActive }) =>
-        cn(
-          "group flex items-center gap-2.5 rounded-md text-[13px] transition-colors",
-          collapsed ? "h-9 w-9 justify-center mx-auto" : "h-9 px-2.5",
-          isActive
-            ? "bg-accent text-foreground"
-            : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-        )
-      }
-    >
-      <Icon className="h-4 w-4" strokeWidth={1.75} />
-      {!collapsed && <span className="truncate">{item.label}</span>}
-    </NavLink>
-  );
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{link}</TooltipTrigger>
-        <TooltipContent side="right" className="border border-border bg-card text-foreground">
-          {item.label}
-        </TooltipContent>
-      </Tooltip>
+
+  if (enabled) {
+    const link = (
+      <NavLink
+        to={item.to}
+        data-testid={NAV.item(item.key)}
+        className={({ isActive }) =>
+          cn(
+            "group flex items-center gap-2.5 rounded-md text-[13px] transition-colors",
+            collapsed ? "h-9 w-9 justify-center mx-auto" : "h-9 px-2.5",
+            isActive
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+          )
+        }
+      >
+        <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </NavLink>
     );
+
+    if (collapsed) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="right" className="border border-border bg-card text-foreground">
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return link;
   }
-  return link;
+
+  const lockedRow = (
+    <div
+      data-testid={NAV.item(item.key)}
+      aria-disabled="true"
+      className={cn(
+        "flex items-center gap-2.5 rounded-md text-[13px] text-muted-foreground/45 cursor-not-allowed select-none",
+        collapsed ? "h-9 w-9 justify-center mx-auto" : "h-9 px-2.5"
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0 opacity-50" strokeWidth={1.75} />
+      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+      <Lock className={cn("shrink-0 opacity-60", collapsed ? "h-3 w-3 absolute -bottom-0.5 -right-0.5" : "h-3 w-3")} />
+    </div>
+  );
+
+  const tooltipLabel = collapsed ? `${item.label} — ${LOCKED_REASON}` : LOCKED_REASON;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={cn("block w-full", collapsed && "relative inline-flex justify-center")}>
+          {lockedRow}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="right"
+        className="max-w-[220px] border border-border bg-popover text-foreground text-[12px] leading-snug"
+      >
+        {tooltipLabel}
+      </TooltipContent>
+    </Tooltip>
+  );
 }

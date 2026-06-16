@@ -61,6 +61,15 @@ let webpackConfig = {
 };
 
 webpackConfig.devServer = (devServerConfig) => {
+  // Fallback proxy when REACT_APP_API_URL=/api (setupProxy.js is primary).
+  devServerConfig.proxy = [
+    {
+      context: ["/api"],
+      target: process.env.REACT_APP_API_PROXY_TARGET || "http://noidr-api.test",
+      changeOrigin: true,
+    },
+  ];
+
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
     const originalSetupMiddlewares = devServerConfig.setupMiddlewares;

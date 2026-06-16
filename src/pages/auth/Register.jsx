@@ -5,17 +5,18 @@ import SocialButtons from "@/components/auth/SocialButtons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAppStore } from "@/store/useAppStore";
+import { authDestination } from "@/lib/auth/routes";
+import { getErrorMessage, useRegister } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
 import { toast } from "sonner";
 
 export default function Register() {
-  const login = useAppStore((s) => s.login);
+  const register = useRegister();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [password2, setPassword2] = useState("");
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -23,19 +24,29 @@ export default function Register() {
       toast.error("All fields are required");
       return;
     }
-    setLoading(true);
-    setTimeout(() => {
-      login({ name, email, provider: "password" });
-      setLoading(false);
-      toast.success("Account created — let's set things up");
-      navigate("/onboarding", { replace: true });
-    }, 400);
+    if (password !== password2) {
+      toast.error("Passwords don't match");
+      return;
+    }
+
+    register.mutate(
+      { name, email, password, password_confirmation: password2 },
+      {
+        onSuccess: (user) => {
+          toast.success("Account created — check your email for a verification code");
+          navigate(authDestination(user), { replace: true });
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Could not create account."));
+        },
+      },
+    );
   };
 
   return (
     <AuthShell
       title="Create your account"
-      subtitle="Spin up your developer workspace in seconds."
+      subtitle="Your workspace on app.noidr.dev — powered by the NoIDR API."
       footer={
         <span>
           Already have an account?{" "}
@@ -55,6 +66,7 @@ export default function Register() {
             data-testid={AUTH.registerName}
             className="bg-muted border-border h-10 font-mono text-[13px]"
             placeholder="Ada Lovelace"
+            autoComplete="name"
           />
         </div>
         <div className="space-y-1.5">
@@ -65,7 +77,8 @@ export default function Register() {
             onChange={(e) => setEmail(e.target.value)}
             data-testid={AUTH.registerEmail}
             className="bg-muted border-border h-10 font-mono text-[13px]"
-            placeholder="ada@noidr.dev"
+            placeholder="ada@example.com"
+            autoComplete="email"
           />
         </div>
         <div className="space-y-1.5">
@@ -77,15 +90,26 @@ export default function Register() {
             data-testid={AUTH.registerPassword}
             className="bg-muted border-border h-10 font-mono text-[13px]"
             placeholder="At least 8 characters"
+            autoComplete="new-password"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider font-mono">Confirm password</Label>
+          <Input
+            type="password"
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
+            className="bg-muted border-border h-10 font-mono text-[13px]"
+            autoComplete="new-password"
           />
         </div>
         <Button
           type="submit"
-          disabled={loading}
+          disabled={register.isPending}
           data-testid={AUTH.registerSubmit}
-          className="w-full h-10 bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground font-medium"
+          className="w-full h-10 bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-white font-medium"
         >
-          {loading ? "Creating account…" : "Create account"}
+          {register.isPending ? "Creating account…" : "Create account"}
         </Button>
       </form>
     </AuthShell>

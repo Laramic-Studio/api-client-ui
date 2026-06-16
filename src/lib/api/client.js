@@ -1,6 +1,6 @@
 // Pluggable API client. Default impl is a local Zustand-backed mock.
 // To wire to a real backend, swap out this module's `client` export
-// with one that calls fetch/axios. Stores and pages MUST go through
+// with one that calls axios via fetchClient. Stores and pages MUST go through
 // these methods so the rest of the app is backend-agnostic.
 //
 // CONTRACT: every method returns a Promise.
@@ -14,7 +14,11 @@ const async_ = (fn) => Promise.resolve().then(fn);
 
 export const client = {
   // ----- Auth -----
-  async login({ email, name }) { return async_(() => get().login({ email, name })); },
+  async register({ name, email, password, password_confirmation, remember }) {
+    return async_(() => get().login({ email, name, provider: "password" }));
+  },
+
+  async login({ email, name, password, remember }) { return async_(() => get().login({ email, name })); },
   async logout() { return async_(() => get().logout()); },
   async me() { return async_(() => get().user); },
 
@@ -81,3 +85,5 @@ export const client = {
 let activeClient = client;
 export const setClient = (c) => { activeClient = c; };
 export const getClient = () => activeClient;
+
+export { api, ApiError, createAbortController, isCancelledError } from "@/lib/api/http";

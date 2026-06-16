@@ -10,6 +10,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { useAppStore } from "@/store/useAppStore";
+import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import {
   Send,
   FolderTree,
@@ -35,7 +36,7 @@ export default function CommandPalette() {
   const setOpen = useAppStore((s) => s.setCommandOpen);
   const workspaces = useAppStore((s) => s.workspaces);
   const setActive = useAppStore((s) => s.setActiveWorkspace);
-  const collections = useAppStore((s) => s.collectionsMap[s.activeWorkspaceId] || []);
+  const collections = useAppStore(selectWorkspaceCollections);
   const createCollection = useAppStore((s) => s.createCollection);
   const createEnvironment = useAppStore((s) => s.createEnvironment);
   const navigate = useNavigate();

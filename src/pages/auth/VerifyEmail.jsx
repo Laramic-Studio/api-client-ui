@@ -1,50 +1,85 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import AuthShell from "@/components/auth/AuthShell";
-import { Button } from "@/components/ui/button";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { AUTH } from "@/constants/testIds";
+import VerifyEmailForm from "@/components/auth/VerifyEmailForm";
+import { useAppStore } from "@/store/useAppStore";
+import { getAccessToken } from "@/lib/auth/tokens";
+import { authDestination } from "@/lib/auth/routes";
+import { getErrorMessage, useLogout, useResendVerification, useVerifyEmail } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 export default function VerifyEmail() {
-  const [code, setCode] = useState("");
+  const user = useAppStore((s) => s.user);
+  const verifyEmail = useVerifyEmail();
+  const resend = useResendVerification();
+  const logout = useLogout();
   const navigate = useNavigate();
+  const [code, setCode] = useState("");
 
-  const onVerify = () => {
-    if (code.length !== 6) return toast.error("Enter the 6-digit code");
-    toast.success("Email verified (mock).");
-    setTimeout(() => navigate("/login"), 400);
+  const goToLogin = () => {
+    logout.mutate(undefined, {
+      onSettled: () => navigate("/login", { replace: true }),
+    });
+  };
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if (code.length !== 6) {
+      toast.error("Enter the 6-digit code from your email");
+      return;
+    }
+
+    verifyEmail.mutate(
+      { code },
+      {
+        onSuccess: () => {
+          toast.success("Email verified.");
+          navigate(authDestination({ ...user, emailVerified: true }), { replace: true });
+        },
+        onError: (err) => toast.error(getErrorMessage(err, "Verification failed.")),
+      },
+    );
+  };
+
+  const onResend = () => {
+    if (!getAccessToken()) {
+      toast.error("Session expired. Please sign in again.");
+      goToLogin();
+      return;
+    }
+
+    resend.mutate(undefined, {
+      onSuccess: () => toast.success("A new code was sent to your email."),
+      onError: (err) => {
+        toast.error(getErrorMessage(err, "Could not resend code."));
+        if (err?.status === 401) goToLogin();
+      },
+    });
   };
 
   return (
     <AuthShell
       title="Verify your email"
-      subtitle="Enter the 6-digit code sent to your inbox."
-      footer={<Link to="/login" className="text-[hsl(var(--brand))] hover:underline">← Back to sign in</Link>}
-    >
-      <div className="space-y-5">
-        <InputOTP maxLength={6} value={code} onChange={setCode}>
-          <InputOTPGroup className="gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <InputOTPSlot
-                key={i}
-                index={i}
-                className="h-12 w-11 rounded-md border-border bg-muted text-foreground text-lg font-mono"
-              />
-            ))}
-          </InputOTPGroup>
-        </InputOTP>
-        <Button
-          onClick={onVerify}
-          data-testid={AUTH.verifySubmit}
-          className="w-full h-10 bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground font-medium"
+      subtitle={`Enter the 6-digit code we sent to ${user?.email || "your email"}.`}
+      footer={
+        <button
+          type="button"
+          onClick={goToLogin}
+          disabled={logout.isPending}
+          className="text-[hsl(var(--brand))] hover:underline disabled:opacity-50"
         >
-          Verify email
-        </Button>
-        <button className="text-[12px] text-muted-foreground hover:text-foreground" onClick={() => toast.message("Resent code (mock).")}>
-          Didn&apos;t get the code? Resend
+          {logout.isPending ? "Signing out…" : "← Sign in with a different account"}
         </button>
-      </div>
+      }
+    >
+      <VerifyEmailForm
+        code={code}
+        onCodeChange={setCode}
+        onSubmit={onSubmit}
+        onResend={onResend}
+        isVerifying={verifyEmail.isPending}
+        isResending={resend.isPending}
+      />
     </AuthShell>
   );
 }

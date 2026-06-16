@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
+import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import MethodBadge from "@/components/shared/MethodBadge";
 import { BookOpenText, Search, Copy, Link as LinkIcon, KeyRound, Share2, Globe } from "lucide-react";
 import { toast } from "sonner";
 import Editor from "@monaco-editor/react";
 
 export default function Documentation() {
-  const collections = useAppStore((s) => s.collectionsMap[s.activeWorkspaceId] || []);
+  const collections = useAppStore(selectWorkspaceCollections);
   const activeWs = useAppStore((s) => s.workspaces.find((w) => w.id === s.activeWorkspaceId));
   const createShareLink = useAppStore((s) => s.createShareLink);
   const revokeShareLink = useAppStore((s) => s.revokeShareLink);

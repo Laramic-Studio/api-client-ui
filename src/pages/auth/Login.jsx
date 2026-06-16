@@ -6,18 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAppStore } from "@/store/useAppStore";
+import { authDestination } from "@/lib/auth/routes";
+import { getErrorMessage, useLogin } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
 import { toast } from "sonner";
 
 export default function Login() {
-  const login = useAppStore((s) => s.login);
+  const login = useLogin();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState("demo@noidr.dev");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
-  const [loading, setLoading] = useState(false);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -25,20 +25,28 @@ export default function Login() {
       toast.error("Please enter email and password");
       return;
     }
-    setLoading(true);
-    setTimeout(() => {
-      const u = login({ email, name: email.split("@")[0], provider: "password" });
-      setLoading(false);
-      toast.success("Welcome back to Noidr");
-      const from = location.state?.from || (u.onboarded ? "/dashboard" : "/onboarding");
-      navigate(from, { replace: true });
-    }, 400);
+
+    login.mutate(
+      { email, password, remember },
+      {
+        onSuccess: (user) => {
+          toast.success("Welcome back to Noidr");
+          navigate(authDestination(user, location.state?.from), { replace: true });
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Could not sign in. Try again."));
+          if (process.env.NODE_ENV === "development") {
+            console.error("[auth/login]", err);
+          }
+        },
+      },
+    );
   };
 
   return (
     <AuthShell
       title="Sign in to Noidr"
-      subtitle="Use any email & password — this is a mock-auth prototype."
+      subtitle="Sign in with your NoIDR account."
       footer={
         <span>
           Don&apos;t have an account?{" "}
@@ -90,14 +98,13 @@ export default function Login() {
         </label>
         <Button
           type="submit"
-          disabled={loading}
+          disabled={login.isPending}
           data-testid={AUTH.loginSubmit}
           className="w-full h-10 bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-white font-medium"
         >
-          {loading ? "Signing in…" : "Sign in"}
+          {login.isPending ? "Signing in…" : "Sign in"}
         </Button>
       </form>
     </AuthShell>
   );
 }
-
