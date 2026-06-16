@@ -3,21 +3,20 @@ import { X, Plus } from "lucide-react";
 import MethodBadge from "@/components/shared/MethodBadge";
 import { useAppStore } from "@/store/useAppStore";
 import { isScratchTab } from "@/lib/builder/scratch";
+import { isTabDirty } from "@/lib/builder/dirty";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-export default function RequestTabs({ onNewScratch, onTabSelect, onTabClose }) {
+export default function RequestTabs({ onNewScratch, onTabSelect, onTabClose, drafts = {} }) {
   const tabs = useAppStore((s) => s.openTabs);
   const active = useAppStore((s) => s.activeTabId);
   const setActive = useAppStore((s) => s.setActiveTab);
-  const closeTab = useAppStore((s) => s.closeTab);
   const reorder = useAppStore((s) => s.reorderTabs);
   const findRequest = useAppStore((s) => s.findRequest);
   const [dragId, setDragId] = useState(null);
 
   const handleClose = (e, tabId) => {
     e.stopPropagation();
-    closeTab(tabId);
     onTabClose?.(tabId);
   };
 
@@ -33,6 +32,7 @@ export default function RequestTabs({ onNewScratch, onTabSelect, onTabClose }) {
           const req = t.scratch || isScratchTab(t.id) ? null : findRequest(t.id).request;
           const method = req?.method || "GET";
           const label = req?.name || t.label || "Untitled";
+          const dirty = isTabDirty(t.id, drafts[t.id], req);
           return (
             <div
               key={t.id}
@@ -51,6 +51,7 @@ export default function RequestTabs({ onNewScratch, onTabSelect, onTabClose }) {
             >
               <MethodBadge method={method} className="w-12 text-left text-[10px] shrink-0" />
               <span className="truncate flex-1">{label}</span>
+              {dirty && <span className="text-[hsl(var(--warning))] text-[10px] shrink-0" title="Unsaved changes">●</span>}
               <button
                 onClick={(e) => handleClose(e, t.id)}
                 className="opacity-0 group-hover:opacity-100 h-4 w-4 grid place-items-center rounded hover:bg-accent"

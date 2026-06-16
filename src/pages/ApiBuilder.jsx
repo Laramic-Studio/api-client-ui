@@ -23,15 +23,36 @@ import { buildRequestBreadcrumb } from "@/lib/builder/breadcrumb";
 import { exampleToResponse, suggestExampleName } from "@/lib/builder/examples";
 import { buildHistoryEntry } from "@/lib/builder/history";
 import { isRequestUrlEmpty } from "@/lib/builder/url-variables";
+import { isTabDirty } from "@/lib/builder/dirty";
+import UnsavedTabDialog from "@/components/builder/UnsavedTabDialog";
 import { toast } from "sonner";
 
-function pruneTabState(setter, tabId) {
-  setter((state) => {
-    if (!state[tabId]) return state;
-    const next = { ...state };
-    delete next[tabId];
-    return next;
-  });
+function useBuilderSession() {
+  const drafts = useAppStore((s) => s.builderSession.drafts);
+  const responses = useAppStore((s) => s.builderSession.responses);
+  const testResults = useAppStore((s) => s.builderSession.testResults);
+  const activeExamples = useAppStore((s) => s.builderSession.activeExamples);
+  const setBuilderDraft = useAppStore((s) => s.setBuilderDraft);
+  const clearBuilderDraft = useAppStore((s) => s.clearBuilderDraft);
+  const setBuilderResponse = useAppStore((s) => s.setBuilderResponse);
+  const setBuilderTestResults = useAppStore((s) => s.setBuilderTestResults);
+  const setBuilderActiveExample = useAppStore((s) => s.setBuilderActiveExample);
+  const clearBuilderActiveExample = useAppStore((s) => s.clearBuilderActiveExample);
+  const clearBuilderTabSession = useAppStore((s) => s.clearBuilderTabSession);
+
+  return {
+    drafts,
+    responses,
+    testResults,
+    activeExamples,
+    setBuilderDraft,
+    clearBuilderDraft,
+    setBuilderResponse,
+    setBuilderTestResults,
+    setBuilderActiveExample,
+    clearBuilderActiveExample,
+    clearBuilderTabSession,
+  };
 }
 
 export default function ApiBuilder() {
@@ -53,19 +74,32 @@ export default function ApiBuilder() {
   const closeTab = useAppStore((s) => s.closeTab);
   const panels = useAppStore((s) => s.builderPanels);
   const setPanels = useAppStore((s) => s.setBuilderPanels);
+  const {
+    drafts,
+    responses,
+    testResults,
+    activeExamples,
+    setBuilderDraft,
+    clearBuilderDraft,
+    setBuilderResponse,
+    setBuilderTestResults,
+    setBuilderActiveExample,
+    clearBuilderActiveExample,
+    clearBuilderTabSession,
+  } = useBuilderSession();
 
-  const [drafts, setDrafts] = useState({});
-  const [responses, setResponses] = useState({});
-  const [testResults, setTestResults] = useState({});
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeExamples, setActiveExamples] = useState({});
   const [askAIOpen, setAskAIOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
+  const [closePrompt, setClosePrompt] = useState(null);
+  const [closeSaveCollectionId, setCloseSaveCollectionId] = useState(null);
 
   const ensureScratchDraft = useCallback((tabId) => {
-    setDrafts((d) => (d[tabId] ? d : { ...d, [tabId]: createEmptyScratch(tabId) }));
-  }, []);
+    if (!drafts[tabId]) {
+      setBuilderDraft(tabId, createEmptyScratch(tabId));
+    }
+  }, [drafts, setBuilderDraft]);
 
   // URL param → open saved request tab
   useEffect(() => {
@@ -83,7 +117,7 @@ export default function ApiBuilder() {
     const f = findRequest(activeTabId);
     if (f.request) return { ...f.request, collectionId: f.collection.id };
     return null;
-  }, [activeTabId, drafts, findRequest]);
+  }, [activeTabId, drafts, findRequest, collections]);
 
   const activeExampleId = activeTabId ? activeExamples[activeTabId] ?? null : null;
 
@@ -99,22 +133,96 @@ export default function ApiBuilder() {
 
   const setActiveReq = (next) => {
     if (!activeTabId) return;
-    setDrafts((d) => ({ ...d, [activeTabId]: next }));
+    setBuilderDraft(activeTabId, next);
   };
 
-  const handleTabClose = useCallback((tabId) => {
-    pruneTabState(setDrafts, tabId);
-    pruneTabState(setResponses, tabId);
-    pruneTabState(setTestResults, tabId);
-    pruneTabState(setActiveExamples, tabId);
-
+  const finishCloseTab = useCallback((tabId) => {
+    clearBuilderTabSession(tabId);
+    closeTab(tabId);
     const nextActive = useAppStore.getState().activeTabId;
     if (nextActive && !isScratchTab(nextActive)) {
       navigate(`/builder/${nextActive}`);
     } else {
       navigate("/builder");
     }
-  }, [navigate]);
+  }, [clearBuilderTabSession, closeTab, navigate]);
+
+  const attemptCloseTab = useCallback((tabId) => {
+    const draft = drafts[tabId];
+    const saved = isScratchTab(tabId) ? null : findRequest(tabId).request;
+    const dirty = isTabDirty(tabId, draft, saved);
+    if (!dirty) {
+      finishCloseTab(tabId);
+      return;
+    }
+    const tab = openTabs.find((t) => t.id === tabId);
+    setCloseSaveCollectionId(
+      draft?.collectionId || tab?.collectionId || collections[0]?.id || null,
+    );
+    setClosePrompt({
+      tabId,
+      label: draft?.name || saved?.name || tab?.label || "Untitled",
+      isScratch: isScratchTab(tabId),
+    });
+  }, [collections, drafts, finishCloseTab, findRequest, openTabs]);
+
+  const handleClosePromptSave = async () => {
+    if (!closePrompt) return;
+    const tabId = closePrompt.tabId;
+    const draft = drafts[tabId] || activeReq;
+    if (!draft) return;
+
+    setSaving(true);
+    try {
+      const payload = {
+        name: draft.name || "Untitled request",
+        method: draft.method,
+        url: draft.url ?? "",
+        params: draft.params || [],
+        headers: draft.headers || [],
+        auth: draft.auth || { type: "none" },
+        body: draft.body || { type: "none", content: "" },
+        tests: draft.tests ?? "",
+        preScript: draft.preScript ?? "",
+        docs: draft.docs ?? "",
+      };
+
+      let collectionId = closeSaveCollectionId || draft.collectionId;
+      if (!collectionId) {
+        let target = collections[0];
+        if (!target) target = await client.createCollection("My Collection");
+        collectionId = target.id;
+      }
+
+      if (isScratchTab(tabId)) {
+        const saved = await client.addRequest(collectionId, {
+          ...payload,
+          examples: draft.examples || [],
+          folderId: draft.folderId || null,
+        });
+        finishCloseTab(tabId);
+        openTab({ id: saved.id, collectionId, label: saved.name });
+        navigate(`/builder/${saved.id}`);
+        toast.success(`Saved ${saved.name}`);
+      } else {
+        await client.updateRequest(collectionId, draft.id, payload);
+        clearBuilderDraft(tabId);
+        finishCloseTab(tabId);
+        toast.success("Request saved");
+      }
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Could not save request."));
+    } finally {
+      setSaving(false);
+      setClosePrompt(null);
+    }
+  };
+
+  const handleClosePromptDiscard = () => {
+    if (!closePrompt) return;
+    finishCloseTab(closePrompt.tabId);
+    setClosePrompt(null);
+  };
 
   const handleTabSelect = useCallback((tabId) => {
     if (isScratchTab(tabId)) {
@@ -143,8 +251,8 @@ export default function ApiBuilder() {
     }
     setPanels({ responseOpen: true });
     setSending(true);
-    setActiveExamples((state) => ({ ...state, [activeTabId]: null }));
-    setResponses((r) => ({ ...r, [activeTabId]: null }));
+    setBuilderActiveExample(activeTabId, null);
+    setBuilderResponse(activeTabId, null);
     const headers = [...(activeReq.headers || [])];
     if (activeReq.auth?.type === "bearer" && activeReq.auth.token) {
       headers.push({ key: "Authorization", value: `Bearer ${interpolate(activeReq.auth.token, activeEnv)}`, enabled: true });
@@ -166,10 +274,10 @@ export default function ApiBuilder() {
       env: activeEnv,
       mode: "real",
     });
-    setResponses((r) => ({ ...r, [activeTabId]: result }));
+    setBuilderResponse(activeTabId, result);
     setSending(false);
     const tr = client.runTests(activeReq.tests, result);
-    setTestResults((t) => ({ ...t, [activeTabId]: tr }));
+    setBuilderTestResults(activeTabId, tr);
     const collection = collections.find((c) => c.id === activeReq.collectionId);
     await client.addHistory(buildHistoryEntry({
       request: activeReq,
@@ -215,13 +323,13 @@ export default function ApiBuilder() {
         });
         const scratchId = activeTabId;
         closeTab(scratchId);
-        pruneTabState(setDrafts, scratchId);
+        clearBuilderTabSession(scratchId);
         openTab({ id: saved.id, collectionId, label: saved.name });
         navigate(`/builder/${saved.id}`);
         toast.success(`Saved ${saved.name}`);
       } else {
         await client.updateRequest(collectionId, activeReq.id, payload);
-        setDrafts((d) => { const c = { ...d }; delete c[activeTabId]; return c; });
+        clearBuilderDraft(activeTabId);
         toast.success("Request saved");
       }
     } catch (err) {
@@ -233,27 +341,25 @@ export default function ApiBuilder() {
 
   const onOpenRequest = (requestId, collectionId) => {
     const found = findRequest(requestId);
+    clearBuilderDraft(requestId);
     openTab({ id: requestId, collectionId, label: found.request?.name || "Request" });
-    setActiveExamples((state) => ({ ...state, [requestId]: null }));
+    clearBuilderActiveExample(requestId);
     navigate(`/builder/${requestId}`);
   };
 
   const onOpenExample = (requestId, collectionId, exampleId) => {
     const found = findRequest(requestId);
     openTab({ id: requestId, collectionId, label: found.request?.name || "Request" });
-    setActiveExamples((state) => ({ ...state, [requestId]: exampleId }));
+    setBuilderActiveExample(requestId, exampleId);
     setPanels({ responseOpen: true });
     navigate(`/builder/${requestId}`);
   };
 
   const handleExampleDeleted = useCallback((requestId, exampleId) => {
-    setActiveExamples((state) => {
-      if (state[requestId] !== exampleId) return state;
-      const next = { ...state };
-      delete next[requestId];
-      return next;
-    });
-  }, []);
+    if (activeExamples[requestId] === exampleId) {
+      clearBuilderActiveExample(requestId);
+    }
+  }, [activeExamples, clearBuilderActiveExample]);
 
   const onAddExample = async (ex) => {
     if (!activeReq?.collectionId || isScratchTab(activeTabId)) {
@@ -300,7 +406,7 @@ export default function ApiBuilder() {
 
   const newScratchTab = () => {
     const id = createScratchTabId();
-    setDrafts((d) => ({ ...d, [id]: createEmptyScratch(id) }));
+    setBuilderDraft(id, createEmptyScratch(id));
     openTab({ id, scratch: true, label: "Untitled" });
     navigate("/builder");
   };
@@ -342,11 +448,11 @@ export default function ApiBuilder() {
   );
 
   const handleRequestRenamed = useCallback((requestId, name) => {
-    setDrafts((draft) => {
-      if (!draft[requestId]) return draft;
-      return { ...draft, [requestId]: { ...draft[requestId], name } };
-    });
-  }, []);
+    const draft = drafts[requestId];
+    if (draft) {
+      setBuilderDraft(requestId, { ...draft, name });
+    }
+  }, [drafts, setBuilderDraft]);
 
   const requestBreadcrumb = useMemo(() => {
     if (!activeReq) return [];
@@ -428,7 +534,8 @@ export default function ApiBuilder() {
       <RequestTabs
         onNewScratch={newScratchTab}
         onTabSelect={handleTabSelect}
-        onTabClose={handleTabClose}
+        onTabClose={attemptCloseTab}
+        drafts={drafts}
       />
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex-1 min-h-0">
@@ -506,6 +613,18 @@ export default function ApiBuilder() {
         onOpenChange={setAskAIOpen}
         envVars={envVarNames}
         onApply={applyAISpec}
+      />
+      <UnsavedTabDialog
+        open={Boolean(closePrompt)}
+        onOpenChange={(open) => { if (!open) setClosePrompt(null); }}
+        isScratch={closePrompt?.isScratch}
+        tabLabel={closePrompt?.label}
+        collections={collections}
+        collectionId={closeSaveCollectionId}
+        onCollectionChange={setCloseSaveCollectionId}
+        onSave={handleClosePromptSave}
+        onDiscard={handleClosePromptDiscard}
+        saving={saving}
       />
     </div>
   );

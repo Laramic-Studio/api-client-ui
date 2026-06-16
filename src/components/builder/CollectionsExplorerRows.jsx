@@ -98,7 +98,7 @@ export function CollectionRow({
             {isDuplicating ? "Duplicating…" : "Duplicate"}
           </ContextMenuItem>
           <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteCollection(c.id)} className="text-red-400">
+          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteCollection(c.id, c.name)} className="text-red-400">
             {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             {isDeleting ? "Deleting…" : "Delete"}
           </ContextMenuItem>
@@ -249,7 +249,7 @@ function FolderRow({
           <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
           <ContextMenuItem
             disabled={isDeleting}
-            onClick={() => actions.deleteFolder(c.id, f.id)}
+            onClick={() => actions.deleteFolder(c.id, f.id, f.name)}
             className="cursor-pointer text-xs px-2 gap-2 text-red-400"
           >
             {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -403,7 +403,7 @@ export function RequestRow({
             <FileJson className="h-3.5 w-3.5" /> Add example
           </ContextMenuItem>
           <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteRequest(c.id, r.id)} className="text-red-400">
+          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteRequest(c.id, r.id, r.name)} className="text-red-400">
             {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             {isDeleting ? "Deleting…" : "Delete"}
           </ContextMenuItem>
@@ -497,7 +497,7 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
         <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
         <ContextMenuItem
           disabled={isDeleting}
-          onClick={() => actions.deleteExample(collection.id, request.id, example.id)}
+          onClick={() => actions.deleteExample(collection.id, request.id, example.id, example.name)}
           className="text-red-400"
         >
           {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}

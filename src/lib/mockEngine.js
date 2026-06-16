@@ -13,6 +13,16 @@ function interpolate(str, env) {
   });
 }
 
+/** Add http:// when the user types localhost:3000/path without a scheme. */
+function normalizeSendUrl(url) {
+  const trimmed = String(url ?? "").trim();
+  if (!trimmed || /^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(trimmed)) {
+    return `http://${trimmed}`;
+  }
+  return trimmed;
+}
+
 const SUCCESS_BODIES = {
   GET: ({ pathParts }) => {
     if (pathParts.includes("users")) {
@@ -82,7 +92,7 @@ const ERROR_BODIES = {
 };
 
 export async function runMockRequest({ method, url, headers = [], body, env, mode = "mock" }) {
-  const fullUrl = interpolate(url, env);
+  const fullUrl = normalizeSendUrl(interpolate(url, env));
   const t0 = performance.now();
 
   if (mode === "real") {
@@ -117,7 +127,7 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
         body: {
           success: false,
           error: "Invalid URL",
-          message: "URL must start with http:// or https://",
+          message: "URL must start with http:// or https:// (e.g. http://localhost:8000/path)",
         },
         rawText: "",
         url: fullUrl,

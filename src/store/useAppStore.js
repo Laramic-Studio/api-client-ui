@@ -129,6 +129,59 @@ export const useAppStore = create(
       },
       setBuilderPanels: (next) => set({ builderPanels: { ...get().builderPanels, ...next } }),
 
+      // ===== Builder session (survives module navigation) =====
+      builderSession: {
+        drafts: {},
+        responses: {},
+        testResults: {},
+        activeExamples: {},
+      },
+      setBuilderDraft: (tabId, draft) => set((s) => ({
+        builderSession: {
+          ...s.builderSession,
+          drafts: { ...s.builderSession.drafts, [tabId]: draft },
+        },
+      })),
+      clearBuilderDraft: (tabId) => set((s) => {
+        const { [tabId]: _d, ...drafts } = s.builderSession.drafts;
+        return { builderSession: { ...s.builderSession, drafts } };
+      }),
+      setBuilderResponse: (tabId, response) => set((s) => ({
+        builderSession: {
+          ...s.builderSession,
+          responses: { ...s.builderSession.responses, [tabId]: response },
+        },
+      })),
+      clearBuilderResponse: (tabId) => set((s) => {
+        const { [tabId]: _r, ...responses } = s.builderSession.responses;
+        return { builderSession: { ...s.builderSession, responses } };
+      }),
+      setBuilderTestResults: (tabId, results) => set((s) => ({
+        builderSession: {
+          ...s.builderSession,
+          testResults: { ...s.builderSession.testResults, [tabId]: results },
+        },
+      })),
+      setBuilderActiveExample: (tabId, exampleId) => set((s) => ({
+        builderSession: {
+          ...s.builderSession,
+          activeExamples: { ...s.builderSession.activeExamples, [tabId]: exampleId },
+        },
+      })),
+      clearBuilderActiveExample: (tabId) => set((s) => {
+        const { [tabId]: _e, ...activeExamples } = s.builderSession.activeExamples;
+        return { builderSession: { ...s.builderSession, activeExamples } };
+      }),
+      clearBuilderTabSession: (tabId) => set((s) => {
+        const { [tabId]: _d, ...drafts } = s.builderSession.drafts;
+        const { [tabId]: _r, ...responses } = s.builderSession.responses;
+        const { [tabId]: _t, ...testResults } = s.builderSession.testResults;
+        const { [tabId]: _e, ...activeExamples } = s.builderSession.activeExamples;
+        return {
+          builderSession: { drafts, responses, testResults, activeExamples },
+        };
+      }),
+
       // ===== Builder tabs =====
       openTabs: [],         // [{ id: requestId | "scratch", collectionId, scratch, label }]
       activeTabId: null,
@@ -571,6 +624,7 @@ export const useAppStore = create(
         sidebarCollapsed: s.sidebarCollapsed,
         sidebarWidth: s.sidebarWidth,
         builderPanels: s.builderPanels,
+        builderSession: s.builderSession,
         openTabs: s.openTabs,
         activeTabId: s.activeTabId,
         workspaces: s.workspaces,

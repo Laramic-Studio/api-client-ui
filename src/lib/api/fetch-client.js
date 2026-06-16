@@ -17,7 +17,7 @@ import * as teamsApi from "@/lib/api/teams-api";
 import { useAppStore } from "@/store/useAppStore";
 import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
 import { refreshCollectionsInStore } from "@/hooks/use-collections";
-import { mapConduitToApi, mapApiConduit } from "@/lib/api/map-conduit";
+import { mapApiConduit, mapConduitToApi } from "@/lib/api/map-conduit";
 import * as conduitsApi from "@/lib/api/conduits-api";
 import { client as mockClient } from "@/lib/api/client";
 import { teamToWorkspace } from "@/lib/api/map-user";

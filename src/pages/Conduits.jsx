@@ -20,6 +20,7 @@ import { getErrorMessage } from "@/hooks/use-auth";
 import { Plus, Workflow, ArrowRight, Play, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function Conduits() {
   useCollections();
@@ -38,6 +39,7 @@ export default function Conduits() {
   const [selectedEnvId, setSelectedEnvId] = useState(activeEnv?.id || "");
   const [runningId, setRunningId] = useState(null);
   const [runResults, setRunResults] = useState({});
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const selectedEnv = useMemo(
     () => envs.find((e) => e.id === selectedEnvId) || activeEnv || envs[0],
@@ -71,9 +73,17 @@ export default function Conduits() {
     );
   };
 
-  const handleDelete = (id) => {
-    deleteConduit.mutate(id, {
-      onSuccess: () => toast.success("Conduit deleted"),
+  const handleDelete = (conduit) => {
+    setDeleteTarget(conduit);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteConduit.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        toast.success("Conduit deleted");
+        setDeleteTarget(null);
+      },
       onError: (err) => toast.error(getErrorMessage(err, "Could not delete conduit.")),
     });
   };
@@ -200,7 +210,7 @@ export default function Conduits() {
             </button>
             <button
               type="button"
-              onClick={() => handleDelete(c.id)}
+              onClick={() => handleDelete(c)}
               disabled={deleteConduit.isPending}
               className="h-8 w-8 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]"
             >
@@ -258,6 +268,14 @@ export default function Conduits() {
           </div>
         </div>
       ))}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete conduit"
+        description={deleteTarget ? `Delete "${deleteTarget.name}"?` : ""}
+        onConfirm={confirmDelete}
+        loading={deleteConduit.isPending}
+      />
     </div>
   );
 }

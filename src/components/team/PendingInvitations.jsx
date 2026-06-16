@@ -1,10 +1,13 @@
 import { Loader2, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { getErrorMessage, useCancelInvitation } from "@/hooks/use-teams";
 
 export default function PendingInvitations({ teamId, invitations, canCancel }) {
   const cancel = useCancelInvitation(teamId);
+  const [cancelTarget, setCancelTarget] = useState(null);
 
   if (!invitations.length) return null;
 
@@ -27,12 +30,7 @@ export default function PendingInvitations({ teamId, invitations, canCancel }) {
               </div>
               {canCancel && (
                 <button
-                  onClick={() => {
-                    cancel.mutate(inv.code, {
-                      onSuccess: () => toast.success("Invitation cancelled"),
-                      onError: (err) => toast.error(getErrorMessage(err, "Could not cancel invitation.")),
-                    });
-                  }}
+                  onClick={() => setCancelTarget(inv)}
                   disabled={isCancelling}
                   className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))] disabled:opacity-50"
                   aria-label={isCancelling ? "Cancelling invitation" : "Cancel invitation"}
@@ -48,6 +46,24 @@ export default function PendingInvitations({ teamId, invitations, canCancel }) {
           );
         })}
       </div>
+      <ConfirmDialog
+        open={Boolean(cancelTarget)}
+        onOpenChange={(open) => { if (!open) setCancelTarget(null); }}
+        title="Cancel invitation"
+        description={cancelTarget ? `Cancel the invitation sent to ${cancelTarget.email}?` : ""}
+        confirmLabel="Cancel invitation"
+        onConfirm={() => {
+          if (!cancelTarget) return;
+          cancel.mutate(cancelTarget.code, {
+            onSuccess: () => {
+              toast.success("Invitation cancelled");
+              setCancelTarget(null);
+            },
+            onError: (err) => toast.error(getErrorMessage(err, "Could not cancel invitation.")),
+          });
+        }}
+        loading={cancel.isPending}
+      />
     </div>
   );
 }

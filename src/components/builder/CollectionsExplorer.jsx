@@ -32,6 +32,7 @@ import {
 import { renameExampleInList, setDefaultExampleInList } from "@/lib/builder/examples";
 import { CollectionRow } from "@/components/builder/CollectionsExplorerRows";
 import AddExampleDialog from "@/components/builder/AddExampleDialog";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function CollectionsExplorer({
   activeRequestId,
@@ -45,6 +46,7 @@ export default function CollectionsExplorer({
   const moveRequestLocal = useAppStore((s) => s.moveRequest);
   const reorderRequestLocal = useAppStore((s) => s.reorderRequest);
   const closeTab = useAppStore((s) => s.closeTab);
+  const clearBuilderTabSession = useAppStore((s) => s.clearBuilderTabSession);
   const renameTab = useAppStore((s) => s.renameTab);
   const { isLoading } = useCollections();
 
@@ -69,6 +71,7 @@ export default function CollectionsExplorer({
   const [dragOver, setDragOver] = useState(null);
   const [pending, setPending] = useState(null);
   const [exampleTarget, setExampleTarget] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const filtered = useMemo(() => {
     if (!filter) return collections;
@@ -104,17 +107,27 @@ export default function CollectionsExplorer({
         updateFolderMut.mutate({ collectionId, folderId, patch: { name } }, opts),
       );
     },
-    deleteFolder: (collectionId, folderId) => {
-      run(`delete-folder:${folderId}`, (opts) =>
-        deleteFolderMut.mutate({ collectionId, folderId }, {
-          ...opts,
-          onSuccess: () => toast.success("Folder deleted"),
-        }),
-      );
+    deleteFolder: (collectionId, folderId, name) => {
+      setDeleteConfirm({
+        title: "Delete folder",
+        description: `Delete folder "${name}"? Requests inside will move to the collection root.`,
+        loadingKey: `delete-folder:${folderId}`,
+        onConfirm: () => {
+          run(`delete-folder:${folderId}`, (opts) =>
+            deleteFolderMut.mutate({ collectionId, folderId }, {
+              ...opts,
+              onSuccess: () => {
+                toast.success("Folder deleted");
+                setDeleteConfirm(null);
+              },
+            }),
+          );
+        },
+      });
     },
     addRequest: (collectionId, payload, onCreated) => {
       run(`request:${collectionId}`, (opts) =>
-        createRequestMut.mutate({ collectionId, payload: { url: "", ...payload } }, {
+        createRequestMut.mutate({ collectionId, payload }, {
           ...opts,
           onSuccess: (data) => {
             onCreated?.(data.request.id, collectionId);
@@ -122,16 +135,25 @@ export default function CollectionsExplorer({
         }),
       );
     },
-    deleteRequest: (collectionId, requestId) => {
-      run(`delete-request:${requestId}`, (opts) =>
-        deleteRequestMut.mutate({ collectionId, requestId }, {
-          ...opts,
-          onSuccess: () => {
-            closeTab(requestId);
-            toast.success("Request deleted");
-          },
-        }),
-      );
+    deleteRequest: (collectionId, requestId, name) => {
+      setDeleteConfirm({
+        title: "Delete request",
+        description: `Permanently delete "${name}"? This cannot be undone.`,
+        loadingKey: `delete-request:${requestId}`,
+        onConfirm: () => {
+          run(`delete-request:${requestId}`, (opts) =>
+            deleteRequestMut.mutate({ collectionId, requestId }, {
+              ...opts,
+              onSuccess: () => {
+                closeTab(requestId);
+                clearBuilderTabSession(requestId);
+                toast.success("Request deleted");
+                setDeleteConfirm(null);
+              },
+            }),
+          );
+        },
+      });
     },
     moveRequest: (collectionId, requestId, opts) => {
       moveRequestLocal(collectionId, requestId, opts);
@@ -168,10 +190,23 @@ export default function CollectionsExplorer({
         { onError: (err) => toast.error(getErrorMessage(err, "Could not rename request.")) },
       );
     },
-    deleteCollection: (id) => {
-      run(`delete-collection:${id}`, (opts) =>
-        deleteCollectionMut.mutate(id, { ...opts, onSuccess: () => toast.success("Collection deleted") }),
-      );
+    deleteCollection: (id, name) => {
+      setDeleteConfirm({
+        title: "Delete collection",
+        description: `Permanently delete "${name}" and all its requests? This cannot be undone.`,
+        loadingKey: `delete-collection:${id}`,
+        onConfirm: () => {
+          run(`delete-collection:${id}`, (opts) =>
+            deleteCollectionMut.mutate(id, {
+              ...opts,
+              onSuccess: () => {
+                toast.success("Collection deleted");
+                setDeleteConfirm(null);
+              },
+            }),
+          );
+        },
+      });
     },
     duplicateCollection: (id) => {
       run(`duplicate-collection:${id}`, (opts) =>
@@ -207,19 +242,27 @@ export default function CollectionsExplorer({
         { onError: (err) => toast.error(getErrorMessage(err, "Could not set default example.")) },
       );
     },
-    deleteExample: (collectionId, requestId, exampleId) => {
-      run(`delete-example:${exampleId}`, (opts) =>
-        deleteExampleMut.mutate(
-          { collectionId, requestId, exampleId },
-          {
-            ...opts,
-            onSuccess: () => {
-              onExampleDeleted?.(requestId, exampleId);
-              toast.success("Example deleted");
-            },
-          },
-        ),
-      );
+    deleteExample: (collectionId, requestId, exampleId, name) => {
+      setDeleteConfirm({
+        title: "Delete example",
+        description: `Delete example "${name}"?`,
+        loadingKey: `delete-example:${exampleId}`,
+        onConfirm: () => {
+          run(`delete-example:${exampleId}`, (opts) =>
+            deleteExampleMut.mutate(
+              { collectionId, requestId, exampleId },
+              {
+                ...opts,
+                onSuccess: () => {
+                  onExampleDeleted?.(requestId, exampleId);
+                  toast.success("Example deleted");
+                  setDeleteConfirm(null);
+                },
+              },
+            ),
+          );
+        },
+      });
     },
   };
 
@@ -317,6 +360,14 @@ export default function CollectionsExplorer({
             },
           );
         }}
+      />
+      <ConfirmDialog
+        open={Boolean(deleteConfirm)}
+        onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}
+        title={deleteConfirm?.title}
+        description={deleteConfirm?.description}
+        onConfirm={deleteConfirm?.onConfirm}
+        loading={pending === deleteConfirm?.loadingKey}
       />
     </div>
   );

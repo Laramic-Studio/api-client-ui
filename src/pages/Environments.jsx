@@ -6,6 +6,7 @@ import { Loader2, Trash2, Copy, Check, Box, Globe, Folder, Plus } from "lucide-r
 import { ENV } from "@/constants/testIds";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
@@ -31,6 +32,7 @@ export default function Environments() {
   const savePatch = useDebouncedEnvironmentUpdate(700);
 
   const [scope, setScope] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const filtered = useMemo(() => {
     if (scope === "all") return envs;
     if (scope === "workspace") return envs.filter((e) => !e.collectionId);
@@ -202,13 +204,7 @@ export default function Environments() {
                 <button
                   onClick={() => {
                     if (envs.length <= 1) return;
-                    deleteEnv.mutate(selected.id, {
-                      onSuccess: () => {
-                        setSelectedId(envs.find((e) => e.id !== selected.id)?.id);
-                        toast.success("Deleted");
-                      },
-                      onError: (err) => toast.error(getErrorMessage(err, "Could not delete environment.")),
-                    });
+                    setDeleteTarget(selected);
                   }}
                   disabled={deleteEnv.isPending || envs.length <= 1}
                   className="h-8 w-8 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))] disabled:opacity-50"
@@ -247,6 +243,24 @@ export default function Environments() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete environment"
+        description={deleteTarget ? `Delete "${deleteTarget.name}"? Variables in this environment will be removed.` : ""}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          deleteEnv.mutate(deleteTarget.id, {
+            onSuccess: () => {
+              setSelectedId(envs.find((e) => e.id !== deleteTarget.id)?.id);
+              toast.success("Deleted");
+              setDeleteTarget(null);
+            },
+            onError: (err) => toast.error(getErrorMessage(err, "Could not delete environment.")),
+          });
+        }}
+        loading={deleteEnv.isPending}
+      />
     </div>
   );
 }

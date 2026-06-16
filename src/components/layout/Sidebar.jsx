@@ -40,7 +40,7 @@ const NAV_ITEMS = [
 
 const SECONDARY = [
   { to: "/team", icon: Users, label: "Team", key: "team", enabled: true },
-  { to: "/conduits", icon: Workflow, label: "Conduits", key: "conduits" },
+  { to: "/conduits", icon: Workflow, label: "Conduits", key: "conduits", enabled: true },
   { to: "/generators", icon: Sparkles, label: "Generators", key: "generators" },
   { to: "/import", icon: Upload, label: "Import API", key: "import" },
   { to: "/settings", icon: SettingsIcon, label: "Settings", key: "settings", enabled: true },

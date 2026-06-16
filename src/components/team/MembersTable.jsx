@@ -1,5 +1,7 @@
 import { Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { getErrorMessage, useRemoveMember, useUpdateMemberRole } from "@/hooks/use-teams";
@@ -20,6 +22,7 @@ export default function MembersTable({
 }) {
   const updateRole = useUpdateMemberRole(teamId);
   const removeMember = useRemoveMember(teamId);
+  const [removeTarget, setRemoveTarget] = useState(null);
 
   return (
     <div className="rounded-md border border-border bg-card overflow-hidden">
@@ -90,12 +93,7 @@ export default function MembersTable({
               </div>
               {canRemoveMember && !isOwner ? (
                 <button
-                  onClick={() => {
-                    removeMember.mutate(m.id, {
-                      onSuccess: () => toast.success(`Removed ${m.name}`),
-                      onError: (err) => toast.error(getErrorMessage(err, "Could not remove member.")),
-                    });
-                  }}
+                  onClick={() => setRemoveTarget(m)}
                   disabled={isRemoving || isUpdatingRole}
                   className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))] disabled:opacity-50"
                   aria-label={isRemoving ? "Removing member" : "Remove member"}
@@ -109,6 +107,24 @@ export default function MembersTable({
           );
         })}
       </div>
+      <ConfirmDialog
+        open={Boolean(removeTarget)}
+        onOpenChange={(open) => { if (!open) setRemoveTarget(null); }}
+        title="Remove team member"
+        description={removeTarget ? `Remove ${removeTarget.name} from this workspace?` : ""}
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (!removeTarget) return;
+          removeMember.mutate(removeTarget.id, {
+            onSuccess: () => {
+              toast.success(`Removed ${removeTarget.name}`);
+              setRemoveTarget(null);
+            },
+            onError: (err) => toast.error(getErrorMessage(err, "Could not remove member.")),
+          });
+        }}
+        loading={removeMember.isPending}
+      />
     </div>
   );
 }

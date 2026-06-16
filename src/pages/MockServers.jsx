@@ -14,6 +14,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import Editor from "@monaco-editor/react";
 import { METHODS_LIST } from "@/lib/mockData";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function MockServers() {
   const mockServers = useAppStore((s) => s.mockServers);
@@ -21,6 +22,7 @@ export default function MockServers() {
   const update = useAppStore((s) => s.updateMockEndpoint);
   const del = useAppStore((s) => s.deleteMockEndpoint);
   const [editing, setEditing] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const openNew = () => setEditing({
     name: "",
@@ -87,7 +89,7 @@ export default function MockServers() {
               <button onClick={() => setEditing(m)} className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-foreground/85">
                 <Edit className="h-3.5 w-3.5" />
               </button>
-              <button onClick={() => { del(m.id); toast.success("Endpoint deleted"); }} className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]">
+              <button onClick={() => setDeleteTarget(m)} className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -152,6 +154,19 @@ export default function MockServers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete mock endpoint"
+        description={deleteTarget ? `Delete ${deleteTarget.method} ${deleteTarget.path || deleteTarget.url || "endpoint"}?` : ""}
+        onConfirm={() => {
+          if (deleteTarget) {
+            del(deleteTarget.id);
+            toast.success("Endpoint deleted");
+          }
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }

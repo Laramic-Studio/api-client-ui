@@ -1,5 +1,4 @@
-import { mapApiConduit, mapConduitToApi } from "@/lib/api/map-conduit";
-import * as conduitsApi from "@/lib/api/conduits-api";
+import { getClient } from "@/lib/api/client";
 import { conduitKeys } from "@/lib/api/query-keys";
 import { useAppStore } from "@/store/useAppStore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,10 +19,7 @@ export function useConduits() {
 
   return useQuery({
     queryKey: conduitKeys.list(teamId),
-    queryFn: async () => {
-      const data = await conduitsApi.listConduits(teamId);
-      return (data.conduits || []).map(mapApiConduit);
-    },
+    queryFn: () => getClient().listConduits(),
     enabled: Boolean(teamId),
     staleTime: 30 * 1000,
   });
@@ -34,7 +30,7 @@ export function useCreateConduit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload) => conduitsApi.createConduit(teamId, mapConduitToApi(payload)),
+    mutationFn: (payload) => getClient().createConduit(payload),
     onSuccess: () => invalidateConduits(queryClient, teamId),
   });
 }
@@ -44,8 +40,7 @@ export function useUpdateConduit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, patch }) =>
-      conduitsApi.updateConduit(teamId, id, mapConduitToApi(patch)),
+    mutationFn: ({ id, patch }) => getClient().updateConduit(id, patch),
     onSuccess: () => invalidateConduits(queryClient, teamId),
   });
 }
@@ -63,7 +58,7 @@ export function useDeleteConduit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id) => conduitsApi.deleteConduit(teamId, id),
+    mutationFn: (id) => getClient().deleteConduit(id),
     onSuccess: () => invalidateConduits(queryClient, teamId),
   });
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import MethodBadge from "@/components/shared/MethodBadge";
 import StatusBadge from "@/components/shared/StatusBadge";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { Search, Star, Trash2, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,8 @@ export default function History() {
   const [m, setM] = useState("ALL");
   const [s, setS] = useState("ALL");
   const [favOnly, setFavOnly] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const filtered = history.filter((h) => {
     if (favOnly && !h.favorite) return false;
@@ -77,7 +80,7 @@ export default function History() {
         <button onClick={() => setFavOnly((v) => !v)} className={cn("h-7 px-2 rounded text-[11px] border inline-flex items-center gap-1", favOnly ? "border-[hsl(var(--warning))] text-[hsl(var(--warning))]" : "border-border text-muted-foreground hover:bg-accent/50")}>
           <Star className="h-3 w-3" /> Favorites
         </button>
-        <button onClick={clear} className="h-7 px-2 rounded text-[11px] border border-border text-muted-foreground hover:bg-accent/50">
+        <button onClick={() => setConfirmClear(true)} className="h-7 px-2 rounded text-[11px] border border-border text-muted-foreground hover:bg-accent/50">
           Clear
         </button>
       </div>
@@ -110,7 +113,7 @@ export default function History() {
                   <Play className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={() => del(h.id)}
+                  onClick={() => setDeleteTarget(h)}
                   className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -120,6 +123,27 @@ export default function History() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete history entry"
+        description={deleteTarget ? `Remove "${deleteTarget.requestName || deleteTarget.url}" from history?` : ""}
+        onConfirm={() => {
+          if (deleteTarget) del(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+      />
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        title="Clear history"
+        description="Remove all history entries? This cannot be undone."
+        confirmLabel="Clear all"
+        onConfirm={() => {
+          clear();
+          setConfirmClear(false);
+        }}
+      />
     </div>
   );
 }

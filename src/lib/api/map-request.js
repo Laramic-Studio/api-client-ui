@@ -1,6 +1,7 @@
 import { mapApiExample } from "@/lib/builder/examples";
 
 function mapBodyFromApi(request) {
+  const bodyType = request.bodyType || request.body_type || "none";
 
   if (bodyType === "form") {
     return {
@@ -46,13 +47,15 @@ export function mapRequestToApi(patch) {
 
   if (patch.name !== undefined) payload.name = patch.name;
   if (patch.method !== undefined) payload.method = patch.method;
-  if (patch.url !== undefined) payload.url = patch.url;
+  if (patch.url !== undefined) payload.url = asOptionalString(patch.url);
   if (patch.params !== undefined) payload.params = patch.params;
   if (patch.headers !== undefined) payload.headers = patch.headers;
   if (patch.auth !== undefined) payload.auth = patch.auth;
   if (patch.tests !== undefined) payload.tests = asOptionalString(patch.tests);
   if (patch.preScript !== undefined) payload.pre_script = asOptionalString(patch.preScript);
+  if (patch.pre_script !== undefined) payload.pre_script = asOptionalString(patch.pre_script);
   if (patch.docs !== undefined) payload.description = asOptionalString(patch.docs);
+  if (patch.description !== undefined) payload.description = asOptionalString(patch.description);
   if (patch.starred !== undefined) payload.starred = patch.starred;
   if (patch.folderId !== undefined) payload.folder_id = patch.folderId;
   if (patch.order !== undefined) payload.sort_order = patch.order;

@@ -22,6 +22,7 @@ import {
 import {
   ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator,
 } from "@/components/ui/context-menu";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function Collections() {
   const collections = useAppStore(selectWorkspaceCollections);
@@ -38,6 +39,7 @@ export default function Collections() {
   const [showArchived, setShowArchived] = useState(false);
   const [open, setOpen] = useState({});
   const [pendingAction, setPendingAction] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const filtered = collections
     .filter((c) => (showArchived ? c.archived : !c.archived))
@@ -84,10 +86,19 @@ export default function Collections() {
     });
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (id, name) => {
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    const { id } = deleteTarget;
     setPendingAction(`${id}:delete`);
     deleteCollection.mutate(id, {
-      onSuccess: () => toast.success("Collection deleted"),
+      onSuccess: () => {
+        toast.success("Collection deleted");
+        setDeleteTarget(null);
+      },
       onError: (err) => toast.error(getErrorMessage(err, "Could not delete collection.")),
       onSettled: () => setPendingAction(null),
     });
@@ -261,7 +272,7 @@ export default function Collections() {
                 <ContextMenuSeparator className="bg-accent" />
                 <ContextMenuItem
                   disabled={isDeleting}
-                  onClick={() => handleDelete(c.id)}
+                  onClick={() => handleDelete(c.id, c.name)}
                   className="text-red-400"
                 >
                   {isDeleting ? (
@@ -283,6 +294,14 @@ export default function Collections() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete collection"
+        description={deleteTarget ? `Permanently delete "${deleteTarget.name}" and all its requests?` : ""}
+        onConfirm={confirmDelete}
+        loading={pendingAction === `${deleteTarget?.id}:delete`}
+      />
     </div>
   );
 }
