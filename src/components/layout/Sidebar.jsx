@@ -29,7 +29,7 @@ import { useState, useMemo } from "react";
 const NAV_ITEMS = [
   { to: "/dashboard", icon: LayoutGrid, label: "Dashboard", key: "dashboard" },
   { to: "/collections", icon: FolderTree, label: "Collections", key: "collections", enabled: true },
-  { to: "/builder", icon: Send, label: "APIs", key: "apis" },
+  { to: "/builder", icon: Send, label: "APIs", key: "apis", enabled: true },
   { to: "/environments", icon: Boxes, label: "Environments", key: "environments", enabled: true },
   { to: "/mock-servers", icon: ServerCog, label: "Mock Servers", key: "mock-servers" },
   { to: "/documentation", icon: BookOpenText, label: "Documentation", key: "documentation" },

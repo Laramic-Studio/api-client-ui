@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Save, Send, Play, Code2, Copy, Sparkles,
+  Save, Send, Play, Code2, Copy, Sparkles, Loader2,
 } from "lucide-react";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -36,7 +36,7 @@ const BODY_TYPES = [
 ];
 
 export default function RequestPanel({
-  req, onChange, onSend, onSave, sending, mode, onToggleMode,
+  req, onChange, onSend, onSave, sending, saving, mode, onToggleMode,
   testResults, finalUrl,
   onAddExample, onDeleteExample,
   onAskAI,
@@ -79,10 +79,12 @@ export default function RequestPanel({
           </button>
           <button
             onClick={onSave}
+            disabled={saving}
             data-testid={BUILDER.saveButton}
-            className="h-7 px-2.5 rounded-md text-[12px] font-medium border border-[hsl(var(--border))] hover:bg-accent/50 inline-flex items-center gap-1.5"
+            className="h-7 px-2.5 rounded-md text-[12px] font-medium border border-[hsl(var(--border))] hover:bg-accent/50 inline-flex items-center gap-1.5 disabled:opacity-50"
           >
-            <Save className="h-3.5 w-3.5" /> Save
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>

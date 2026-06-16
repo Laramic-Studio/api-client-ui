@@ -11,7 +11,9 @@ import {
 import * as environmentsApi from "@/lib/api/environments-api";
 import * as collectionsApi from "@/lib/api/collections-api";
 import { mapEnvironmentToApi } from "@/lib/api/map-environment";
-import { mapCollectionToApi } from "@/lib/api/map-collection";
+import { mapCollectionToApi, mapCreateFolderPayload } from "@/lib/api/map-collection";
+import { mapApiRequest, mapExampleToApi, mapRequestToApi } from "@/lib/api/map-request";
+import * as requestsApi from "@/lib/api/requests-api";
 import * as teamsApi from "@/lib/api/teams-api";
 import { useAppStore } from "@/store/useAppStore";
 import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
@@ -160,10 +162,7 @@ export const fetchClient = {
 
   async addFolder(collectionId, payload) {
     const teamId = useAppStore.getState().activeWorkspaceId;
-    const data = await collectionsApi.createFolder(teamId, collectionId, {
-      name: payload?.name || "New folder",
-      parent_folder_id: payload?.parentId || null,
-    });
+    const data = await collectionsApi.createFolder(teamId, collectionId, mapCreateFolderPayload(payload));
     await refreshCollectionsInStore(teamId);
     return data.folder;
   },
@@ -183,11 +182,72 @@ export const fetchClient = {
 
   async addRequest(collectionId, payload) {
     const teamId = useAppStore.getState().activeWorkspaceId;
-    const data = await collectionsApi.createCollectionRequest(teamId, collectionId, {
-      name: payload?.name,
-      folder_id: payload?.folderId || null,
-    });
+    const body = {
+      ...mapRequestToApi(payload || {}),
+      name: payload?.name || "Untitled request",
+    };
+    if (payload?.folderId != null) {
+      body.folder_id = payload.folderId;
+    }
+    const data = await collectionsApi.createCollectionRequest(teamId, collectionId, body);
     await refreshCollectionsInStore(teamId);
-    return data.request;
+    return mapApiRequest(data.request);
+  },
+
+  async updateRequest(collectionId, requestId, patch) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    await requestsApi.updateRequest(teamId, collectionId, requestId, mapRequestToApi(patch));
+    await refreshCollectionsInStore(teamId);
+  },
+
+  async deleteRequest(collectionId, requestId) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    await requestsApi.deleteRequest(teamId, collectionId, requestId);
+    await refreshCollectionsInStore(teamId);
+  },
+
+  async moveRequest(collectionId, requestId, { folderId = null }) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    await requestsApi.updateRequest(teamId, collectionId, requestId, { folder_id: folderId });
+    await refreshCollectionsInStore(teamId);
+  },
+
+  async reorderRequest(collectionId, fromId, toId) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    const collection = useAppStore.getState().getCollections().find((c) => c.id === collectionId);
+    if (!collection) return;
+
+    const arr = [...collection.requests];
+    const fromIndex = arr.findIndex((r) => r.id === fromId);
+    const toIndex = arr.findIndex((r) => r.id === toId);
+    if (fromIndex < 0 || toIndex < 0) return;
+
+    const [moved] = arr.splice(fromIndex, 1);
+    moved.folderId = arr[toIndex]?.folderId ?? null;
+    arr.splice(toIndex, 0, moved);
+
+    await requestsApi.reorderRequests(teamId, collectionId, arr.map((r) => r.id));
+    if (moved.folderId !== collection.requests.find((r) => r.id === fromId)?.folderId) {
+      await requestsApi.updateRequest(teamId, collectionId, fromId, { folder_id: moved.folderId });
+    }
+    await refreshCollectionsInStore(teamId);
+  },
+
+  async addExample(collectionId, requestId, example) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    const data = await requestsApi.addRequestExample(
+      teamId,
+      collectionId,
+      requestId,
+      mapExampleToApi(example),
+    );
+    await refreshCollectionsInStore(teamId);
+    return data.example;
+  },
+
+  async deleteExample(collectionId, requestId, exampleId) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    await requestsApi.deleteRequestExample(teamId, collectionId, requestId, exampleId);
+    await refreshCollectionsInStore(teamId);
   },
 };

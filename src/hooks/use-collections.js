@@ -1,6 +1,7 @@
 import {
   mapApiCollection,
   mapCollectionToApi,
+  mapCreateFolderPayload,
   mapFolderToApi,
 } from "@/lib/api/map-collection";
 import * as collectionsApi from "@/lib/api/collections-api";
@@ -120,7 +121,7 @@ export function useCreateFolder() {
 
   return useMutation({
     mutationFn: ({ collectionId, payload }) =>
-      collectionsApi.createFolder(teamId, collectionId, payload),
+      collectionsApi.createFolder(teamId, collectionId, mapCreateFolderPayload(payload)),
     onSuccess: () => invalidateCollections(queryClient, teamId),
   });
 }

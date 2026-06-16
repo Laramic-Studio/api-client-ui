@@ -2,7 +2,7 @@ import EnvironmentVariablesTable from "@/components/environments/EnvironmentVari
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections, selectWorkspaceEnvironments } from "@/lib/store/selectors";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Trash2, Copy, Check, Box, Globe, Folder } from "lucide-react";
+import { Loader2, Trash2, Copy, Check, Box, Globe, Folder, Plus } from "lucide-react";
 import { ENV } from "@/constants/testIds";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";

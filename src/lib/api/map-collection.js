@@ -1,24 +1,4 @@
-function mapApiRequest(request) {
-  const bodyType = request.bodyType || request.body_type || "none";
-
-  return {
-    id: request.id,
-    name: request.name,
-    method: request.method,
-    url: request.url || "[[BASE_URL]]/",
-    params: request.params || [],
-    headers: request.headers || [],
-    auth: request.auth?.type ? request.auth : { type: "none" },
-    body: { type: bodyType, content: request.body ?? "" },
-    tests: "",
-    preScript: "",
-    starred: false,
-    docs: request.description || "",
-    examples: request.examples || [],
-    folderId: request.folderId ?? request.folder_id ?? null,
-    order: request.order ?? request.sortOrder ?? request.sort_order ?? 0,
-  };
-}
+import { mapApiRequest } from "@/lib/api/map-request";
 
 export function mapApiCollection(collection, workspaceId) {
   return {
@@ -55,6 +35,14 @@ export function mapFolderToApi(patch) {
 
   if (patch.name !== undefined) payload.name = patch.name;
   if (patch.parentId !== undefined) payload.parent_folder_id = patch.parentId;
+  if (patch.parent_folder_id !== undefined) payload.parent_folder_id = patch.parent_folder_id;
 
   return payload;
+}
+
+export function mapCreateFolderPayload(payload = {}) {
+  return {
+    name: payload.name || "New folder",
+    parent_folder_id: payload.parentId ?? payload.parent_folder_id ?? null,
+  };
 }
