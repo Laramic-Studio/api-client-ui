@@ -85,7 +85,47 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
   const fullUrl = interpolate(url, env);
   const t0 = performance.now();
 
-  if (mode === "real" && /^https?:\/\//i.test(fullUrl)) {
+  if (mode === "real") {
+    if (!fullUrl?.trim()) {
+      const ms = Math.round(performance.now() - t0);
+      return {
+        ok: false,
+        status: 0,
+        statusText: "Invalid URL",
+        durationMs: ms,
+        sizeBytes: 0,
+        headers: {},
+        cookies: [],
+        body: { success: false, error: "Invalid URL", message: "Request URL is empty." },
+        rawText: "",
+        url: fullUrl,
+        method,
+        mode: "real",
+      };
+    }
+
+    if (!/^https?:\/\//i.test(fullUrl)) {
+      const ms = Math.round(performance.now() - t0);
+      return {
+        ok: false,
+        status: 0,
+        statusText: "Invalid URL",
+        durationMs: ms,
+        sizeBytes: 0,
+        headers: {},
+        cookies: [],
+        body: {
+          success: false,
+          error: "Invalid URL",
+          message: "URL must start with http:// or https://",
+        },
+        rawText: "",
+        url: fullUrl,
+        method,
+        mode: "real",
+      };
+    }
+
     try {
       const hdrs = {};
       headers.filter((h) => h.enabled !== false && h.key).forEach((h) => (hdrs[h.key] = interpolate(h.value, env)));
@@ -124,6 +164,24 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
         rawText: "", url: fullUrl, method, mode: "real",
       };
     }
+  }
+
+  if (mode === "real") {
+    const ms = Math.round(performance.now() - t0);
+    return {
+      ok: false,
+      status: 0,
+      statusText: "Request Failed",
+      durationMs: ms,
+      sizeBytes: 0,
+      headers: {},
+      cookies: [],
+      body: { success: false, error: "Request Failed", message: "Could not complete request." },
+      rawText: "",
+      url: fullUrl,
+      method,
+      mode: "real",
+    };
   }
 
   const delay = 60 + Math.floor(Math.random() * 380);

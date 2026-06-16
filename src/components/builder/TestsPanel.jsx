@@ -3,7 +3,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 
 export default function TestsPanel({ tests, onChange, results }) {
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       <div className="flex-1 min-h-0">
         <Editor
           height="100%"
@@ -16,13 +16,14 @@ export default function TestsPanel({ tests, onChange, results }) {
             minimap: { enabled: false },
             fontSize: 13,
             fontFamily: "JetBrains Mono, monospace",
-            padding: { top: 12 },
+            padding: { top: 8 },
             scrollBeyondLastLine: false,
+            lineNumbers: "on",
           }}
         />
       </div>
       {results.length > 0 && (
-        <div className="border-t border-[hsl(var(--border))] max-h-44 overflow-auto">
+        <div className="shrink-0 border-t border-[hsl(var(--border))] max-h-44 overflow-auto">
           <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground font-mono flex items-center gap-2">
             Test results
             <span className="text-[hsl(var(--success))]">{results.filter((r) => r.passed).length} passed</span>

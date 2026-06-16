@@ -26,14 +26,26 @@ import {
   useMoveRequest,
   useReorderRequests,
   useUpdateRequest,
+  useAddRequestExample,
+  useDeleteRequestExample,
 } from "@/hooks/use-requests";
+import { renameExampleInList, setDefaultExampleInList } from "@/lib/builder/examples";
 import { CollectionRow } from "@/components/builder/CollectionsExplorerRows";
+import AddExampleDialog from "@/components/builder/AddExampleDialog";
 
-export default function CollectionsExplorer({ activeRequestId, onOpenRequest }) {
+export default function CollectionsExplorer({
+  activeRequestId,
+  activeExampleId,
+  onOpenRequest,
+  onOpenExample,
+  onRequestRenamed,
+  onExampleDeleted,
+}) {
   const collections = useAppStore(selectWorkspaceCollections);
   const moveRequestLocal = useAppStore((s) => s.moveRequest);
   const reorderRequestLocal = useAppStore((s) => s.reorderRequest);
   const closeTab = useAppStore((s) => s.closeTab);
+  const renameTab = useAppStore((s) => s.renameTab);
   const { isLoading } = useCollections();
 
   const createCollectionMut = useCreateCollection();
@@ -47,12 +59,16 @@ export default function CollectionsExplorer({ activeRequestId, onOpenRequest }) 
   const deleteRequestMut = useDeleteRequest();
   const moveRequestMut = useMoveRequest();
   const reorderRequestsMut = useReorderRequests();
+  const addExampleMut = useAddRequestExample();
+  const deleteExampleMut = useDeleteRequestExample();
 
   const [filter, setFilter] = useState("");
   const [openCols, setOpenCols] = useState(() => Object.fromEntries(collections.map((c) => [c.id, true])));
   const [openFolders, setOpenFolders] = useState({});
+  const [openRequests, setOpenRequests] = useState({});
   const [dragOver, setDragOver] = useState(null);
   const [pending, setPending] = useState(null);
+  const [exampleTarget, setExampleTarget] = useState(null);
 
   const filtered = useMemo(() => {
     if (!filter) return collections;
@@ -60,7 +76,13 @@ export default function CollectionsExplorer({ activeRequestId, onOpenRequest }) 
     return collections
       .map((c) => ({
         ...c,
-        requests: c.requests.filter((r) => r.name.toLowerCase().includes(q) || r.url.toLowerCase().includes(q)),
+        requests: c.requests.filter((r) => {
+          const matchesRequest = r.name.toLowerCase().includes(q) || r.url.toLowerCase().includes(q);
+          const matchesExample = (r.examples || []).some((example) =>
+            example.name?.toLowerCase().includes(q),
+          );
+          return matchesRequest || matchesExample;
+        }),
       }))
       .filter((c) => c.requests.length > 0 || c.name.toLowerCase().includes(q));
   }, [collections, filter]);
@@ -92,7 +114,7 @@ export default function CollectionsExplorer({ activeRequestId, onOpenRequest }) 
     },
     addRequest: (collectionId, payload, onCreated) => {
       run(`request:${collectionId}`, (opts) =>
-        createRequestMut.mutate({ collectionId, payload }, {
+        createRequestMut.mutate({ collectionId, payload: { url: "", ...payload } }, {
           ...opts,
           onSuccess: (data) => {
             onCreated?.(data.request.id, collectionId);
@@ -136,6 +158,16 @@ export default function CollectionsExplorer({ activeRequestId, onOpenRequest }) 
       applyOptimisticRequestPatch(collectionId, requestId, patch);
       patchRequestMut.mutate({ collectionId, requestId, patch });
     },
+    renameRequest: (collectionId, requestId, name) => {
+      const trimmed = (name || "").trim() || "Untitled request";
+      applyOptimisticRequestPatch(collectionId, requestId, { name: trimmed });
+      renameTab(requestId, trimmed);
+      onRequestRenamed?.(requestId, trimmed);
+      patchRequestMut.mutate(
+        { collectionId, requestId, patch: { name: trimmed } },
+        { onError: (err) => toast.error(getErrorMessage(err, "Could not rename request.")) },
+      );
+    },
     deleteCollection: (id) => {
       run(`delete-collection:${id}`, (opts) =>
         deleteCollectionMut.mutate(id, { ...opts, onSuccess: () => toast.success("Collection deleted") }),
@@ -147,6 +179,46 @@ export default function CollectionsExplorer({ activeRequestId, onOpenRequest }) 
           ...opts,
           onSuccess: (data) => toast.success(`Duplicated as ${data.collection.name}`),
         }),
+      );
+    },
+    addExample: (collectionId, request) => {
+      setOpenRequests((open) => ({ ...open, [request.id]: true }));
+      setExampleTarget({ collectionId, request });
+    },
+    renameExample: (collectionId, requestId, exampleId, name) => {
+      const collection = collections.find((c) => c.id === collectionId);
+      const request = collection?.requests.find((r) => r.id === requestId);
+      if (!request) return;
+      const examples = renameExampleInList(request.examples, exampleId, name);
+      applyOptimisticRequestPatch(collectionId, requestId, { examples });
+      patchRequestMut.mutate(
+        { collectionId, requestId, patch: { examples } },
+        { onError: (err) => toast.error(getErrorMessage(err, "Could not rename example.")) },
+      );
+    },
+    setDefaultExample: (collectionId, requestId, exampleId) => {
+      const collection = collections.find((c) => c.id === collectionId);
+      const request = collection?.requests.find((r) => r.id === requestId);
+      if (!request) return;
+      const examples = setDefaultExampleInList(request.examples, exampleId);
+      applyOptimisticRequestPatch(collectionId, requestId, { examples });
+      patchRequestMut.mutate(
+        { collectionId, requestId, patch: { examples } },
+        { onError: (err) => toast.error(getErrorMessage(err, "Could not set default example.")) },
+      );
+    },
+    deleteExample: (collectionId, requestId, exampleId) => {
+      run(`delete-example:${exampleId}`, (opts) =>
+        deleteExampleMut.mutate(
+          { collectionId, requestId, exampleId },
+          {
+            ...opts,
+            onSuccess: () => {
+              onExampleDeleted?.(requestId, exampleId);
+              toast.success("Example deleted");
+            },
+          },
+        ),
       );
     },
   };
@@ -208,9 +280,13 @@ export default function CollectionsExplorer({ activeRequestId, onOpenRequest }) 
             isOpen={openCols[c.id] ?? true}
             onToggle={() => setOpenCols((o) => ({ ...o, [c.id]: !(o[c.id] ?? true) }))}
             activeRequestId={activeRequestId}
+            activeExampleId={activeExampleId}
             onOpenRequest={onOpenRequest}
+            onOpenExample={onOpenExample}
             openFolders={openFolders}
             setOpenFolders={setOpenFolders}
+            openRequests={openRequests}
+            setOpenRequests={setOpenRequests}
             actions={actions}
             dragOver={dragOver}
             setDragOver={setDragOver}
@@ -218,6 +294,30 @@ export default function CollectionsExplorer({ activeRequestId, onOpenRequest }) 
           />
         ))}
       </div>
+      <AddExampleDialog
+        open={Boolean(exampleTarget)}
+        onOpenChange={(open) => { if (!open) setExampleTarget(null); }}
+        request={exampleTarget?.request}
+        saving={addExampleMut.isPending}
+        onSubmit={(example) => {
+          if (!exampleTarget) return;
+          addExampleMut.mutate(
+            {
+              collectionId: exampleTarget.collectionId,
+              requestId: exampleTarget.request.id,
+              example,
+            },
+            {
+              onSuccess: () => {
+                toast.success(`Added "${example.name}"`);
+                setOpenRequests((open) => ({ ...open, [exampleTarget.request.id]: true }));
+                setExampleTarget(null);
+              },
+              onError: (err) => toast.error(getErrorMessage(err, "Could not add example.")),
+            },
+          );
+        }}
+      />
     </div>
   );
 }

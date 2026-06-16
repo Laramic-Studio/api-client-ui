@@ -31,7 +31,8 @@ export default function History() {
       if (s === "4xx" && !(h.status >= 400 && h.status < 500)) return false;
       if (s === "5xx" && !(h.status >= 500)) return false;
     }
-    if (q && !(`${h.method} ${h.url}`.toLowerCase().includes(q.toLowerCase()))) return false;
+    const haystack = `${h.method} ${h.url} ${h.requestName || ""}`.toLowerCase();
+    if (q && !haystack.includes(q.toLowerCase())) return false;
     return true;
   });
 
@@ -90,7 +91,10 @@ export default function History() {
               <div key={h.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-accent/50">
                 <MethodBadge method={h.method} className="w-14" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12.5px] font-mono truncate">{h.url}</div>
+                  <div className="text-[12.5px] font-mono truncate">{h.requestName || h.url}</div>
+                  {h.requestName && (
+                    <div className="text-[11px] text-muted-foreground font-mono truncate">{h.url}</div>
+                  )}
                   <div className="text-[10px] text-muted-foreground mt-0.5 font-mono uppercase tracking-wider">
                     {h.collectionName} • {new Date(h.timestamp).toLocaleString()} • {h.durationMs}ms • {(h.sizeBytes / 1024).toFixed(1)} KB
                   </div>
@@ -102,7 +106,7 @@ export default function History() {
                 >
                   <Star className={cn("h-3.5 w-3.5", h.favorite && "fill-[hsl(var(--warning))]")} />
                 </button>
-                <button className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground" title="Re-run">
+                <button className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground" title="Re-run (Module 7)">
                   <Play className="h-3.5 w-3.5" />
                 </button>
                 <button

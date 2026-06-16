@@ -3,9 +3,10 @@ import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceEnvironments } from "@/lib/store/selectors";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Box, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useActivateEnvironment, useSetEnvironmentPreference } from "@/hooks/use-environments";
 
-export default function EnvPicker({ collectionId }) {
+export default function EnvPicker({ collectionId, compact = false }) {
   const envs = useAppStore(selectWorkspaceEnvironments);
   const setEnv = useAppStore((s) => s.setActiveEnvForCollection);
   const setActive = useAppStore((s) => s.setActiveEnvironment);
@@ -31,7 +32,10 @@ export default function EnvPicker({ collectionId }) {
   return (
     <Select value={current || ""} onValueChange={onChange} disabled={isPending}>
       <SelectTrigger
-        className="h-9 w-40 bg-[hsl(var(--input))] border-[hsl(var(--border))] text-[12px]"
+        className={cn(
+          "bg-[hsl(var(--input))] border-[hsl(var(--border))] text-[12px]",
+          compact ? "h-7 w-32" : "h-9 w-40",
+        )}
         data-testid="builder-env-picker"
         title="Active environment for this request"
       >

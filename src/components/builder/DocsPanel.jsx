@@ -2,12 +2,12 @@ import Editor from "@monaco-editor/react";
 
 export default function DocsPanel({ value, onChange }) {
   return (
-    <div className="h-full grid grid-cols-1 md:grid-cols-2 min-h-0">
-      <div className="min-h-0 border-r border-[hsl(var(--border))]">
-        <div className="h-8 flex items-center px-3 border-b border-[hsl(var(--border))] text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+    <div className="h-full min-h-0 grid grid-cols-1 md:grid-cols-2">
+      <div className="min-h-0 flex flex-col border-r border-[hsl(var(--border))]">
+        <div className="h-8 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))] text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
           Markdown
         </div>
-        <div className="h-[calc(100%-2rem)]">
+        <div className="flex-1 min-h-0">
           <Editor
             height="100%"
             defaultLanguage="markdown"
@@ -20,17 +20,18 @@ export default function DocsPanel({ value, onChange }) {
               fontSize: 13,
               fontFamily: "JetBrains Mono, monospace",
               wordWrap: "on",
-              padding: { top: 10 },
+              padding: { top: 8 },
               scrollBeyondLastLine: false,
+              lineNumbers: "on",
             }}
           />
         </div>
       </div>
-      <div className="min-h-0 overflow-auto">
-        <div className="h-8 flex items-center px-3 border-b border-[hsl(var(--border))] text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+      <div className="min-h-0 flex flex-col overflow-hidden">
+        <div className="h-8 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))] text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
           Preview
         </div>
-        <div className="p-4 prose prose-invert prose-sm max-w-none">
+        <div className="flex-1 min-h-0 overflow-auto p-4 prose prose-invert prose-sm max-w-none">
           {value ? <MarkdownLite text={value} /> : <div className="text-muted-foreground text-[12.5px]">Nothing to preview yet. Document this request on the left.</div>}
         </div>
       </div>

@@ -61,6 +61,7 @@ export const COLL = {
   newRequest: "collections-new-request",
   item: (id) => `collection-item-${id}`,
   request: (id) => `request-item-${id}`,
+  example: (id) => `example-item-${id}`,
 };
 
 export const ENV = {

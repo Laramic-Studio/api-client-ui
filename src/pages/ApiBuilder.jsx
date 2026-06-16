@@ -19,6 +19,10 @@ import { interpolate } from "@/lib/mockEngine";
 import { getErrorMessage } from "@/hooks/use-auth";
 import { useCollections } from "@/hooks/use-collections";
 import { createEmptyScratch, createScratchTabId, isScratchTab } from "@/lib/builder/scratch";
+import { buildRequestBreadcrumb } from "@/lib/builder/breadcrumb";
+import { exampleToResponse, suggestExampleName } from "@/lib/builder/examples";
+import { buildHistoryEntry } from "@/lib/builder/history";
+import { isRequestUrlEmpty } from "@/lib/builder/url-variables";
 import { toast } from "sonner";
 
 function pruneTabState(setter, tabId) {
@@ -44,7 +48,6 @@ export default function ApiBuilder() {
   const activeEnv = useAppStore((s) =>
     activeColIdForEnv ? s.getActiveEnvForCollection(activeColIdForEnv) : s.getActiveEnvironment(),
   );
-  const addHistory = useAppStore((s) => s.addHistory);
   const pushNotification = useAppStore((s) => s.pushNotification);
   const openTab = useAppStore((s) => s.openTab);
   const closeTab = useAppStore((s) => s.closeTab);
@@ -56,7 +59,7 @@ export default function ApiBuilder() {
   const [testResults, setTestResults] = useState({});
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [mode, setMode] = useState("mock");
+  const [activeExamples, setActiveExamples] = useState({});
   const [askAIOpen, setAskAIOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
 
@@ -82,6 +85,18 @@ export default function ApiBuilder() {
     return null;
   }, [activeTabId, drafts, findRequest]);
 
+  const activeExampleId = activeTabId ? activeExamples[activeTabId] ?? null : null;
+
+  const activeExample = useMemo(() => {
+    if (!activeExampleId || !activeReq?.examples) return null;
+    return activeReq.examples.find((example) => example.id === activeExampleId) || null;
+  }, [activeExampleId, activeReq]);
+
+  const displayResponse = useMemo(() => {
+    if (activeExample) return exampleToResponse(activeExample);
+    return activeTabId ? responses[activeTabId] : null;
+  }, [activeExample, activeTabId, responses]);
+
   const setActiveReq = (next) => {
     if (!activeTabId) return;
     setDrafts((d) => ({ ...d, [activeTabId]: next }));
@@ -91,6 +106,7 @@ export default function ApiBuilder() {
     pruneTabState(setDrafts, tabId);
     pruneTabState(setResponses, tabId);
     pruneTabState(setTestResults, tabId);
+    pruneTabState(setActiveExamples, tabId);
 
     const nextActive = useAppStore.getState().activeTabId;
     if (nextActive && !isScratchTab(nextActive)) {
@@ -121,7 +137,13 @@ export default function ApiBuilder() {
 
   const onSend = async () => {
     if (!activeReq || !activeTabId) return;
+    if (isRequestUrlEmpty(activeReq.url)) {
+      toast.error("Enter a request URL before sending.");
+      return;
+    }
+    setPanels({ responseOpen: true });
     setSending(true);
+    setActiveExamples((state) => ({ ...state, [activeTabId]: null }));
     setResponses((r) => ({ ...r, [activeTabId]: null }));
     const headers = [...(activeReq.headers || [])];
     if (activeReq.auth?.type === "bearer" && activeReq.auth.token) {
@@ -142,20 +164,19 @@ export default function ApiBuilder() {
       headers,
       body: activeReq.body,
       env: activeEnv,
-      mode,
+      mode: "real",
     });
     setResponses((r) => ({ ...r, [activeTabId]: result }));
     setSending(false);
     const tr = client.runTests(activeReq.tests, result);
     setTestResults((t) => ({ ...t, [activeTabId]: tr }));
-    addHistory({
-      method: activeReq.method,
-      url: result.url,
-      status: result.status,
-      durationMs: result.durationMs,
-      sizeBytes: result.sizeBytes,
-      collectionName: collections.find((c) => c.id === activeReq.collectionId)?.name || "Scratch",
-    });
+    const collection = collections.find((c) => c.id === activeReq.collectionId);
+    await client.addHistory(buildHistoryEntry({
+      request: activeReq,
+      result,
+      collectionName: collection?.name || "Scratch",
+      requestId: isScratchTab(activeTabId) ? null : activeReq.id,
+    }));
     pushNotification({
       type: result.ok ? "success" : "danger",
       title: result.ok ? "Request succeeded" : "Request failed",
@@ -167,6 +188,19 @@ export default function ApiBuilder() {
     if (!activeReq || !activeTabId) return;
     setSaving(true);
     try {
+      const payload = {
+        name: activeReq.name || "Untitled request",
+        method: activeReq.method,
+        url: activeReq.url ?? "",
+        params: activeReq.params || [],
+        headers: activeReq.headers || [],
+        auth: activeReq.auth || { type: "none" },
+        body: activeReq.body || { type: "none", content: "" },
+        tests: activeReq.tests ?? "",
+        preScript: activeReq.preScript ?? "",
+        docs: activeReq.docs ?? "",
+      };
+
       let collectionId = activeReq.collectionId;
       if (!collectionId) {
         let target = collections[0];
@@ -175,16 +209,7 @@ export default function ApiBuilder() {
       }
       if (isScratchTab(activeTabId)) {
         const saved = await client.addRequest(collectionId, {
-          name: activeReq.name,
-          method: activeReq.method,
-          url: activeReq.url,
-          params: activeReq.params,
-          headers: activeReq.headers,
-          auth: activeReq.auth,
-          body: activeReq.body,
-          tests: activeReq.tests,
-          preScript: activeReq.preScript,
-          docs: activeReq.docs,
+          ...payload,
           examples: activeReq.examples || [],
           folderId: activeReq.folderId || null,
         });
@@ -195,18 +220,7 @@ export default function ApiBuilder() {
         navigate(`/builder/${saved.id}`);
         toast.success(`Saved ${saved.name}`);
       } else {
-        await client.updateRequest(collectionId, activeReq.id, {
-          name: activeReq.name,
-          method: activeReq.method,
-          url: activeReq.url,
-          params: activeReq.params,
-          headers: activeReq.headers,
-          auth: activeReq.auth,
-          body: activeReq.body,
-          tests: activeReq.tests,
-          preScript: activeReq.preScript,
-          docs: activeReq.docs,
-        });
+        await client.updateRequest(collectionId, activeReq.id, payload);
         setDrafts((d) => { const c = { ...d }; delete c[activeTabId]; return c; });
         toast.success("Request saved");
       }
@@ -220,8 +234,26 @@ export default function ApiBuilder() {
   const onOpenRequest = (requestId, collectionId) => {
     const found = findRequest(requestId);
     openTab({ id: requestId, collectionId, label: found.request?.name || "Request" });
+    setActiveExamples((state) => ({ ...state, [requestId]: null }));
     navigate(`/builder/${requestId}`);
   };
+
+  const onOpenExample = (requestId, collectionId, exampleId) => {
+    const found = findRequest(requestId);
+    openTab({ id: requestId, collectionId, label: found.request?.name || "Request" });
+    setActiveExamples((state) => ({ ...state, [requestId]: exampleId }));
+    setPanels({ responseOpen: true });
+    navigate(`/builder/${requestId}`);
+  };
+
+  const handleExampleDeleted = useCallback((requestId, exampleId) => {
+    setActiveExamples((state) => {
+      if (state[requestId] !== exampleId) return state;
+      const next = { ...state };
+      delete next[requestId];
+      return next;
+    });
+  }, []);
 
   const onAddExample = async (ex) => {
     if (!activeReq?.collectionId || isScratchTab(activeTabId)) {
@@ -246,10 +278,17 @@ export default function ApiBuilder() {
   };
 
   const onSaveCurrentResponseAsExample = () => {
+    if (isRequestUrlEmpty(activeReq?.url)) {
+      toast.error("Add a URL before saving an example.");
+      return;
+    }
     const resp = responses[activeTabId];
-    if (!resp) return;
+    if (!resp || resp.mode === "mock") {
+      toast.error("Send a real request before saving an example.");
+      return;
+    }
     onAddExample({
-      name: `Example ${(activeReq?.examples?.length || 0) + 1}`,
+      name: suggestExampleName(activeReq?.examples, resp.status, resp.statusText),
       status: resp.status,
       statusText: resp.statusText,
       headers: resp.headers,
@@ -280,12 +319,109 @@ export default function ApiBuilder() {
     });
   };
 
+  const handleUpdateVariable = useCallback(async (key, value) => {
+    if (!activeEnv?.id) return;
+    const variables = [...(activeEnv.variables || [])];
+    const idx = variables.findIndex((v) => v.key === key);
+    if (idx >= 0) {
+      variables[idx] = { ...variables[idx], value };
+    } else {
+      variables.push({ key, value, enabled: true });
+    }
+    useAppStore.getState().updateEnvironment(activeEnv.id, { variables });
+    try {
+      await client.updateEnvironment(activeEnv.id, { variables });
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Could not update variable."));
+    }
+  }, [activeEnv, client]);
+
   const envVarNames = useMemo(
     () => (activeEnv?.variables || []).filter((v) => v.enabled !== false).map((v) => v.key),
     [activeEnv],
   );
 
+  const handleRequestRenamed = useCallback((requestId, name) => {
+    setDrafts((draft) => {
+      if (!draft[requestId]) return draft;
+      return { ...draft, [requestId]: { ...draft[requestId], name } };
+    });
+  }, []);
+
+  const requestBreadcrumb = useMemo(() => {
+    if (!activeReq) return [];
+    const found = isScratchTab(activeTabId) ? null : findRequest(activeTabId);
+    return buildRequestBreadcrumb({
+      request: activeReq,
+      collection: found?.collection,
+      isScratch: isScratchTab(activeTabId),
+      example: activeExample,
+    });
+  }, [activeReq, activeTabId, activeExample, findRequest]);
+
   const explorerActiveId = activeReq && !isScratchTab(activeTabId) ? activeReq.id : null;
+
+  const responseLayout = panels.responseLayout || "side";
+  const responseOpen = panels.responseOpen !== false;
+
+  const handleResponseLayoutChange = useCallback((layout) => {
+    setPanels({ responseLayout: layout, responseOpen: true });
+  }, [setPanels]);
+
+  const handleResponseClose = useCallback(() => {
+    setPanels({ responseOpen: false });
+  }, [setPanels]);
+
+  const handleOpenResponse = useCallback(() => {
+    setPanels({ responseOpen: true });
+  }, [setPanels]);
+
+  const requestPane = activeReq ? (
+    <RequestPanel
+      req={activeReq}
+      onChange={setActiveReq}
+      onSend={onSend}
+      onSave={onSave}
+      sending={sending}
+      saving={saving}
+      testResults={testResults[activeTabId] || []}
+      finalUrl={finalUrl}
+      breadcrumb={requestBreadcrumb}
+      onAskAI={() => setAskAIOpen(true)}
+      collectionId={activeReq.collectionId || activeColIdForEnv}
+      activeEnv={activeEnv}
+      onUpdateVariable={handleUpdateVariable}
+      responseOpen={responseOpen}
+      onOpenResponse={handleOpenResponse}
+    />
+  ) : (
+    <div className="h-full grid place-items-center text-center p-8 text-muted-foreground">
+      <div>
+        <p className="text-[14px] text-foreground/85">No request open</p>
+        <p className="text-[12px] mt-1">Click + to start a new request, or pick one from the explorer.</p>
+      </div>
+    </div>
+  );
+
+  const canSaveExample = Boolean(
+    responses[activeTabId]
+    && !activeExample
+    && !isRequestUrlEmpty(activeReq?.url)
+    && responses[activeTabId]?.mode !== "mock",
+  );
+
+  const responsePane = (
+    <ResponsePanel
+      response={displayResponse}
+      isExampleView={Boolean(activeExample)}
+      sending={sending && !displayResponse}
+      onSaveExample={canSaveExample ? onSaveCurrentResponseAsExample : null}
+      onExplain={activeExample ? null : () => setExplainOpen(true)}
+      layout={responseLayout}
+      onLayoutChange={handleResponseLayoutChange}
+      onClose={handleResponseClose}
+    />
+  );
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -298,58 +434,71 @@ export default function ApiBuilder() {
         <div className="flex-1 min-h-0">
           <ResizablePanelGroup
             direction="horizontal"
-            onLayout={(sizes) => setPanels({ explorer: sizes[0], builder: sizes[1], response: sizes[2] })}
+            onLayout={(sizes) => {
+              if (responseLayout === "side" && responseOpen) {
+                setPanels({ explorer: sizes[0], builder: sizes[1], response: sizes[2] });
+              } else {
+                setPanels({ explorer: sizes[0], builder: sizes[1] });
+              }
+            }}
             className="h-full"
           >
             <ResizablePanel defaultSize={panels.explorer || 22} minSize={14} maxSize={36}>
               <CollectionsExplorer
                 activeRequestId={explorerActiveId}
+                activeExampleId={activeExampleId}
                 onOpenRequest={onOpenRequest}
+                onOpenExample={onOpenExample}
+                onRequestRenamed={handleRequestRenamed}
+                onExampleDeleted={handleExampleDeleted}
               />
             </ResizablePanel>
 
             <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 w-px" />
 
-            <ResizablePanel defaultSize={panels.builder || 45} minSize={28}>
-              {activeReq ? (
-                <RequestPanel
-                  req={activeReq}
-                  onChange={setActiveReq}
-                  onSend={onSend}
-                  onSave={onSave}
-                  sending={sending}
-                  saving={saving}
-                  mode={mode}
-                  onToggleMode={() => setMode((m) => (m === "mock" ? "real" : "mock"))}
-                  testResults={testResults[activeTabId] || []}
-                  finalUrl={finalUrl}
-                  onAddExample={onAddExample}
-                  onDeleteExample={onDeleteExample}
-                  onAskAI={() => setAskAIOpen(true)}
-                />
-              ) : (
-                <div className="h-full grid place-items-center text-center p-8 text-muted-foreground">
-                  <div>
-                    <p className="text-[14px] text-foreground/85">No request open</p>
-                    <p className="text-[12px] mt-1">Click + to start a new request, or pick one from the explorer.</p>
-                  </div>
-                </div>
-              )}
-            </ResizablePanel>
+            {responseLayout === "side" ? (
+              <>
+                <ResizablePanel defaultSize={panels.builder || 45} minSize={28}>
+                  {requestPane}
+                </ResizablePanel>
 
-            <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 w-px" />
+                {responseOpen && (
+                  <>
+                    <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 w-px" />
 
-            <ResizablePanel defaultSize={panels.response || 33} minSize={20}>
-              <ResponsePanel
-                response={activeTabId ? responses[activeTabId] : null}
-                onSaveExample={onSaveCurrentResponseAsExample}
-                onExplain={() => setExplainOpen(true)}
-              />
-            </ResizablePanel>
+                    <ResizablePanel defaultSize={panels.response || 33} minSize={20}>
+                      {responsePane}
+                    </ResizablePanel>
+                  </>
+                )}
+              </>
+            ) : (
+              <ResizablePanel defaultSize={panels.builder || 78} minSize={40}>
+                {responseOpen ? (
+                  <ResizablePanelGroup
+                    direction="vertical"
+                    onLayout={(sizes) => setPanels({ stackRequest: sizes[0], stackResponse: sizes[1] })}
+                    className="h-full"
+                  >
+                    <ResizablePanel defaultSize={panels.stackRequest || 58} minSize={24}>
+                      {requestPane}
+                    </ResizablePanel>
+
+                    <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 h-px" />
+
+                    <ResizablePanel defaultSize={panels.stackResponse || 42} minSize={18}>
+                      {responsePane}
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
+                ) : (
+                  requestPane
+                )}
+              </ResizablePanel>
+            )}
           </ResizablePanelGroup>
         </div>
-        {explainOpen && activeTabId && responses[activeTabId] && (
-          <ExplainPanel response={responses[activeTabId]} onClose={() => setExplainOpen(false)} />
+        {explainOpen && activeTabId && displayResponse && !activeExample && (
+          <ExplainPanel response={displayResponse} onClose={() => setExplainOpen(false)} />
         )}
       </div>
       <AskAIDialog

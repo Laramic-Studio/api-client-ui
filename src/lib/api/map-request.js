@@ -1,5 +1,6 @@
+import { mapApiExample } from "@/lib/builder/examples";
+
 function mapBodyFromApi(request) {
-  const bodyType = request.bodyType || request.body_type || "none";
 
   if (bodyType === "form") {
     return {
@@ -20,19 +21,24 @@ export function mapApiRequest(request) {
     id: request.id,
     name: request.name,
     method: request.method,
-    url: request.url || "[[BASE_URL]]/",
+    url: normalizeRequestUrl(request.url),
     params: request.params || [],
     headers: request.headers || [],
     auth: request.auth?.type ? request.auth : { type: "none" },
     body: mapBodyFromApi(request),
-    tests: request.tests || "",
+    tests: request.tests ?? "",
     preScript: request.preScript || request.pre_script || "",
     starred: Boolean(request.starred),
-    docs: request.description || "",
-    examples: request.examples || [],
+    docs: request.description ?? "",
+    examples: (request.examples || []).map(mapApiExample).filter(Boolean),
     folderId: request.folderId ?? request.folder_id ?? null,
     order: request.order ?? request.sortOrder ?? request.sort_order ?? 0,
   };
+}
+
+function asOptionalString(value) {
+  if (value == null) return "";
+  return typeof value === "string" ? value : String(value);
 }
 
 export function mapRequestToApi(patch) {
@@ -44,9 +50,9 @@ export function mapRequestToApi(patch) {
   if (patch.params !== undefined) payload.params = patch.params;
   if (patch.headers !== undefined) payload.headers = patch.headers;
   if (patch.auth !== undefined) payload.auth = patch.auth;
-  if (patch.tests !== undefined) payload.tests = patch.tests;
-  if (patch.preScript !== undefined) payload.pre_script = patch.preScript;
-  if (patch.docs !== undefined) payload.description = patch.docs;
+  if (patch.tests !== undefined) payload.tests = asOptionalString(patch.tests);
+  if (patch.preScript !== undefined) payload.pre_script = asOptionalString(patch.preScript);
+  if (patch.docs !== undefined) payload.description = asOptionalString(patch.docs);
   if (patch.starred !== undefined) payload.starred = patch.starred;
   if (patch.folderId !== undefined) payload.folder_id = patch.folderId;
   if (patch.order !== undefined) payload.sort_order = patch.order;
@@ -57,6 +63,11 @@ export function mapRequestToApi(patch) {
   }
 
   return payload;
+}
+
+function normalizeRequestUrl(url) {
+  if (!url || url === "[[BASE_URL]]/") return "";
+  return url;
 }
 
 export function mapExampleToApi(example) {

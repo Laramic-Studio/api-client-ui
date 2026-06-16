@@ -1,8 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronDown, ChevronRight, Folder, FolderPlus, FilePlus, Plus, Trash2, Edit3, Copy, FolderOpen, Loader2,
+  ArrowRight, FileJson,
+  StarIcon,
+  StarOffIcon,
+  Star,
 } from "lucide-react";
 import MethodBadge from "@/components/shared/MethodBadge";
+import StatusBadge from "@/components/shared/StatusBadge";
 import { COLL } from "@/constants/testIds";
 import { cn } from "@/lib/utils";
 import {
@@ -33,9 +38,13 @@ export function CollectionRow({
   isOpen,
   onToggle,
   activeRequestId,
+  activeExampleId,
   onOpenRequest,
+  onOpenExample,
   openFolders,
   setOpenFolders,
+  openRequests,
+  setOpenRequests,
   actions,
   dragOver,
   setDragOver,
@@ -109,7 +118,11 @@ export function CollectionRow({
                 openFolders={openFolders}
                 setOpenFolders={setOpenFolders}
                 activeRequestId={activeRequestId}
+                activeExampleId={activeExampleId}
                 onOpenRequest={onOpenRequest}
+                onOpenExample={onOpenExample}
+                openRequests={openRequests}
+                setOpenRequests={setOpenRequests}
                 actions={actions}
                 dragOver={dragOver}
                 setDragOver={setDragOver}
@@ -122,8 +135,12 @@ export function CollectionRow({
               key={r.id}
               request={r}
               collection={c}
-              active={r.id === activeRequestId}
+              active={r.id === activeRequestId && !activeExampleId}
+              activeExampleId={activeExampleId}
               onClick={() => onOpenRequest(r.id, c.id)}
+              onOpenExample={onOpenExample}
+              openRequests={openRequests}
+              setOpenRequests={setOpenRequests}
               actions={actions}
               dragOver={dragOver}
               setDragOver={setDragOver}
@@ -159,7 +176,11 @@ function FolderRow({
   openFolders,
   setOpenFolders,
   activeRequestId,
+  activeExampleId,
   onOpenRequest,
+  onOpenExample,
+  openRequests,
+  setOpenRequests,
   actions,
   dragOver,
   setDragOver,
@@ -185,7 +206,7 @@ function FolderRow({
   return (
     <div style={{ marginLeft: depth > 0 ? depth * 8 : 0 }}>
       <ContextMenu>
-        <ContextMenuTrigger asChild>
+        <ContextMenuTrigger asChild >
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(`fld-${f.id}`); }}
             onDragLeave={() => setDragOver(null)}
@@ -215,18 +236,22 @@ function FolderRow({
             <span className="ml-auto text-[10px] text-muted-foreground font-mono">{requests.length}</span>
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
-          <ContextMenuItem onClick={() => actions.addRequest(c.id, { name: "New request", folderId: f.id }, onOpenRequest)}>
-            <FilePlus className="h-3.5 w-3.5" /> New request here
+        <ContextMenuContent data-side="right" className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addRequest(c.id, { name: "New request", folderId: f.id }, onOpenRequest)}>
+            <FilePlus className="h-3.5 w-3.5" /> New request
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => actions.addFolder(c.id, { name: "Subfolder", parentId: f.id })}>
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addFolder(c.id, { name: "Subfolder", parentId: f.id })}>
             <FolderPlus className="h-3.5 w-3.5" /> New subfolder
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => setRenaming(true)}>
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
             <Edit3 className="h-3.5 w-3.5" /> Rename
           </ContextMenuItem>
           <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteFolder(c.id, f.id)} className="text-red-400">
+          <ContextMenuItem
+            disabled={isDeleting}
+            onClick={() => actions.deleteFolder(c.id, f.id)}
+            className="cursor-pointer text-xs px-2 gap-2 text-red-400"
+          >
             {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             {isDeleting ? "Deleting…" : "Delete folder"}
           </ContextMenuItem>
@@ -237,8 +262,12 @@ function FolderRow({
           <RequestRow
             request={r}
             collection={c}
-            active={r.id === activeRequestId}
+            active={r.id === activeRequestId && !activeExampleId}
+            activeExampleId={activeExampleId}
             onClick={() => onOpenRequest(r.id, c.id)}
+            onOpenExample={onOpenExample}
+            openRequests={openRequests}
+            setOpenRequests={setOpenRequests}
             actions={actions}
             dragOver={dragOver}
             setDragOver={setDragOver}
@@ -250,10 +279,41 @@ function FolderRow({
   );
 }
 
-export function RequestRow({ request, collection, active, onClick, actions, dragOver, setDragOver, pending }) {
+export function RequestRow({
+  request,
+  collection,
+  active,
+  activeExampleId,
+  onClick,
+  onOpenExample,
+  openRequests,
+  setOpenRequests,
+  actions,
+  dragOver,
+  setDragOver,
+  pending,
+}) {
   const r = request;
   const c = collection;
+  const examples = r.examples || [];
+  const hasExamples = examples.length > 0;
   const isDeleting = pending === `delete-request:${r.id}`;
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(r.name);
+
+  const examplesExpanded = openRequests[r.id] ?? (
+    hasExamples && examples.some((example) => example.id === activeExampleId)
+  );
+
+  useEffect(() => {
+    if (!renaming) setName(r.name);
+  }, [r.name, renaming]);
+
+  const commitRename = () => {
+    const next = name.trim() || r.name;
+    actions.renameRequest(c.id, r.id, next);
+    setRenaming(false);
+  };
 
   const onDragStart = (e) => {
     e.dataTransfer.effectAllowed = "move";
@@ -269,36 +329,177 @@ export function RequestRow({ request, collection, active, onClick, actions, drag
     setDragOver(null);
   };
 
+  const toggleExamples = (e) => {
+    e.stopPropagation();
+    setOpenRequests((open) => ({ ...open, [r.id]: !examplesExpanded }));
+  };
+
+  return (
+    <div>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div
+            draggable
+            onDragStart={onDragStart}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(`req-${r.id}`); }}
+            onDragLeave={() => setDragOver(null)}
+            onDrop={onDrop}
+            onClick={onClick}
+            className={cn(
+              "w-full flex items-center gap-1.5 h-7 px-2 rounded text-[12px] hover:bg-accent/50 cursor-pointer",
+              active ? "bg-accent text-foreground" : "text-muted-foreground",
+              dragOver === `req-${r.id}` && "ring-1 ring-inset ring-[hsl(var(--brand))]/60",
+            )}
+            data-testid={COLL.request(r.id)}
+          >
+            {hasExamples ? (
+              <button
+                type="button"
+                onClick={toggleExamples}
+                className="h-5 w-5 shrink-0 grid place-items-center text-muted-foreground hover:text-foreground"
+                aria-label={examplesExpanded ? "Collapse examples" : "Expand examples"}
+              >
+                {examplesExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              </button>
+            ) : (
+              <span className="h-5 w-5 shrink-0" />
+            )}
+            <MethodBadge method={r.method} className="w-7 text-left shrink-0" />
+            {renaming ? (
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Escape") {
+                    setName(r.name);
+                    setRenaming(false);
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-transparent text-[12px] outline-none flex-1 min-w-0"
+              />
+            ) : (
+              <span className="truncate flex-1 min-w-0">{r.name}</span>
+            )}
+            {hasExamples && (
+              <span className="text-[10px] text-muted-foreground font-mono shrink-0">{examples.length}</span>
+            )}
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent data-side="right" className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={onClick}>
+            <ArrowRight className="h-3.5 w-3.5" /> Open
+          </ContextMenuItem>
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.patchRequest(c.id, r.id, { starred: !r.starred })}>
+            {r.starred ? <StarIcon className="h-3.5 w-3.5" /> : <StarOffIcon className="h-3.5 w-3.5" />} {r.starred ? "Unstar" : "Star"}
+          </ContextMenuItem>
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
+            <Edit3 className="h-3.5 w-3.5" /> Rename
+          </ContextMenuItem>
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addExample(c.id, r)}>
+            <FileJson className="h-3.5 w-3.5" /> Add example
+          </ContextMenuItem>
+          <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
+          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteRequest(c.id, r.id)} className="text-red-400">
+            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            {isDeleting ? "Deleting…" : "Delete"}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
+      {examplesExpanded && hasExamples && (
+        <div className="ml-3 border-l border-[hsl(var(--border))] pl-1.5">
+          {examples.map((example) => (
+            <ExampleRow
+              key={example.id}
+              example={example}
+              request={r}
+              collection={c}
+              active={example.id === activeExampleId}
+              onOpen={() => onOpenExample(r.id, c.id, example.id)}
+              actions={actions}
+              pending={pending}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExampleRow({ example, request, collection, active, onOpen, actions, pending }) {
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(example.name);
+  const isDeleting = pending === `delete-example:${example.id}`;
+
+  useEffect(() => {
+    if (!renaming) setName(example.name);
+  }, [example.name, renaming]);
+
+  const commitRename = () => {
+    const next = name.trim() || example.name;
+    actions.renameExample(collection.id, request.id, example.id, next);
+    setRenaming(false);
+  };
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          draggable
-          onDragStart={onDragStart}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(`req-${r.id}`); }}
-          onDragLeave={() => setDragOver(null)}
-          onDrop={onDrop}
-          onClick={onClick}
+          onClick={onOpen}
           className={cn(
             "w-full flex items-center gap-2 h-7 px-2 rounded text-[12px] hover:bg-accent/50 cursor-pointer",
             active ? "bg-accent text-foreground" : "text-muted-foreground",
-            dragOver === `req-${r.id}` && "ring-1 ring-inset ring-[hsl(var(--brand))]/60",
           )}
-          data-testid={COLL.request(r.id)}
+          data-testid={COLL.example(example.id)}
         >
-          <MethodBadge method={r.method} className="w-12 text-left" />
-          <span className="truncate">{r.name}</span>
+          <StatusBadge status={example.status} className="text-[10px] px-1 py-0 h-4 min-w-[2rem] justify-center shrink-0" />
+          {example.isDefault && <Star className="h-3 w-3 text-[hsl(var(--warning))] shrink-0" fill="currentColor" />}
+          {renaming ? (
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") {
+                  setName(example.name);
+                  setRenaming(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-transparent text-[12px] outline-none flex-1 min-w-0"
+            />
+          ) : (
+            <span className="truncate flex-1 min-w-0">{example.name}</span>
+          )}
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
-        <ContextMenuItem onClick={onClick}>
-          <Edit3 className="h-3.5 w-3.5" /> Open
+      <ContextMenuContent data-side="right" className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
+        <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={onOpen}>
+          <ArrowRight className="h-3.5 w-3.5" /> Open
         </ContextMenuItem>
-        <ContextMenuItem onClick={() => actions.patchRequest(c.id, r.id, { starred: !r.starred })}>
-          {r.starred ? "Unstar" : "Star"}
+        <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
+          <Edit3 className="h-3.5 w-3.5" /> Rename
         </ContextMenuItem>
+        {!example.isDefault && (
+          <ContextMenuItem
+            className="cursor-pointer text-xs px-2 gap-2"
+            onClick={() => actions.setDefaultExample(collection.id, request.id, example.id)}
+          >
+            <Star className="h-3.5 w-3.5" /> Set as default
+          </ContextMenuItem>
+        )}
         <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-        <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteRequest(c.id, r.id)} className="text-red-400">
+        <ContextMenuItem
+          disabled={isDeleting}
+          onClick={() => actions.deleteExample(collection.id, request.id, example.id)}
+          className="text-red-400"
+        >
           {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
           {isDeleting ? "Deleting…" : "Delete"}
         </ContextMenuItem>

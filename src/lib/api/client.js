@@ -9,6 +9,30 @@ import { runMockRequest, runTests as runTestsImpl } from "@/lib/mockEngine";
 
 const get = () => useAppStore.getState();
 
+const STARTER_CONDUIT = {
+  id: "c_starter",
+  name: "Auth → Profile → Orders",
+  steps: [
+    { id: "node1", name: "Login", method: "POST", url: "[[BASE_URL]]/auth/login", extract: "token", headers: [], body: { type: "none", content: "" }, auth: { type: "none" } },
+    { id: "node2", name: "Fetch profile", method: "GET", url: "[[BASE_URL]]/users/me", extract: "user.id", headers: [], body: { type: "none", content: "" }, auth: { type: "none" } },
+    { id: "node3", name: "List orders", method: "GET", url: "[[BASE_URL]]/orders?user={user.id}", extract: "", headers: [], body: { type: "none", content: "" }, auth: { type: "none" } },
+  ],
+};
+
+const mockConduitsByTeam = new Map();
+
+function getMockConduits(teamId) {
+  if (!teamId) return [];
+  if (!mockConduitsByTeam.has(teamId)) {
+    mockConduitsByTeam.set(teamId, [{ ...STARTER_CONDUIT, steps: STARTER_CONDUIT.steps.map((s) => ({ ...s })) }]);
+  }
+  return mockConduitsByTeam.get(teamId);
+}
+
+function setMockConduits(teamId, list) {
+  mockConduitsByTeam.set(teamId, list);
+}
+
 // Helper so the adapter feels async even for sync state ops
 const async_ = (fn) => Promise.resolve().then(fn);
 
@@ -68,8 +92,49 @@ export const client = {
     return runTestsImpl(script, response);
   },
 
+  // ----- Conduits -----
+  async listConduits() {
+    return async_(() => getMockConduits(get().activeWorkspaceId));
+  },
+  async createConduit(payload) {
+    return async_(() => {
+      const wsId = get().activeWorkspaceId;
+      const conduit = {
+        id: `c_${Date.now()}`,
+        name: payload?.name || "Untitled conduit",
+        steps: (payload?.steps || []).map((s, i) => ({
+          id: s.id || `n_${Date.now()}_${i}`,
+          ...s,
+        })),
+      };
+      const list = [...getMockConduits(wsId), conduit];
+      setMockConduits(wsId, list);
+      return conduit;
+    });
+  },
+  async updateConduit(id, patch) {
+    return async_(() => {
+      const wsId = get().activeWorkspaceId;
+      const list = getMockConduits(wsId).map((c) =>
+        c.id === id ? { ...c, ...patch, steps: patch.steps ?? c.steps } : c,
+      );
+      setMockConduits(wsId, list);
+      return list.find((c) => c.id === id);
+    });
+  },
+  async deleteConduit(id) {
+    return async_(() => {
+      const wsId = get().activeWorkspaceId;
+      setMockConduits(wsId, getMockConduits(wsId).filter((c) => c.id !== id));
+    });
+  },
+
   // ----- History / mock servers / team / notifications (read-through) -----
   async listHistory() { return async_(() => get().history); },
+  async addHistory(entry) { return async_(() => get().addHistory(entry)); },
+  async deleteHistory(id) { return async_(() => get().deleteHistory(id)); },
+  async clearHistory() { return async_(() => get().clearHistory()); },
+  async toggleHistoryFavorite(id) { return async_(() => get().toggleHistoryFavorite(id)); },
   async listMockServers() { return async_(() => get().mockServers); },
   async listTeam() { return async_(() => get().team); },
   async listNotifications() { return async_(() => get().notifications); },

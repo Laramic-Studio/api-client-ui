@@ -46,7 +46,7 @@ const SECONDARY = [
   { to: "/settings", icon: SettingsIcon, label: "Settings", key: "settings", enabled: true },
 ];
 
-const LOCKED_REASON = "Not available yet. This module is still being built for the web app.";
+const LOCKED_REASON = "Coming soon — still being built.";
 
 const isNavEnabled = (item) => item.enabled === true;
 
@@ -78,7 +78,13 @@ export default function Sidebar({ collapsed }) {
           </div>
           {!collapsed && (
             <div className="text-[15px] font-medium tracking-tight truncate max-w-[140px]">
-              {companyName || (<><span>noidr</span><span className="text-[hsl(var(--brand))]">.</span><span>web</span></>)}
+              {companyName || (
+                <>
+                  <span>noidr</span>
+                  <span className="text-[hsl(var(--brand))]">.</span>
+                  <span>web</span>
+                </>
+              )}
             </div>
           )}
         </button>
@@ -100,11 +106,11 @@ export default function Sidebar({ collapsed }) {
           <TooltipTrigger asChild>
             <button
               onClick={toggleSidebar}
-              className="mx-auto my-2 h-7 w-7 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+              className="mx-auto my-2 h-9 w-9 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-foreground"
               data-testid={NAV.collapseToggle}
               aria-label="Expand sidebar"
             >
-              <ChevronsRight className="h-4 w-4" />
+              <ChevronsRight className="h-5 w-5" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" className="border border-border bg-popover text-foreground">
@@ -113,7 +119,6 @@ export default function Sidebar({ collapsed }) {
         </Tooltip>
       )}
 
-     
       {/* Search */}
       {!collapsed && (
         <div className="px-3 pt-3">
@@ -136,34 +141,20 @@ export default function Sidebar({ collapsed }) {
         ))}
         {!filtered && (
           <>
-            <div className={cn("mt-4 mb-1 px-2 text-[10px] uppercase tracking-wider text-muted-foreground", collapsed && "hidden")}>Tools</div>
+            {/* FIX D: show a divider in collapsed mode instead of hiding the section entirely */}
+            {collapsed ? (
+              <div className="my-2 mx-2 border-t border-border" />
+            ) : (
+              <div className="mt-4 mb-1 px-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                Tools
+              </div>
+            )}
             {SECONDARY.map((it) => (
               <NavRow key={it.key} item={it} collapsed={collapsed} />
             ))}
           </>
         )}
       </nav>
-
-      {/* Workspace mini list */}
-      {/* {!collapsed && (
-        <div className="border-t border-border p-2 max-h-44 overflow-y-auto">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1">Switch workspace</div>
-          {workspaces.slice(0, 5).map((w) => (
-            <button
-              key={w.id}
-              onClick={() => setActive(w.id)}
-              className={cn(
-                "w-full text-left px-2 py-1.5 rounded-md text-[12px] flex items-center gap-2 hover:bg-accent/50",
-                w.id === activeWorkspaceId && "bg-accent/50 text-foreground"
-              )}
-              data-testid={`ws-switch-${w.id}`}
-            >
-              <div className={cn("h-1.5 w-1.5 rounded-full", w.id === activeWorkspaceId ? "bg-[hsl(var(--brand))]" : "bg-muted-foreground/50")} />
-              <span className="truncate">{w.name}</span>
-            </button>
-          ))}
-        </div>
-      )} */}
     </div>
   );
 }
@@ -173,6 +164,8 @@ function NavRow({ item, collapsed }) {
   const Icon = item.icon;
 
   if (enabled) {
+    const iconClass = collapsed ? "h-5 w-5 shrink-0" : "h-4 w-4 shrink-0";
+
     const link = (
       <NavLink
         to={item.to}
@@ -180,23 +173,33 @@ function NavRow({ item, collapsed }) {
         className={({ isActive }) =>
           cn(
             "group flex items-center gap-2.5 rounded-md text-[13px] transition-colors",
-            collapsed ? "h-9 w-9 justify-center mx-auto" : "h-9 px-2.5",
+            collapsed ? "h-9 w-9 justify-center items-center mx-auto" : "h-9 px-2.5",
+            // FIX B: stronger active state with brand-color left border
             isActive
-              ? "bg-accent text-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              ? "bg-accent text-foreground border-l-2 border-[hsl(var(--brand))] pl-[calc(0.625rem-2px)]"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/50 border-l-2 border-transparent pl-[calc(0.625rem-2px)]"
           )
         }
+        tabIndex={0}
       >
-        <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+        <Icon className={iconClass} strokeWidth={1.75} />
         {!collapsed && <span className="truncate">{item.label}</span>}
       </NavLink>
     );
 
     if (collapsed) {
       return (
-        <Tooltip>
-          <TooltipTrigger asChild>{link}</TooltipTrigger>
-          <TooltipContent side="right" className="border border-border bg-card text-foreground">
+        <Tooltip delayDuration={200}>
+          {/* FIX C: wrap the full row div as the trigger, not just the icon */}
+          <TooltipTrigger asChild>
+            <div className="flex w-full justify-center items-center">{link}</div>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            align="center"
+            sideOffset={6}
+            className="border border-border bg-card text-foreground py-1 px-2 rounded text-xs"
+          >
             {item.label}
           </TooltipContent>
         </Tooltip>
@@ -206,36 +209,55 @@ function NavRow({ item, collapsed }) {
     return link;
   }
 
-  const lockedRow = (
+  // FIX A: render the full row at reduced opacity — same height and padding as enabled items
+  // FIX C: TooltipTrigger wraps the full row div for a stable anchor
+  // FIX E: in expanded mode show a short "Soon" badge instead of the full LOCKED_REASON string
+
+  const iconClass = collapsed ? "h-5 w-5 shrink-0" : "h-4 w-4 shrink-0";
+
+  const rowContent = (
     <div
-      data-testid={NAV.item(item.key)}
-      aria-disabled="true"
       className={cn(
-        "flex items-center gap-2.5 rounded-md text-[13px] text-muted-foreground/45 cursor-not-allowed select-none",
-        collapsed ? "h-9 w-9 justify-center mx-auto" : "h-9 px-2.5"
+        "flex items-center gap-2.5 rounded-md text-[13px] h-9 opacity-40 cursor-not-allowed select-none",
+        collapsed ? "w-9 justify-center mx-auto" : "px-2.5 border-l-2 border-transparent pl-[calc(0.625rem-2px)]"
       )}
+      aria-disabled="true"
     >
-      <Icon className="h-4 w-4 shrink-0 opacity-50" strokeWidth={1.75} />
-      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
-      <Lock className={cn("shrink-0 opacity-60", collapsed ? "h-3 w-3 absolute -bottom-0.5 -right-0.5" : "h-3 w-3")} />
+      <Icon className={iconClass} strokeWidth={1.75} />
+      {!collapsed && (
+        <>
+          <span className="truncate flex-1">{item.label}</span>
+          {/* FIX E: small inline badge instead of a verbose tooltip in expanded mode */}
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground leading-none">
+            Soon
+          </span>
+        </>
+      )}
     </div>
   );
 
-  const tooltipLabel = collapsed ? `${item.label} — ${LOCKED_REASON}` : LOCKED_REASON;
+  if (collapsed) {
+    // In collapsed mode: tooltip shows label + short reason (no label visible in row)
+    return (
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>
+          <div className="flex w-full justify-center items-center cursor-not-allowed">
+            {rowContent}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent
+          side="right"
+          align="center"
+          sideOffset={6}
+          className="max-w-[200px] border border-border bg-popover text-foreground text-xs leading-snug py-1 px-2 rounded"
+        >
+          <span className="font-medium">{item.label}</span>
+          <span className="text-muted-foreground"> — {LOCKED_REASON}</span>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
 
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className={cn("block w-full", collapsed && "relative inline-flex justify-center")}>
-          {lockedRow}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent
-        side="right"
-        className="max-w-[220px] border border-border bg-popover text-foreground text-[12px] leading-snug"
-      >
-        {tooltipLabel}
-      </TooltipContent>
-    </Tooltip>
-  );
+  // In expanded mode: no tooltip needed — the "Soon" badge already communicates the state
+  return rowContent;
 }

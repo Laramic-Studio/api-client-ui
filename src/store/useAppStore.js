@@ -9,8 +9,13 @@ import { EMPTY_ARRAY } from "@/lib/store/empty";
 
 const ensureSeed = (state) => {
   if (state.seeded) return state;
-  const { user: _ignoredUser, ...seedData } = buildInitialState();
-  return { ...state, ...seedData, seeded: true };
+  const { user: _ignoredUser, history: _seedHistory, ...seedData } = buildInitialState();
+  return {
+    ...state,
+    ...seedData,
+    history: Array.isArray(state.history) && state.history.length > 0 ? state.history : [],
+    seeded: true,
+  };
 };
 
 export const useAppStore = create(
@@ -113,7 +118,15 @@ export const useAppStore = create(
       setCommandOpen: (v) => set({ commandOpen: v }),
       sidebarWidth: 244,
       setSidebarWidth: (w) => set({ sidebarWidth: Math.min(380, Math.max(64, w)) }),
-      builderPanels: { explorer: 22, builder: 45, response: 33 },
+      builderPanels: {
+        explorer: 22,
+        builder: 45,
+        response: 33,
+        responseLayout: "side",
+        responseOpen: true,
+        stackRequest: 58,
+        stackResponse: 42,
+      },
       setBuilderPanels: (next) => set({ builderPanels: { ...get().builderPanels, ...next } }),
 
       // ===== Builder tabs =====
@@ -134,6 +147,11 @@ export const useAppStore = create(
         set({ openTabs: tabs, activeTabId: nextActive });
       },
       setActiveTab: (id) => set({ activeTabId: id }),
+      renameTab: (id, label) => {
+        set({
+          openTabs: get().openTabs.map((tab) => (tab.id === id ? { ...tab, label } : tab)),
+        });
+      },
       reorderTabs: (fromId, toId) => {
         const tabs = [...get().openTabs];
         const fi = tabs.findIndex((t) => t.id === fromId);

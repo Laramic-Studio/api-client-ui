@@ -20,6 +20,11 @@ export const collectionKeys = {
   list: (teamId) => [...collectionKeys.all, "list", String(teamId)],
 };
 
+export const conduitKeys = {
+  all: ["conduits"],
+  list: (teamId) => [...conduitKeys.all, "list", String(teamId)],
+};
+
 export const invitationKeys = {
   all: ["invitations"],
   detail: (code) => [...invitationKeys.all, String(code)],
