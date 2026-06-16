@@ -15,6 +15,11 @@ export const envKeys = {
   list: (teamId) => [...envKeys.all, "list", String(teamId)],
 };
 
+export const collectionKeys = {
+  all: ["collections"],
+  list: (teamId) => [...collectionKeys.all, "list", String(teamId)],
+};
+
 export const invitationKeys = {
   all: ["invitations"],
   detail: (code) => [...invitationKeys.all, String(code)],

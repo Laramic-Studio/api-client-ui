@@ -4,30 +4,115 @@ import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import { useNavigate } from "react-router-dom";
 import MethodBadge from "@/components/shared/MethodBadge";
 import {
-  Plus, Search, Star, Archive, Copy, Trash2, Folder, ChevronRight, ChevronDown,
+  Plus, Search, Star, Archive, Copy, Trash2, Folder, ChevronRight, ChevronDown, Loader2,
 } from "lucide-react";
 import { COLL } from "@/constants/testIds";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/hooks/use-auth";
+import {
+  useCollections,
+  useCreateCollection,
+  useCreateCollectionRequest,
+  useDebouncedCollectionUpdate,
+  useDeleteCollection,
+  useDuplicateCollection,
+  useUpdateCollection,
+} from "@/hooks/use-collections";
 import {
   ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 
 export default function Collections() {
   const collections = useAppStore(selectWorkspaceCollections);
-  const create = useAppStore((s) => s.createCollection);
-  const del = useAppStore((s) => s.deleteCollection);
-  const dup = useAppStore((s) => s.duplicateCollection);
-  const update = useAppStore((s) => s.updateCollection);
-  const addRequest = useAppStore((s) => s.addRequest);
+  const updateLocal = useAppStore((s) => s.updateCollection);
+  const { isLoading } = useCollections();
+  const createCollection = useCreateCollection();
+  const updateCollection = useUpdateCollection();
+  const savePatch = useDebouncedCollectionUpdate(700);
+  const deleteCollection = useDeleteCollection();
+  const duplicateCollection = useDuplicateCollection();
+  const createRequest = useCreateCollectionRequest();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [open, setOpen] = useState({});
+  const [pendingAction, setPendingAction] = useState(null);
 
   const filtered = collections
     .filter((c) => (showArchived ? c.archived : !c.archived))
     .filter((c) => c.name.toLowerCase().includes(q.toLowerCase()));
+
+  const patchCollection = (id, patch) => {
+    updateLocal(id, patch);
+    savePatch(id, patch);
+  };
+
+  const handleCreate = () => {
+    createCollection.mutate(
+      { name: "New Collection" },
+      {
+        onSuccess: (data) => toast.success(`Created ${data.collection.name}`),
+        onError: (err) => toast.error(getErrorMessage(err, "Could not create collection.")),
+      },
+    );
+  };
+
+  const handleToggle = (collection, field) => {
+    const next = !collection[field];
+    const key = `${collection.id}:${field}`;
+    setPendingAction(key);
+    updateLocal(collection.id, { [field]: next });
+    updateCollection.mutate(
+      { id: collection.id, patch: { [field]: next } },
+      {
+        onSettled: () => setPendingAction(null),
+        onError: (err) => {
+          updateLocal(collection.id, { [field]: collection[field] });
+          toast.error(getErrorMessage(err, "Could not update collection."));
+        },
+      },
+    );
+  };
+
+  const handleDuplicate = (id) => {
+    setPendingAction(`${id}:duplicate`);
+    duplicateCollection.mutate(id, {
+      onSuccess: (data) => toast.success(`Duplicated as ${data.collection.name}`),
+      onError: (err) => toast.error(getErrorMessage(err, "Could not duplicate collection.")),
+      onSettled: () => setPendingAction(null),
+    });
+  };
+
+  const handleDelete = (id) => {
+    setPendingAction(`${id}:delete`);
+    deleteCollection.mutate(id, {
+      onSuccess: () => toast.success("Collection deleted"),
+      onError: (err) => toast.error(getErrorMessage(err, "Could not delete collection.")),
+      onSettled: () => setPendingAction(null),
+    });
+  };
+
+  const handleAddRequest = (collectionId) => {
+    setPendingAction(`${collectionId}:request`);
+    createRequest.mutate(
+      { collectionId, payload: { name: "New request" } },
+      {
+        onSuccess: (data) => navigate(`/builder/${data.request.id}`),
+        onError: (err) => toast.error(getErrorMessage(err, "Could not create request.")),
+        onSettled: () => setPendingAction(null),
+      },
+    );
+  };
+
+  if (isLoading && collections.length === 0) {
+    return (
+      <div className="h-full grid place-items-center text-muted-foreground text-[13px]">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Loading collections…
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-auto p-6">
@@ -54,11 +139,17 @@ export default function Collections() {
             {showArchived ? "Showing archived" : "Show archived"}
           </button>
           <button
-            onClick={() => { const c = create("New Collection"); toast.success(`Created ${c.name}`); }}
+            onClick={handleCreate}
+            disabled={createCollection.isPending}
             data-testid={COLL.newCollection}
-            className="h-9 px-3 rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground text-[13px] font-medium inline-flex items-center gap-2"
+            className="h-9 px-3 rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground text-[13px] font-medium inline-flex items-center gap-2 disabled:opacity-50"
           >
-            <Plus className="h-3.5 w-3.5" /> New collection
+            {createCollection.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+            {createCollection.isPending ? "Creating…" : "New collection"}
           </button>
         </div>
       </div>
@@ -66,6 +157,12 @@ export default function Collections() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {filtered.map((c) => {
           const isOpen = open[c.id];
+          const isDuplicating = pendingAction === `${c.id}:duplicate`;
+          const isDeleting = pendingAction === `${c.id}:delete`;
+          const isAddingRequest = pendingAction === `${c.id}:request`;
+          const isTogglingPin = pendingAction === `${c.id}:pinned`;
+          const isTogglingArchive = pendingAction === `${c.id}:archived`;
+
           return (
             <ContextMenu key={c.id}>
               <ContextMenuTrigger asChild>
@@ -81,7 +178,7 @@ export default function Collections() {
                       <div className="flex items-center gap-2">
                         <input
                           value={c.name}
-                          onChange={(e) => update(c.id, { name: e.target.value })}
+                          onChange={(e) => patchCollection(c.id, { name: e.target.value })}
                           className="bg-transparent text-[14px] font-medium outline-none flex-1 min-w-0"
                         />
                         {c.pinned && <Star className="h-3.5 w-3.5 text-[hsl(var(--warning))] fill-[hsl(var(--warning))]" />}
@@ -112,31 +209,67 @@ export default function Collections() {
                         </button>
                       ))}
                       <button
-                        onClick={() => {
-                          const req = addRequest(c.id, { name: "New request" });
-                          navigate(`/builder/${req.id}`);
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-muted-foreground hover:bg-accent/50"
+                        onClick={() => handleAddRequest(c.id)}
+                        disabled={isAddingRequest}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-muted-foreground hover:bg-accent/50 disabled:opacity-50"
                       >
-                        <Plus className="h-3.5 w-3.5" /> Add request
+                        {isAddingRequest ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5" />
+                        )}
+                        {isAddingRequest ? "Creating…" : "Add request"}
                       </button>
                     </div>
                   )}
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-card border-border text-foreground">
-                <ContextMenuItem onClick={() => update(c.id, { pinned: !c.pinned })}>
-                  <Star className="h-3.5 w-3.5" /> {c.pinned ? "Unpin" : "Pin"}
+                <ContextMenuItem
+                  disabled={isTogglingPin}
+                  onClick={() => handleToggle(c, "pinned")}
+                >
+                  {isTogglingPin ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Star className="h-3.5 w-3.5" />
+                  )}
+                  {c.pinned ? "Unpin" : "Pin"}
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => dup(c.id)}>
-                  <Copy className="h-3.5 w-3.5" /> Duplicate
+                <ContextMenuItem
+                  disabled={isDuplicating}
+                  onClick={() => handleDuplicate(c.id)}
+                >
+                  {isDuplicating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                  {isDuplicating ? "Duplicating…" : "Duplicate"}
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => update(c.id, { archived: !c.archived })}>
-                  <Archive className="h-3.5 w-3.5" /> {c.archived ? "Restore" : "Archive"}
+                <ContextMenuItem
+                  disabled={isTogglingArchive}
+                  onClick={() => handleToggle(c, "archived")}
+                >
+                  {isTogglingArchive ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Archive className="h-3.5 w-3.5" />
+                  )}
+                  {c.archived ? "Restore" : "Archive"}
                 </ContextMenuItem>
                 <ContextMenuSeparator className="bg-accent" />
-                <ContextMenuItem onClick={() => { del(c.id); toast.success("Collection deleted"); }} className="text-red-400">
-                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                <ContextMenuItem
+                  disabled={isDeleting}
+                  onClick={() => handleDelete(c.id)}
+                  className="text-red-400"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  {isDeleting ? "Deleting…" : "Delete"}
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>

@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getErrorMessage } from "@/hooks/use-auth";
-import { teamKeys, invitationKeys, envKeys } from "@/lib/api/query-keys";
+import { teamKeys, invitationKeys, envKeys, collectionKeys } from "@/lib/api/query-keys";
 import * as teamsApi from "@/lib/api/teams-api";
 import {
   applyTeamSwitch,
   refreshTeamsInStore,
 } from "@/lib/api/session";
 import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
+import { refreshCollectionsInStore } from "@/hooks/use-collections";
 import { useAppStore } from "@/store/useAppStore";
 
 export function useTeams() {
@@ -47,9 +48,12 @@ export function useSwitchTeam() {
     onSuccess: async (data) => {
       applyTeamSwitch(data.current_team);
       await refreshTeamsInStore();
-      await refreshEnvironmentsInStore(String(data.current_team?.id));
+      const teamId = String(data.current_team?.id);
+      await refreshEnvironmentsInStore(teamId);
+      await refreshCollectionsInStore(teamId);
       invalidateTeamQueries(queryClient, data.current_team?.id);
-      queryClient.invalidateQueries({ queryKey: envKeys.list(String(data.current_team?.id)) });
+      queryClient.invalidateQueries({ queryKey: envKeys.list(teamId) });
+      queryClient.invalidateQueries({ queryKey: collectionKeys.list(teamId) });
     },
   });
 }
@@ -122,9 +126,12 @@ export function useAcceptInvitation() {
     onSuccess: async (data) => {
       applyTeamSwitch(data.current_team);
       await refreshTeamsInStore();
-      await refreshEnvironmentsInStore(String(data.current_team?.id));
+      const teamId = String(data.current_team?.id);
+      await refreshEnvironmentsInStore(teamId);
+      await refreshCollectionsInStore(teamId);
       invalidateTeamQueries(queryClient, data.current_team?.id);
-      queryClient.invalidateQueries({ queryKey: envKeys.list(String(data.current_team?.id)) });
+      queryClient.invalidateQueries({ queryKey: envKeys.list(teamId) });
+      queryClient.invalidateQueries({ queryKey: collectionKeys.list(teamId) });
     },
   });
 }

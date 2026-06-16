@@ -3,6 +3,7 @@ import { mapApiUser, teamToWorkspace } from "@/lib/api/map-user";
 import { userIsOnboarded, userIsVerified } from "@/lib/auth/user-state";
 import { clearAccessToken } from "@/lib/auth/tokens";
 import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
+import { refreshCollectionsInStore } from "@/hooks/use-collections";
 import { useAppStore } from "@/store/useAppStore";
 
 function mergeUser(mapped, existing) {
@@ -109,7 +110,10 @@ export async function fetchSession() {
   const teamId = useAppStore.getState().activeWorkspaceId;
 
   if (teamId) {
-    await refreshEnvironmentsInStore(teamId).catch(() => []);
+    await Promise.all([
+      refreshEnvironmentsInStore(teamId).catch(() => []),
+      refreshCollectionsInStore(teamId).catch(() => []),
+    ]);
   }
 
   return user;
