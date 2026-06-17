@@ -1,10 +1,14 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MethodBadge from "@/components/shared/MethodBadge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 
 const NODE_W = 200;
 const NODE_H = 88;
+const MIN_ZOOM = 0.4;
+const MAX_ZOOM = 2;
+const ZOOM_STEP = 0.1;
 
 function edgePath(source, target) {
   const x1 = source.x + NODE_W;
@@ -13,6 +17,10 @@ function edgePath(source, target) {
   const y2 = target.y + NODE_H / 2;
   const mx = (x1 + x2) / 2;
   return `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+}
+
+function clampZoom(value) {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
 }
 
 export default function ConduitCanvas({
@@ -27,11 +35,14 @@ export default function ConduitCanvas({
   onAddStep,
 }) {
   const containerRef = useRef(null);
+  const panRef = useRef({ x: 0, y: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [drag, setDrag] = useState(null);
   const [panDrag, setPanDrag] = useState(null);
   const [connectFrom, setConnectFrom] = useState(null);
+
+  panRef.current = pan;
 
   const positions = useMemo(() => {
     const map = {};
@@ -43,42 +54,71 @@ export default function ConduitCanvas({
 
   const edges = layout?.edges || [];
 
+  const zoomIn = () => setZoom((z) => clampZoom(+(z + ZOOM_STEP).toFixed(2)));
+  const zoomOut = () => setZoom((z) => clampZoom(+(z - ZOOM_STEP).toFixed(2)));
+
   const handleWheel = useCallback((e) => {
     e.preventDefault();
-    setZoom((z) => Math.min(2, Math.max(0.4, z - e.deltaY * 0.001)));
+    setZoom((z) => clampZoom(z - e.deltaY * 0.001));
   }, []);
 
+  const startPan = useCallback((e) => {
+    const isMiddle = e.button === 1;
+    const isLeft = e.button === 0;
+    if (!isMiddle && !isLeft) return;
+
+    if (isLeft) {
+      if (e.target.closest("[data-conduit-node]")) return;
+      if (e.target.closest("button")) return;
+    }
+
+    e.preventDefault();
+    onSelectStep(null);
+    setConnectFrom(null);
+    setPanDrag({
+      ox: e.clientX,
+      oy: e.clientY,
+      x: panRef.current.x,
+      y: panRef.current.y,
+    });
+  }, [onSelectStep]);
+
   const onNodeMouseDown = (e, step) => {
+    if (e.button !== 0) return;
     e.stopPropagation();
     onSelectStep(step.id);
     const pos = positions[step.id];
     setDrag({ id: step.id, ox: e.clientX, oy: e.clientY, x: pos.x, y: pos.y });
   };
 
-  const onCanvasMouseDown = (e) => {
-    if (e.target !== containerRef.current && !e.target.dataset?.canvasBg) return;
-    onSelectStep(null);
-    setConnectFrom(null);
-    setPanDrag({ ox: e.clientX, oy: e.clientY, x: pan.x, y: pan.y });
-  };
+  useEffect(() => {
+    if (!drag && !panDrag) return undefined;
 
-  const onMouseMove = (e) => {
-    if (drag) {
-      const dx = (e.clientX - drag.ox) / zoom;
-      const dy = (e.clientY - drag.oy) / zoom;
-      onMoveStep(drag.id, { x: Math.round(drag.x + dx), y: Math.round(drag.y + dy) });
-    } else if (panDrag) {
-      setPan({
-        x: panDrag.x + (e.clientX - panDrag.ox),
-        y: panDrag.y + (e.clientY - panDrag.oy),
-      });
-    }
-  };
+    const onMove = (e) => {
+      if (drag) {
+        const dx = (e.clientX - drag.ox) / zoom;
+        const dy = (e.clientY - drag.oy) / zoom;
+        onMoveStep(drag.id, { x: Math.round(drag.x + dx), y: Math.round(drag.y + dy) });
+      } else if (panDrag) {
+        setPan({
+          x: panDrag.x + (e.clientX - panDrag.ox),
+          y: panDrag.y + (e.clientY - panDrag.oy),
+        });
+      }
+    };
 
-  const onMouseUp = () => {
-    setDrag(null);
-    setPanDrag(null);
-  };
+    const onUp = () => {
+      setDrag(null);
+      setPanDrag(null);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [drag, panDrag, zoom, onMoveStep]);
 
   const handlePortClick = (e, stepId, port) => {
     e.stopPropagation();
@@ -96,16 +136,17 @@ export default function ConduitCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative h-full min-h-[200px] overflow-hidden"
-      onMouseDown={onCanvasMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
+      className={cn(
+        "relative h-full min-h-[200px] overflow-hidden",
+        panDrag ? "cursor-grabbing" : "cursor-grab",
+      )}
+      onMouseDown={startPan}
       onWheel={handleWheel}
+      onContextMenu={(e) => e.preventDefault()}
     >
       <div
         data-canvas-bg="true"
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-30 pointer-events-none"
         style={{
           backgroundImage: "radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px)",
           backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
@@ -150,6 +191,7 @@ export default function ConduitCanvas({
           return (
             <div
               key={step.id}
+              data-conduit-node
               className={cn(
                 "absolute rounded-md border bg-card shadow-sm cursor-grab active:cursor-grabbing select-none",
                 selected ? "border-[hsl(var(--brand))] ring-1 ring-[hsl(var(--brand))]/40" : "border-border",
@@ -190,7 +232,7 @@ export default function ConduitCanvas({
         })}
       </div>
 
-      <div className="absolute bottom-3 left-3 flex items-center gap-2">
+      <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 pointer-events-auto">
         <button
           type="button"
           onClick={onAddStep}
@@ -203,8 +245,36 @@ export default function ConduitCanvas({
         )}
       </div>
 
+      <div className="absolute bottom-3 right-3 z-20 flex items-center gap-0.5 rounded-md border border-border bg-card/95 p-0.5 shadow-sm pointer-events-auto">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={zoomOut}
+          disabled={zoom <= MIN_ZOOM}
+          title="Zoom out"
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </Button>
+        <span className="min-w-[40px] text-center text-[11px] font-mono text-muted-foreground select-none">
+          {Math.round(zoom * 100)}%
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={zoomIn}
+          disabled={zoom >= MAX_ZOOM}
+          title="Zoom in"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
       {edges.length > 0 && (
-        <div className="absolute top-3 right-3 max-w-[200px] space-y-1">
+        <div className="absolute top-3 right-3 z-20 max-w-[200px] space-y-1 pointer-events-auto">
           {edges.map((edge) => (
             <div key={edge.id} className="flex items-center gap-1 text-[10px] bg-card border border-border rounded px-2 py-1">
               <span className="truncate font-mono text-muted-foreground">{edge.source.slice(0, 6)}→{edge.target.slice(0, 6)}</span>
