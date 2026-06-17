@@ -96,7 +96,7 @@ export default function ConduitCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 min-h-0 overflow-hidden rounded-md border border-border bg-[hsl(var(--background))]"
+      className="relative h-full min-h-[200px] overflow-hidden rounded-md bg-[hsl(var(--background))]"
       onMouseDown={onCanvasMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}

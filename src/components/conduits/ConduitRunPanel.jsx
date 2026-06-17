@@ -1,10 +1,41 @@
 import MethodBadge from "@/components/shared/MethodBadge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, SkipForward, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
+function formatBody(body, raw) {
+  if (raw && typeof raw === "string" && raw.trim()) {
+    try {
+      return JSON.stringify(JSON.parse(raw), null, 2);
+    } catch {
+      return raw;
+    }
+  }
+  if (body == null) return null;
+  if (typeof body === "string") {
+    try {
+      return JSON.stringify(JSON.parse(body), null, 2);
+    } catch {
+      return body;
+    }
+  }
+  return JSON.stringify(body, null, 2);
+}
+
 function StepRow({ step, defaultOpen }) {
   const [open, setOpen] = useState(defaultOpen);
+  const bodyText = formatBody(step.responseBody, step.responseRaw);
+  const headersText = step.responseHeaders
+    ? JSON.stringify(step.responseHeaders, null, 2)
+    : null;
 
   const Icon = step.skipped ? SkipForward : step.ok ? CheckCircle2 : XCircle;
   const color = step.skipped
@@ -34,7 +65,7 @@ function StepRow({ step, defaultOpen }) {
       </button>
       {open && (
         <div className="px-3 pb-3 pl-10 space-y-2 text-[11px]">
-          {step.url && <div className="font-mono text-muted-foreground truncate">{step.url}</div>}
+          {step.url && <div className="font-mono text-muted-foreground break-all">{step.url}</div>}
           {step.error && <div className="text-[hsl(var(--danger))]">{step.error}</div>}
           {step.extracted?.length > 0 && (
             <div className="space-y-0.5">
@@ -45,10 +76,29 @@ function StepRow({ step, defaultOpen }) {
               ))}
             </div>
           )}
-          {step.responseBody != null && (
-            <pre className="rounded bg-muted/40 p-2 overflow-auto max-h-[160px] font-mono text-[10px]">
-              {typeof step.responseBody === "string" ? step.responseBody : JSON.stringify(step.responseBody, null, 2)}
-            </pre>
+          {(bodyText || headersText) && (
+            <Tabs defaultValue="body" className="w-full">
+              <TabsList className="h-8">
+                <TabsTrigger value="body" className="text-[10px] px-2">Body</TabsTrigger>
+                {headersText && <TabsTrigger value="headers" className="text-[10px] px-2">Headers</TabsTrigger>}
+              </TabsList>
+              <TabsContent value="body" className="mt-1">
+                {bodyText ? (
+                  <pre className="rounded-md border border-border bg-muted/30 p-2 overflow-auto max-h-[280px] font-mono text-[10px] whitespace-pre-wrap break-all">
+                    {bodyText}
+                  </pre>
+                ) : (
+                  <div className="text-muted-foreground">No response body</div>
+                )}
+              </TabsContent>
+              {headersText && (
+                <TabsContent value="headers" className="mt-1">
+                  <pre className="rounded-md border border-border bg-muted/30 p-2 overflow-auto max-h-[280px] font-mono text-[10px] whitespace-pre-wrap break-all">
+                    {headersText}
+                  </pre>
+                </TabsContent>
+              )}
+            </Tabs>
           )}
         </div>
       )}
@@ -61,40 +111,44 @@ export default function ConduitRunPanel({ result, runs = [], onSelectRun }) {
 
   if (!active && runs.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-border p-4 text-[12px] text-muted-foreground text-center">
+      <div className="rounded-md border border-dashed border-border p-4 text-[12px] text-muted-foreground text-center h-full grid place-items-center">
         Run the flow to see per-step results here.
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border border-border bg-card overflow-hidden flex flex-col max-h-[320px]">
-      <div className="px-3 py-2 border-b border-border flex items-center justify-between gap-2">
+    <div className="rounded-md border border-border bg-card overflow-hidden flex flex-col h-full min-h-0">
+      <div className="px-3 py-2 border-b border-border flex items-center justify-between gap-2 shrink-0">
         <div className="text-[12px] font-medium">
           {active.success ? "Run succeeded" : "Run finished"}
           <span className="text-muted-foreground font-normal ml-1.5">({active.durationMs}ms)</span>
         </div>
         {runs.length > 1 && (
-          <select
-            className="h-7 px-2 rounded border border-border bg-background text-[11px]"
-            onChange={(e) => onSelectRun?.(runs.find((r) => r.id === e.target.value))}
+          <Select
             defaultValue={active.id}
+            onValueChange={(id) => onSelectRun?.(runs.find((r) => r.id === id))}
           >
-            {runs.map((r) => (
-              <option key={r.id} value={r.id}>
-                {new Date(r.createdAt || r.finishedAt).toLocaleString()} — {r.success ? "OK" : "Failed"}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-7 w-[200px] text-[11px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {runs.map((r) => (
+                <SelectItem key={r.id} value={r.id} className="text-[11px]">
+                  {new Date(r.createdAt || r.finishedAt).toLocaleString()} — {r.success ? "OK" : "Failed"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
       </div>
-      <div className="overflow-auto flex-1">
+      <div className="overflow-auto flex-1 min-h-0">
         {(active.steps || []).map((step, idx) => (
           <StepRow key={step.stepId || idx} step={step} defaultOpen={!step.ok && !step.skipped} />
         ))}
       </div>
       {active.variables && Object.keys(active.variables).length > 0 && (
-        <div className="px-3 py-2 border-t border-border bg-muted/20">
+        <div className="px-3 py-2 border-t border-border bg-muted/20 shrink-0">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1">Flow variables</div>
           <pre className="text-[10px] font-mono overflow-auto max-h-[80px]">{JSON.stringify(active.variables, null, 2)}</pre>
         </div>

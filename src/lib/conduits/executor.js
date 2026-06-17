@@ -58,14 +58,25 @@ function normalizeExtractions(step) {
   return [];
 }
 
-function snapshotBody(body) {
-  if (body == null) return null;
-  try {
-    const text = typeof body === "string" ? body : JSON.stringify(body);
-    return text.length > 4000 ? `${text.slice(0, 4000)}…` : body;
-  } catch {
-    return String(body);
+function snapshotBody(response) {
+  if (!response) return null;
+  const raw = response.rawText;
+  if (raw && raw.trim()) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw;
+    }
   }
+  const body = response.body;
+  if (body == null) return null;
+  if (typeof body === "string") return body;
+  return body;
+}
+
+function snapshotHeaders(headers) {
+  if (!headers || typeof headers !== "object") return null;
+  return headers;
 }
 
 /**
@@ -163,7 +174,9 @@ export async function runConduit({
       response,
       extracted: extractedItems.length ? extractedItems : null,
       error: response.ok ? null : response.body?.message || response.statusText,
-      responseBody: snapshotBody(response.body),
+      responseBody: snapshotBody(response),
+      responseHeaders: snapshotHeaders(response.headers),
+      responseRaw: response.rawText || null,
     };
     results.push(stepResult);
     onStepComplete?.(stepResult);
@@ -197,6 +210,7 @@ export function formatRunForApi(result, environmentId) {
     steps: result.steps.map((s) => ({
       step_id: s.stepId,
       name: s.name,
+      method: s.method,
       ok: s.ok,
       skipped: s.skipped,
       status: s.status,
@@ -205,6 +219,8 @@ export function formatRunForApi(result, environmentId) {
       extracted: s.extracted,
       error: s.error,
       response_body: s.responseBody,
+      response_headers: s.responseHeaders,
+      response_raw: s.responseRaw,
     })),
   };
 }

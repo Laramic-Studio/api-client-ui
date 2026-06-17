@@ -44,25 +44,29 @@ export default function Conduits() {
 
   const activeConduit = conduits.find((c) => c.id === activeId);
 
-  const allRequests = useMemo(
-    () => collections.flatMap((c) => c.requests.map((r) => ({ ...r, collectionName: c.name }))),
-    [collections],
-  );
-
   const patchConduit = (id, patch) => {
-    queryClient.setQueryData(conduitKeys.list(teamId), (old) =>
-      (old || []).map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              ...patch,
-              steps: patch.steps ?? c.steps,
-              layout: patch.layout ?? c.layout,
-            }
-          : c,
-      ),
-    );
-    savePatch(id, patch);
+    let snapshot = null;
+    queryClient.setQueryData(conduitKeys.list(teamId), (old) => {
+      const next = (old || []).map((c) => {
+        if (c.id !== id) return c;
+        const merged = {
+          ...c,
+          ...patch,
+          steps: patch.steps ?? c.steps,
+          layout: patch.layout ?? c.layout,
+        };
+        snapshot = merged;
+        return merged;
+      });
+      return next;
+    });
+    if (snapshot) {
+      savePatch(id, {
+        name: snapshot.name,
+        layout: snapshot.layout,
+        steps: snapshot.steps,
+      });
+    }
   };
 
   const handleCreate = () => {
@@ -93,7 +97,7 @@ export default function Conduits() {
         conduit={activeConduit}
         onPatch={patchConduit}
         onBack={() => setActiveId(null)}
-        allRequests={allRequests}
+        collections={collections}
         envs={envs}
         selectedEnv={selectedEnv}
         onEnvChange={setSelectedEnvId}

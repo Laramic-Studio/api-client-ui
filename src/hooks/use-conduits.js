@@ -41,7 +41,12 @@ export function useUpdateConduit() {
 
   return useMutation({
     mutationFn: ({ id, patch }) => getClient().updateConduit(id, patch),
-    onSuccess: () => invalidateConduits(queryClient, teamId),
+    onSuccess: (conduit) => {
+      if (!teamId || !conduit?.id) return;
+      queryClient.setQueryData(conduitKeys.list(teamId), (old) =>
+        (old || []).map((c) => (c.id === conduit.id ? conduit : c)),
+      );
+    },
   });
 }
 

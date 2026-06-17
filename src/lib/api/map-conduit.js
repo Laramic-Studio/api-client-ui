@@ -50,13 +50,31 @@ export function mapApiConduit(conduit) {
   };
 }
 
+export function mapApiConduitRunStep(step) {
+  return {
+    stepId: step.step_id ?? step.stepId,
+    name: step.name,
+    method: step.method || "GET",
+    url: step.url,
+    ok: step.ok,
+    skipped: step.skipped,
+    status: step.status,
+    durationMs: step.duration_ms ?? step.durationMs ?? 0,
+    extracted: step.extracted,
+    error: step.error,
+    responseBody: step.response_body ?? step.responseBody,
+    responseHeaders: step.response_headers ?? step.responseHeaders,
+    responseRaw: step.response_raw ?? step.responseRaw,
+  };
+}
+
 export function mapApiConduitRun(run) {
   return {
     id: run.id,
     conduitId: run.conduit_id ?? run.conduitId,
     environmentId: run.environment_id ?? run.environmentId,
     success: run.success,
-    steps: run.steps || [],
+    steps: (run.steps || []).map(mapApiConduitRunStep),
     variables: run.variables || {},
     durationMs: run.duration_ms ?? run.durationMs ?? 0,
     startedAt: run.started_at ?? run.startedAt,

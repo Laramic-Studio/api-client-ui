@@ -2,7 +2,15 @@ import { useState } from "react";
 import ConduitCanvas from "@/components/conduits/ConduitCanvas";
 import ConduitStepEditor from "@/components/conduits/ConduitStepEditor";
 import ConduitRunPanel from "@/components/conduits/ConduitRunPanel";
-import MethodBadge from "@/components/shared/MethodBadge";
+import ImportFromCollection from "@/components/conduits/ImportFromCollection";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatRunForApi, runConduit } from "@/lib/conduits/executor";
 import { createEmptyStep } from "@/lib/conduits/step-utils";
 import { requestToConduitStep } from "@/lib/api/map-conduit";
@@ -16,7 +24,7 @@ export default function ConduitEditor({
   conduit,
   onPatch,
   onBack,
-  allRequests,
+  collections,
   selectedEnv,
   envs,
   onEnvChange,
@@ -56,6 +64,7 @@ export default function ConduitEditor({
     const step = { ...requestToConduitStep(request, conduit.steps.length), id };
     patch({ steps: [...conduit.steps, step] });
     setSelectedStepId(id);
+    toast.success(`Added "${request.name}"`);
   };
 
   const deleteStep = (id) => {
@@ -132,15 +141,16 @@ export default function ConduitEditor({
           className="bg-transparent text-[14px] font-medium outline-none flex-1 min-w-0"
         />
         {envs.length > 0 && (
-          <select
-            value={selectedEnv?.id || ""}
-            onChange={(e) => onEnvChange(e.target.value)}
-            className="h-8 px-2 rounded-md border border-border bg-background text-[12px]"
-          >
-            {envs.map((e) => (
-              <option key={e.id} value={e.id}>{e.name}</option>
-            ))}
-          </select>
+          <Select value={selectedEnv?.id || ""} onValueChange={onEnvChange}>
+            <SelectTrigger className="h-8 w-[160px] text-[12px]">
+              <SelectValue placeholder="Environment" />
+            </SelectTrigger>
+            <SelectContent>
+              {envs.map((e) => (
+                <SelectItem key={e.id} value={e.id} className="text-[12px]">{e.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         <button
           type="button"
@@ -164,49 +174,38 @@ export default function ConduitEditor({
       </div>
 
       <div className="flex-1 min-h-0 flex">
-        <div className="flex-1 min-w-0 flex flex-col p-3 gap-3">
-          <ConduitCanvas
-            steps={conduit.steps}
-            layout={conduit.layout}
-            selectedStepId={selectedStepId}
-            connectMode={connectMode}
-            onSelectStep={setSelectedStepId}
-            onMoveStep={moveStep}
-            onConnect={connect}
-            onDeleteEdge={deleteEdge}
-            onAddStep={addStep}
-          />
-
-          {allRequests.length > 0 && (
-            <div className="shrink-0 border-t border-border pt-2">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1.5">
-                Import from collection
+        <div className="flex-1 min-w-0 flex flex-col p-3 min-h-0">
+          <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0 rounded-md border border-border">
+            <ResizablePanel defaultSize={58} minSize={25}>
+              <ConduitCanvas
+                steps={conduit.steps}
+                layout={conduit.layout}
+                selectedStepId={selectedStepId}
+                connectMode={connectMode}
+                onSelectStep={setSelectedStepId}
+                onMoveStep={moveStep}
+                onConnect={connect}
+                onDeleteEdge={deleteEdge}
+                onAddStep={addStep}
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={42} minSize={20} className="min-h-0">
+              <div className="h-full flex flex-col gap-3 p-3 overflow-hidden min-h-0">
+                <ImportFromCollection collections={collections} onImport={importRequest} />
+                <div className="flex-1 min-h-0">
+                  <ConduitRunPanel
+                    result={displayResult}
+                    runs={runs}
+                    onSelectRun={setSelectedRun}
+                  />
+                </div>
               </div>
-              <div className="flex flex-wrap gap-1.5 max-h-[72px] overflow-auto">
-                {allRequests.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => importRequest(r)}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded border border-border hover:bg-accent/50 text-[11px]"
-                    title={r.collectionName}
-                  >
-                    <MethodBadge method={r.method} />
-                    <span className="truncate max-w-[120px]">{r.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <ConduitRunPanel
-            result={displayResult}
-            runs={runs}
-            onSelectRun={setSelectedRun}
-          />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
 
-        <div className="w-[340px] shrink-0 min-h-0">
+        <div className="w-[340px] shrink-0 min-h-0 border-l border-border">
           <ConduitStepEditor
             step={selectedStep}
             onChange={updateStep}
