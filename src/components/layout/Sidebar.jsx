@@ -164,7 +164,7 @@ function NavRow({ item, collapsed }) {
   const Icon = item.icon;
 
   if (enabled) {
-    const iconClass = collapsed ? "h-5 w-5 shrink-0" : "h-4 w-4 shrink-0";
+    const iconClass = collapsed ? "h-4 w-4 shrink-0" : "h-4 w-4 shrink-0";
 
     const link = (
       <NavLink
@@ -172,7 +172,7 @@ function NavRow({ item, collapsed }) {
         data-testid={NAV.item(item.key)}
         className={({ isActive }) =>
           cn(
-            "group flex items-center gap-2.5 rounded-md text-[13px] transition-colors",
+            "group flex items-center gap-2.5 text-[13px] transition-colors",
             collapsed ? "h-9 w-9 justify-center items-center mx-auto" : "h-9 px-2.5",
             // FIX B: stronger active state with brand-color left border
             isActive
@@ -208,10 +208,6 @@ function NavRow({ item, collapsed }) {
 
     return link;
   }
-
-  // FIX A: render the full row at reduced opacity — same height and padding as enabled items
-  // FIX C: TooltipTrigger wraps the full row div for a stable anchor
-  // FIX E: in expanded mode show a short "Soon" badge instead of the full LOCKED_REASON string
 
   const iconClass = collapsed ? "h-5 w-5 shrink-0" : "h-4 w-4 shrink-0";
 

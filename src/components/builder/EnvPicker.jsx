@@ -33,9 +33,27 @@ export default function EnvPicker({ collectionId, compact = false }) {
     <Select value={current || ""} onValueChange={onChange} disabled={isPending}>
       <SelectTrigger
         className={cn(
-          "bg-[hsl(var(--input))] border-[hsl(var(--border))] text-[12px]",
-          compact ? "h-7 w-32" : "h-9 w-40",
+          "bg-[hsl(var(--input))] border-[hsl(var(--border))] text-[12px] px-2",
+          "min-w-[6rem] max-w-[16rem]",
+          compact ? "h-7" : "h-9"
         )}
+        style={{
+          // Dynamic width based on selected env's name
+          width: (() => {
+            let selected = visible.find(e => e.id === current);
+            let text = selected ? selected.name : "No env";
+            // Account for icon + padding, rough calculation - can be tuned
+            const charWidth = 8; // px, average monospace
+            const min = compact ? 80 : 96; // px
+            const max = compact ? 175 : 225; // px
+            // Add ' scoped' text width if scoped
+            let extra = selected && selected.collectionId ? 40 : 0;
+            return Math.min(
+              Math.max(min, text.length * charWidth + 38 + extra),
+              max
+            );
+          })()
+        }}
         data-testid="builder-env-picker"
         title="Active environment for this request"
       >

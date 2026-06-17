@@ -33,7 +33,7 @@ const BODY_TYPES = [
   { id: "xml", label: "XML", lang: "xml" },
   { id: "raw", label: "Raw Text", lang: "plaintext" },
   { id: "form", label: "Form Data", lang: null },
-  { id: "graphql", label: "GraphQL", lang: "graphql" },
+  // { id: "graphql", label: "GraphQL", lang: "graphql" },
 ];
 
 const TAB_CONTENT_CLASS = "flex-1 min-h-0 m-0 mt-0 p-0 overflow-hidden data-[state=inactive]:hidden flex flex-col";

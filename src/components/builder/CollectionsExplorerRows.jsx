@@ -87,18 +87,18 @@ export function CollectionRow({
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
-          <ContextMenuItem onClick={() => actions.addFolder(c.id, { name: "New folder" })}>
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addFolder(c.id, { name: "New folder" })}>
             <FolderPlus className="h-3.5 w-3.5" /> New folder
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => actions.addRequest(c.id, { name: "New request" }, onOpenRequest)}>
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addRequest(c.id, { name: "New request" }, onOpenRequest)}>
             <FilePlus className="h-3.5 w-3.5" /> New request
           </ContextMenuItem>
-          <ContextMenuItem disabled={isDuplicating} onClick={() => actions.duplicateCollection(c.id)}>
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" disabled={isDuplicating} onClick={() => actions.duplicateCollection(c.id)}>
             {isDuplicating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
             {isDuplicating ? "Duplicating…" : "Duplicate"}
           </ContextMenuItem>
           <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteCollection(c.id, c.name)} className="text-red-400">
+          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteCollection(c.id, c.name)} className="text-red-400 cursor-pointer text-xs px-2 gap-2">
             {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             {isDeleting ? "Deleting…" : "Delete"}
           </ContextMenuItem>
@@ -403,7 +403,7 @@ export function RequestRow({
             <FileJson className="h-3.5 w-3.5" /> Add example
           </ContextMenuItem>
           <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteRequest(c.id, r.id, r.name)} className="text-red-400">
+          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteRequest(c.id, r.id, r.name)} className="cursor-pointer text-xs px-2 gap-2 text-red-400">
             {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             {isDeleting ? "Deleting…" : "Delete"}
           </ContextMenuItem>
@@ -498,7 +498,7 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
         <ContextMenuItem
           disabled={isDeleting}
           onClick={() => actions.deleteExample(collection.id, request.id, example.id, example.name)}
-          className="text-red-400"
+          className="text-red-400 cursor-pointer text-xs px-2 gap-2"
         >
           {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
           {isDeleting ? "Deleting…" : "Delete"}
