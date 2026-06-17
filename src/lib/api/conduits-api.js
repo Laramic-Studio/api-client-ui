@@ -18,3 +18,14 @@ export function updateConduit(teamId, conduitId, payload) {
 export function deleteConduit(teamId, conduitId) {
   return apiRequest(`/teams/${teamId}/conduits/${conduitId}`, { method: "DELETE" });
 }
+
+export function listConduitRuns(teamId, conduitId) {
+  return apiRequest(`/teams/${teamId}/conduits/${conduitId}/runs`);
+}
+
+export function storeConduitRun(teamId, conduitId, payload) {
+  return apiRequest(`/teams/${teamId}/conduits/${conduitId}/runs`, {
+    method: "POST",
+    body: payload,
+  });
+}

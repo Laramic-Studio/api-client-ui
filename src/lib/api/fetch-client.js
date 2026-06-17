@@ -17,7 +17,7 @@ import * as teamsApi from "@/lib/api/teams-api";
 import { useAppStore } from "@/store/useAppStore";
 import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
 import { refreshCollectionsInStore } from "@/hooks/use-collections";
-import { mapApiConduit, mapConduitToApi } from "@/lib/api/map-conduit";
+import { mapApiConduit, mapApiConduitRun, mapConduitToApi } from "@/lib/api/map-conduit";
 import * as conduitsApi from "@/lib/api/conduits-api";
 import { client as mockClient } from "@/lib/api/client";
 import { teamToWorkspace } from "@/lib/api/map-user";
@@ -280,5 +280,18 @@ export const fetchClient = {
   async deleteConduit(id) {
     const teamId = useAppStore.getState().activeWorkspaceId;
     await conduitsApi.deleteConduit(teamId, id);
+  },
+
+  async listConduitRuns(conduitId) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    if (!teamId) return [];
+    const data = await conduitsApi.listConduitRuns(teamId, conduitId);
+    return (data.runs || []).map(mapApiConduitRun);
+  },
+
+  async storeConduitRun(conduitId, payload) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    const data = await conduitsApi.storeConduitRun(teamId, conduitId, payload);
+    return mapApiConduitRun(data.run);
   },
 };

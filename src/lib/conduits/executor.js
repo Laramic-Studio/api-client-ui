@@ -1,15 +1,22 @@
 import { getClient } from "@/lib/api/client";
 import { interpolate } from "@/lib/mockEngine";
+import { evaluateCondition } from "@/lib/conduits/conditions";
+import { getExecutionOrder } from "@/lib/conduits/step-utils";
+import {
+  applyPassesToStep,
+  applyVarSubstitutions,
+  collectPendingPasses,
+} from "@/lib/conduits/passes";
 import { extractByPath, substituteConduitVars } from "@/lib/conduits/variables";
 
-function buildHeaders(node, env) {
+function buildHeaders(node, env, flowVars) {
   const headers = [...(node.headers || [])];
   const auth = node.auth || { type: "none" };
 
   if (auth.type === "bearer" && auth.token) {
     headers.push({
       key: "Authorization",
-      value: `Bearer ${interpolate(auth.token, env)}`,
+      value: `Bearer ${substituteConduitVars(interpolate(auth.token, env), flowVars)}`,
       enabled: true,
     });
   } else if (auth.type === "basic" && auth.username) {
@@ -18,7 +25,7 @@ function buildHeaders(node, env) {
   } else if (auth.type === "apikey") {
     headers.push({
       key: auth.headerName || "X-API-Key",
-      value: interpolate(auth.value || "", env),
+      value: substituteConduitVars(interpolate(auth.value || "", env), flowVars),
       enabled: true,
     });
   }
@@ -27,8 +34,7 @@ function buildHeaders(node, env) {
 }
 
 function buildUrl(node, env, flowVars) {
-  const withEnv = interpolate(node.url || "", env);
-  const base = substituteConduitVars(withEnv, flowVars);
+  const base = substituteConduitVars(interpolate(node.url || "", env), flowVars);
   const qs = (node.params || [])
     .filter((p) => p.enabled !== false && p.key)
     .map((p) => {
@@ -39,37 +45,91 @@ function buildUrl(node, env, flowVars) {
   return qs ? `${base}${base.includes("?") ? "&" : "?"}${qs}` : base;
 }
 
-function serializeVar(value) {
-  if (value == null) return value;
-  return typeof value === "object" ? value : value;
+function normalizeExtractions(step) {
+  if (step.extractions?.length) return step.extractions;
+  if (step.extract) {
+    return [{
+      id: "legacy",
+      path: step.extract,
+      variable: step.extract.replace(/\./g, "_"),
+      passes: [],
+    }];
+  }
+  return [];
+}
+
+function snapshotBody(body) {
+  if (body == null) return null;
+  try {
+    const text = typeof body === "string" ? body : JSON.stringify(body);
+    return text.length > 4000 ? `${text.slice(0, 4000)}…` : body;
+  } catch {
+    return String(body);
+  }
 }
 
 /**
- * Run a conduit flow sequentially. Each step sends a real HTTP request,
- * extracts variables from responses, and passes them to later steps.
+ * Run a conduit flow. Execution order follows canvas edges or sortOrder.
+ * Stops on first failed request; skips steps when optional conditions fail.
  */
-export async function runConduit({ steps, env, mode = "real", onStepComplete }) {
+export async function runConduit({
+  steps,
+  layout,
+  env,
+  mode = "real",
+  onStepComplete,
+}) {
   const client = getClient();
   const flowVars = {};
   const results = [];
+  const ordered = getExecutionOrder(steps, layout);
   let success = true;
+  let previousResponse = null;
+  let pendingPasses = [];
 
-  for (const node of steps) {
-    const url = buildUrl(node, env, flowVars);
-    const headers = buildHeaders(node, env).map((h) => ({
+  const startedAt = new Date().toISOString();
+  const t0 = performance.now();
+
+  for (const rawStep of ordered) {
+    const conditionOk = evaluateCondition(rawStep.condition, { previousResponse, flowVars });
+    if (!conditionOk) {
+      const skipped = {
+        stepId: rawStep.id,
+        name: rawStep.name,
+        method: rawStep.method,
+        url: rawStep.url,
+        ok: false,
+        skipped: true,
+        status: null,
+        durationMs: 0,
+        extracted: null,
+        error: "Condition not met — step skipped",
+        responseBody: null,
+      };
+      results.push(skipped);
+      onStepComplete?.(skipped);
+      continue;
+    }
+
+    let step = applyPassesToStep(rawStep, pendingPasses, flowVars);
+    pendingPasses = [];
+    step = applyVarSubstitutions(step, env, flowVars, interpolate);
+
+    const url = buildUrl(step, env, flowVars);
+    const headers = buildHeaders(step, env, flowVars).map((h) => ({
       ...h,
       value: substituteConduitVars(interpolate(h.value || "", env), flowVars),
     }));
 
-    const body = node.body?.content
+    const body = step.body?.content
       ? {
-          ...node.body,
-          content: substituteConduitVars(interpolate(node.body.content, env), flowVars),
+          ...step.body,
+          content: substituteConduitVars(interpolate(step.body.content, env), flowVars),
         }
-      : node.body;
+      : step.body;
 
     const response = await client.send({
-      method: node.method || "GET",
+      method: step.method || "GET",
       url,
       headers,
       body,
@@ -77,23 +137,33 @@ export async function runConduit({ steps, env, mode = "real", onStepComplete }) 
       mode,
     });
 
-    let extracted = null;
-    if (node.extract && response.body != null) {
-      const value = extractByPath(response.body, node.extract);
-      if (value !== undefined) {
-        flowVars[node.extract] = serializeVar(value);
-        extracted = { path: node.extract, value };
-      }
-    }
+    previousResponse = response;
+    const extractions = normalizeExtractions(rawStep);
+    const extractedItems = [];
+
+    extractions.forEach((ext) => {
+      if (!ext.path || response.body == null) return;
+      const value = extractByPath(response.body, ext.path);
+      if (value === undefined) return;
+      const variable = ext.variable || ext.path.replace(/\./g, "_");
+      flowVars[variable] = value;
+      extractedItems.push({ path: ext.path, variable, value });
+      pendingPasses = [...pendingPasses, ...collectPendingPasses([ext])];
+    });
 
     const stepResult = {
-      nodeId: node.id,
-      name: node.name,
-      method: node.method,
+      stepId: rawStep.id,
+      name: rawStep.name,
+      method: step.method,
       url,
-      response,
-      extracted,
       ok: response.ok,
+      skipped: false,
+      status: response.status,
+      durationMs: response.durationMs,
+      response,
+      extracted: extractedItems.length ? extractedItems : null,
+      error: response.ok ? null : response.body?.message || response.statusText,
+      responseBody: snapshotBody(response.body),
     };
     results.push(stepResult);
     onStepComplete?.(stepResult);
@@ -104,5 +174,37 @@ export async function runConduit({ steps, env, mode = "real", onStepComplete }) 
     }
   }
 
-  return { success, steps: results, variables: flowVars };
+  const finishedAt = new Date().toISOString();
+
+  return {
+    success,
+    steps: results,
+    variables: flowVars,
+    startedAt,
+    finishedAt,
+    durationMs: Math.round(performance.now() - t0),
+  };
+}
+
+export function formatRunForApi(result, environmentId) {
+  return {
+    environment_id: environmentId || null,
+    success: result.success,
+    duration_ms: result.durationMs,
+    started_at: result.startedAt,
+    finished_at: result.finishedAt,
+    variables: result.variables,
+    steps: result.steps.map((s) => ({
+      step_id: s.stepId,
+      name: s.name,
+      ok: s.ok,
+      skipped: s.skipped,
+      status: s.status,
+      duration_ms: s.durationMs,
+      url: s.url,
+      extracted: s.extracted,
+      error: s.error,
+      response_body: s.responseBody,
+    })),
+  };
 }

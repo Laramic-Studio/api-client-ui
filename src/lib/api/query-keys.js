@@ -23,6 +23,7 @@ export const collectionKeys = {
 export const conduitKeys = {
   all: ["conduits"],
   list: (teamId) => [...conduitKeys.all, "list", String(teamId)],
+  runs: (teamId, conduitId) => [...conduitKeys.all, "runs", String(teamId), String(conduitId)],
 };
 
 export const invitationKeys = {

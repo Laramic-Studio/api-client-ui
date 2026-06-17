@@ -62,3 +62,28 @@ export function useDeleteConduit() {
     onSuccess: () => invalidateConduits(queryClient, teamId),
   });
 }
+
+export function useConduitRuns(conduitId) {
+  const teamId = useActiveTeamId();
+
+  return useQuery({
+    queryKey: conduitKeys.runs(teamId, conduitId),
+    queryFn: () => getClient().listConduitRuns(conduitId),
+    enabled: Boolean(teamId && conduitId),
+    staleTime: 15 * 1000,
+  });
+}
+
+export function useStoreConduitRun(conduitId) {
+  const teamId = useActiveTeamId();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload) => getClient().storeConduitRun(conduitId, payload),
+    onSuccess: () => {
+      if (teamId && conduitId) {
+        queryClient.invalidateQueries({ queryKey: conduitKeys.runs(teamId, conduitId) });
+      }
+    },
+  });
+}

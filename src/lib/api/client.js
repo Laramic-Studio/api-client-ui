@@ -129,6 +129,14 @@ export const client = {
     });
   },
 
+  async listConduitRuns() {
+    return async_(() => []);
+  },
+
+  async storeConduitRun(_conduitId, payload) {
+    return async_(() => ({ id: `run_${Date.now()}`, ...payload }));
+  },
+
   // ----- History / mock servers / team / notifications (read-through) -----
   async listHistory() { return async_(() => get().history); },
   async addHistory(entry) { return async_(() => get().addHistory(entry)); },
