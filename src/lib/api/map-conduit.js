@@ -44,6 +44,10 @@ export function mapApiConduit(conduit) {
   return {
     id: conduit.id,
     name: conduit.name,
+    userId: conduit.user_id ?? conduit.userId ?? null,
+    visibility: conduit.visibility || "private",
+    sharedWith: conduit.shared_with ?? conduit.sharedWith ?? [],
+    canEdit: conduit.can_edit ?? conduit.canEdit ?? true,
     sortOrder: conduit.sort_order ?? conduit.sortOrder ?? 0,
     layout: conduit.layout || { edges: [] },
     steps: steps.sort((a, b) => a.sortOrder - b.sortOrder),
@@ -105,6 +109,8 @@ export function mapConduitStepToApi(step, index) {
 export function mapConduitToApi(patch) {
   const payload = {};
   if (patch.name !== undefined) payload.name = patch.name;
+  if (patch.visibility !== undefined) payload.visibility = patch.visibility;
+  if (patch.sharedWith !== undefined) payload.shared_with = patch.sharedWith;
   if (patch.sortOrder !== undefined) payload.sort_order = patch.sortOrder;
   if (patch.layout !== undefined) payload.layout = patch.layout;
   if (patch.steps !== undefined) {

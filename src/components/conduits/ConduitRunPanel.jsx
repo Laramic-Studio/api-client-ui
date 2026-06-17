@@ -111,15 +111,15 @@ export default function ConduitRunPanel({ result, runs = [], onSelectRun }) {
 
   if (!active && runs.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-border p-4 text-[12px] text-muted-foreground text-center h-full grid place-items-center">
+      <div className="text-[12px] text-muted-foreground text-center py-8">
         Run the flow to see per-step results here.
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border border-border bg-card overflow-hidden flex flex-col h-full min-h-0">
-      <div className="px-3 py-2 border-b border-border flex items-center justify-between gap-2 shrink-0">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="px-0 py-2 border-b border-border flex items-center justify-between gap-2 shrink-0">
         <div className="text-[12px] font-medium">
           {active.success ? "Run succeeded" : "Run finished"}
           <span className="text-muted-foreground font-normal ml-1.5">({active.durationMs}ms)</span>

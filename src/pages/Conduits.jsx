@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections, selectWorkspaceEnvironments } from "@/lib/store/selectors";
 import ConduitEditor from "@/components/conduits/ConduitEditor";
+import CreateConduitDialog from "@/components/conduits/CreateConduitDialog";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import {
   useConduits,
@@ -15,9 +16,15 @@ import { conduitKeys } from "@/lib/api/query-keys";
 import { useCollections } from "@/hooks/use-collections";
 import { useEnvironments } from "@/hooks/use-environments";
 import { getErrorMessage } from "@/hooks/use-auth";
-import { Plus, Workflow, Loader2 } from "lucide-react";
+import { Plus, Workflow, Loader2, Lock, Users, UserCheck, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+const VISIBILITY_META = {
+  private: { label: "Private", icon: Lock },
+  team: { label: "Workspace", icon: Users },
+  shared: { label: "Restricted", icon: UserCheck },
+};
 
 export default function Conduits() {
   useCollections();
@@ -36,6 +43,7 @@ export default function Conduits() {
   const [activeId, setActiveId] = useState(null);
   const [selectedEnvId, setSelectedEnvId] = useState(activeEnv?.id || "");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const selectedEnv = useMemo(
     () => envs.find((e) => e.id === selectedEnvId) || activeEnv || envs[0],
@@ -63,23 +71,23 @@ export default function Conduits() {
     if (snapshot) {
       savePatch(id, {
         name: snapshot.name,
+        visibility: snapshot.visibility,
+        sharedWith: snapshot.sharedWith,
         layout: snapshot.layout,
         steps: snapshot.steps,
       });
     }
   };
 
-  const handleCreate = () => {
-    createConduit.mutate(
-      { name: "Untitled conduit", steps: [], layout: { edges: [] } },
-      {
-        onSuccess: (created) => {
-          toast.success("Conduit created");
-          setActiveId(created.id);
-        },
-        onError: (err) => toast.error(getErrorMessage(err, "Could not create conduit.")),
+  const handleCreate = (payload) => {
+    createConduit.mutate(payload, {
+      onSuccess: (created) => {
+        toast.success("Conduit created");
+        setShowCreateDialog(false);
+        setActiveId(created.id);
       },
-    );
+      onError: (err) => toast.error(getErrorMessage(err, "Could not create conduit.")),
+    });
   };
 
   if (isLoading && conduits.length === 0) {
@@ -117,7 +125,7 @@ export default function Conduits() {
         </div>
         <button
           type="button"
-          onClick={handleCreate}
+          onClick={() => setShowCreateDialog(true)}
           disabled={createConduit.isPending}
           className="h-9 px-3 rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground text-[13px] font-medium inline-flex items-center gap-2 disabled:opacity-60"
         >
@@ -128,11 +136,23 @@ export default function Conduits() {
 
       {conduits.length === 0 ? (
         <div className="flex-1 rounded-md border border-dashed border-border grid place-items-center text-[13px] text-muted-foreground">
-          No conduits yet. Create one to start chaining requests.
+          <div className="text-center space-y-3">
+            <p>No conduits yet. Create one to start chaining requests.</p>
+            <button
+              type="button"
+              onClick={() => setShowCreateDialog(true)}
+              className="h-8 px-3 rounded-md border border-border hover:bg-accent/50 text-[12px] inline-flex items-center gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" /> New conduit
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {conduits.map((c) => (
+          {conduits.map((c) => {
+            const vis = VISIBILITY_META[c.visibility] || VISIBILITY_META.private;
+            const VisIcon = vis.icon;
+            return (
             <button
               key={c.id}
               type="button"
@@ -142,17 +162,37 @@ export default function Conduits() {
               )}
             >
               <div className="flex items-center gap-2">
-                <Workflow className="h-4 w-4 text-[hsl(var(--brand))]" />
-                <span className="text-[14px] font-medium truncate">{c.name}</span>
+                <Workflow className="h-4 w-4 text-[hsl(var(--brand))] shrink-0" />
+                <span className="text-[14px] font-medium truncate flex-1">{c.name}</span>
+                {c.canEdit === false && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+                    <Eye className="h-3 w-3" /> View
+                  </span>
+                )}
               </div>
-              <div className="mt-2 text-[12px] text-muted-foreground">
-                {c.steps.length} step{c.steps.length === 1 ? "" : "s"}
-                {(c.layout?.edges?.length || 0) > 0 && ` · ${c.layout.edges.length} connection${c.layout.edges.length > 1 ? "s" : ""}`}
+              <div className="mt-2 flex items-center gap-2 text-[12px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <VisIcon className="h-3 w-3" />
+                  {vis.label}
+                </span>
+                <span>·</span>
+                <span>
+                  {c.steps.length} step{c.steps.length === 1 ? "" : "s"}
+                  {(c.layout?.edges?.length || 0) > 0 && ` · ${c.layout.edges.length} connection${c.layout.edges.length > 1 ? "s" : ""}`}
+                </span>
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      <CreateConduitDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onCreate={handleCreate}
+        loading={createConduit.isPending}
+      />
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

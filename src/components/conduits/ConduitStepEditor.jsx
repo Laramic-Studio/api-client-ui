@@ -156,7 +156,7 @@ function ConditionEditor({ condition, onChange }) {
   );
 }
 
-export default function ConduitStepEditor({ step, onChange, onClose, onDelete }) {
+export default function ConduitStepEditor({ step, onChange, onClose, onDelete, readOnly = false }) {
   if (!step) {
     return (
       <div className="h-full grid place-items-center text-[12px] text-muted-foreground p-4 text-center">
@@ -165,20 +165,26 @@ export default function ConduitStepEditor({ step, onChange, onClose, onDelete })
     );
   }
 
-  const patch = (p) => onChange({ ...step, ...p });
+  const patch = (p) => {
+    if (readOnly) return;
+    onChange({ ...step, ...p });
+  };
 
   return (
-    <div className="h-full flex flex-col border-l border-border bg-card">
+    <div className="h-full flex flex-col bg-background">
       <div className="h-11 shrink-0 flex items-center gap-2 px-3 border-b border-border">
         <span className="text-[13px] font-medium truncate flex-1">{step.name}</span>
-        <button type="button" onClick={onDelete} className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]">
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        {!readOnly && (
+          <button type="button" onClick={onDelete} className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
         <button type="button" onClick={onClose} className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground">
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
 
+      <fieldset disabled={readOnly} className="flex-1 min-h-0 flex flex-col border-0 m-0 p-0 min-w-0">
       <Tabs defaultValue="request" className="flex-1 min-h-0 flex flex-col">
         <TabsList className="mx-3 mt-2 shrink-0">
           <TabsTrigger value="request" className="text-[11px]">Request</TabsTrigger>
@@ -257,6 +263,7 @@ export default function ConduitStepEditor({ step, onChange, onClose, onDelete })
           />
         </TabsContent>
       </Tabs>
+      </fieldset>
     </div>
   );
 }

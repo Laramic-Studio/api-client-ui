@@ -102,6 +102,10 @@ export const client = {
       const conduit = {
         id: `c_${Date.now()}`,
         name: payload?.name || "Untitled conduit",
+        visibility: payload?.visibility || "private",
+        sharedWith: payload?.sharedWith || [],
+        canEdit: true,
+        layout: payload?.layout || { edges: [] },
         steps: (payload?.steps || []).map((s, i) => ({
           id: s.id || `n_${Date.now()}_${i}`,
           ...s,
