@@ -1,3 +1,30 @@
+/** Map step id → ids of directly connected downstream steps. */
+export function buildOutgoingMap(steps, layout) {
+  const outgoing = new Map(steps.map((s) => [s.id, []]));
+  (layout?.edges || []).forEach((edge) => {
+    if (!outgoing.has(edge.source) || !outgoing.has(edge.target)) return;
+    outgoing.get(edge.source).push(edge.target);
+  });
+  return outgoing;
+}
+
+/**
+ * Steps that should receive extraction passes from a completed step.
+ * Uses canvas edges when present; otherwise falls back to the next sortOrder step.
+ */
+export function getPassTargets(sourceId, steps, layout, outgoing) {
+  const children = outgoing.get(sourceId) || [];
+  if (children.length) return children;
+  if ((layout?.edges || []).length) return [];
+
+  const ordered = [...steps].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const idx = ordered.findIndex((s) => s.id === sourceId);
+  if (idx >= 0 && idx < ordered.length - 1) {
+    return [ordered[idx + 1].id];
+  }
+  return [];
+}
+
 /** Topological execution order from canvas edges; falls back to sortOrder. */
 export function getExecutionOrder(steps, layout) {
   const edges = layout?.edges || [];

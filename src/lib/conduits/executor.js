@@ -1,7 +1,7 @@
 import { getClient } from "@/lib/api/client";
 import { interpolate } from "@/lib/mockEngine";
 import { evaluateCondition } from "@/lib/conduits/conditions";
-import { getExecutionOrder } from "@/lib/conduits/step-utils";
+import { buildOutgoingMap, getExecutionOrder, getPassTargets } from "@/lib/conduits/step-utils";
 import {
   applyPassesToStep,
   applyVarSubstitutions,
@@ -79,8 +79,17 @@ function snapshotHeaders(headers) {
   return headers;
 }
 
+function fanOutPasses(sourceId, passes, steps, layout, outgoing, passesByTarget) {
+  if (!passes.length) return;
+  getPassTargets(sourceId, steps, layout, outgoing).forEach((targetId) => {
+    const existing = passesByTarget.get(targetId) || [];
+    passesByTarget.set(targetId, [...existing, ...passes]);
+  });
+}
+
 /**
  * Run a conduit flow. Execution order follows canvas edges or sortOrder.
+ * Extraction passes fan out to every directly connected downstream step.
  * Stops on first failed request; skips steps when optional conditions fail.
  */
 export async function runConduit({
@@ -94,9 +103,10 @@ export async function runConduit({
   const flowVars = {};
   const results = [];
   const ordered = getExecutionOrder(steps, layout);
+  const outgoing = buildOutgoingMap(steps, layout);
+  const passesByTarget = new Map();
   let success = true;
   let previousResponse = null;
-  let pendingPasses = [];
 
   const startedAt = new Date().toISOString();
   const t0 = performance.now();
@@ -119,11 +129,13 @@ export async function runConduit({
       };
       results.push(skipped);
       onStepComplete?.(skipped);
+      passesByTarget.delete(rawStep.id);
       continue;
     }
 
-    let step = applyPassesToStep(rawStep, pendingPasses, flowVars);
-    pendingPasses = [];
+    const inboundPasses = passesByTarget.get(rawStep.id) || [];
+    passesByTarget.delete(rawStep.id);
+    let step = applyPassesToStep(rawStep, inboundPasses, flowVars);
     step = applyVarSubstitutions(step, env, flowVars, interpolate);
 
     const url = buildUrl(step, env, flowVars);
@@ -151,6 +163,7 @@ export async function runConduit({
     previousResponse = response;
     const extractions = normalizeExtractions(rawStep);
     const extractedItems = [];
+    const outboundPasses = [];
 
     extractions.forEach((ext) => {
       if (!ext.path || response.body == null) return;
@@ -159,8 +172,12 @@ export async function runConduit({
       const variable = ext.variable || ext.path.replace(/\./g, "_");
       flowVars[variable] = value;
       extractedItems.push({ path: ext.path, variable, value });
-      pendingPasses = [...pendingPasses, ...collectPendingPasses([ext])];
+      outboundPasses.push(...collectPendingPasses([ext]));
     });
+
+    if (response.ok) {
+      fanOutPasses(rawStep.id, outboundPasses, steps, layout, outgoing, passesByTarget);
+    }
 
     const stepResult = {
       stepId: rawStep.id,

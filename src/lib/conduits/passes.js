@@ -47,7 +47,7 @@ export function applyPassesToStep(step, passes, flowVars) {
   return next;
 }
 
-/** Collect passes from step extractions to apply on the next step. */
+/** Collect passes from step extractions to fan out to connected downstream steps. */
 export function collectPendingPasses(extractions) {
   const pending = [];
   (extractions || []).forEach((ext) => {

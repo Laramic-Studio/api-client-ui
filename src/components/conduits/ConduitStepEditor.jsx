@@ -61,7 +61,7 @@ function ExtractionEditor({ extractions, onChange }) {
   return (
     <div className="space-y-3">
       <p className="text-[11px] text-muted-foreground">
-        Extract from response JSON and choose where to pass values on the <strong>next</strong> step.
+        Extract from response JSON and pass values to every step connected downstream.
       </p>
       {extractions.map((ext, idx) => (
         <div key={ext.id || idx} className="rounded border border-border p-2.5 space-y-2">
