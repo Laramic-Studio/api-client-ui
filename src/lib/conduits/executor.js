@@ -230,7 +230,7 @@ export function formatRunForApi(result, environmentId) {
       method: s.method,
       ok: s.ok,
       skipped: s.skipped,
-      status: s.status,
+      ...(s.status != null ? { status: Number(s.status) } : {}),
       duration_ms: s.durationMs,
       url: s.url,
       extracted: s.extracted,

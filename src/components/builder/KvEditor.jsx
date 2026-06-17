@@ -1,4 +1,7 @@
 import { Plus, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export default function KvEditor({ rows, onChange, addLabel = "Add row", testIdAdd }) {
   const setRow = (idx, patch) => {
@@ -6,51 +9,61 @@ export default function KvEditor({ rows, onChange, addLabel = "Add row", testIdA
     onChange(next);
   };
   const removeRow = (idx) => onChange(rows.filter((_, i) => i !== idx));
+
   return (
-    <div className="p-2">
-      <div className="grid grid-cols-[24px_1fr_1fr_28px] gap-1 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
-        <div></div><div>Key</div><div>Value</div><div></div>
+    <div>
+      <div className="grid grid-cols-[32px_1fr_1fr_32px] gap-1.5 px-0.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+        <div />
+        <div>Key</div>
+        <div>Value</div>
+        <div />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {rows.length === 0 && (
-          <div className="px-2 py-3 text-[12px] text-muted-foreground">No rows yet.</div>
+          <div className="px-0.5 py-3 text-[12px] text-muted-foreground">No rows yet.</div>
         )}
         {rows.map((r, i) => (
-          <div key={i} className="grid grid-cols-[24px_1fr_1fr_28px] gap-1 items-center">
-            <input
-              type="checkbox"
-              checked={r.enabled !== false}
-              onChange={(e) => setRow(i, { enabled: e.target.checked })}
-              className="accent-[hsl(var(--brand))] mx-auto"
-            />
-            <input
+          <div key={i} className="grid grid-cols-[32px_1fr_1fr_32px] gap-1.5 items-center">
+            <div className="flex h-8 items-center justify-center">
+              <Checkbox
+                checked={r.enabled !== false}
+                onCheckedChange={(checked) => setRow(i, { enabled: checked === true })}
+              />
+            </div>
+            <Input
               value={r.key}
               onChange={(e) => setRow(i, { key: e.target.value })}
               placeholder="key"
-              className="h-8 px-2 rounded bg-[hsl(var(--input))] border border-[hsl(var(--border))] text-[12.5px] font-mono ring-focus"
+              className="h-8 text-[12px] font-mono"
             />
-            <input
+            <Input
               value={r.value}
               onChange={(e) => setRow(i, { value: e.target.value })}
               placeholder="value"
-              className="h-8 px-2 rounded bg-[hsl(var(--input))] border border-[hsl(var(--border))] text-[12.5px] font-mono ring-focus"
+              className="h-8 text-[12px] font-mono"
             />
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => removeRow(i)}
-              className="h-8 w-8 grid place-items-center rounded text-muted-foreground hover:text-[hsl(var(--danger))] hover:bg-accent/50"
+              className="h-8 w-8 text-muted-foreground hover:text-[hsl(var(--danger))]"
             >
               <X className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </div>
         ))}
       </div>
-      <button
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
         onClick={() => onChange([...rows, { key: "", value: "", enabled: true }])}
-        className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground"
+        className="mt-2 h-8 px-0 text-[12px] text-muted-foreground hover:text-foreground"
         data-testid={testIdAdd}
       >
-        <Plus className="h-3.5 w-3.5" /> {addLabel}
-      </button>
+        <Plus className="h-3.5 w-3.5 mr-1.5" /> {addLabel}
+      </Button>
     </div>
   );
 }

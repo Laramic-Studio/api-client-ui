@@ -72,6 +72,18 @@ export function getExecutionOrder(steps, layout) {
   return ordered;
 }
 
+/** Variable names declared on extractions across all steps (for URL autocomplete). */
+export function collectConduitVarKeys(steps) {
+  const keys = new Set();
+  (steps || []).forEach((step) => {
+    (step.extractions || []).forEach((ext) => {
+      const name = ext.variable || (ext.path ? ext.path.replace(/\./g, "_") : "");
+      if (name) keys.add(name);
+    });
+  });
+  return [...keys];
+}
+
 export function defaultPosition(index) {
   return { x: 80 + index * 280, y: 120 };
 }

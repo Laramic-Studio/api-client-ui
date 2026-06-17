@@ -87,6 +87,16 @@ export function mapApiConduitRun(run) {
   };
 }
 
+function normalizeCondition(condition) {
+  if (!condition || condition.type === "none") return null;
+  const c = { ...condition };
+  if (c.type === "status_equals") {
+    const raw = c.value;
+    c.value = raw === "" || raw == null ? 200 : Number(raw);
+  }
+  return c;
+}
+
 export function mapConduitStepToApi(step, index) {
   return {
     id: step.id || undefined,
@@ -100,7 +110,7 @@ export function mapConduitStepToApi(step, index) {
     auth: step.auth || { type: "none" },
     extract: step.extractions?.[0]?.path || step.extract || null,
     extractions: step.extractions || [],
-    condition: step.condition || null,
+    condition: normalizeCondition(step.condition),
     position: step.position || null,
     sort_order: step.sortOrder ?? index,
   };

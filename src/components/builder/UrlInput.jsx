@@ -11,7 +11,9 @@ export default function UrlInput({
   placeholder,
   testid,
   grouped = false,
+  compact = false,
   env = null,
+  conduitVarKeys = [],
 }) {
   const inputRef = useRef(null);
   const containerRef = useRef(null);
@@ -23,26 +25,53 @@ export default function UrlInput({
   const [editValue, setEditValue] = useState("");
 
   const suggestions = useMemo(() => {
-    if (!open || !env) return [];
+    if (!open) return [];
     const before = (value || "").slice(0, pos);
-    const m = before.match(/\[\[([A-Z0-9_]*)$/i);
-    if (!m) return [];
-    const prefix = (m[1] || "").toUpperCase();
-    return (env.variables || [])
-      .filter((v) => v.enabled !== false && v.key.toUpperCase().startsWith(prefix))
-      .slice(0, 8);
-  }, [open, value, pos, env]);
+
+    const envMatch = before.match(/\[\[([A-Z0-9_]*)$/i);
+    if (envMatch && env) {
+      const prefix = (envMatch[1] || "").toUpperCase();
+      return (env.variables || [])
+        .filter((v) => v.enabled !== false && v.key.toUpperCase().startsWith(prefix))
+        .slice(0, 8)
+        .map((v) => ({ kind: "env", key: v.key, value: v.value }));
+    }
+
+    const flowMatch = before.match(/\{([a-zA-Z0-9_.]*)$/);
+    if (flowMatch && conduitVarKeys.length > 0) {
+      const prefix = (flowMatch[1] || "").toLowerCase();
+      return conduitVarKeys
+        .filter((k) => k.toLowerCase().startsWith(prefix))
+        .slice(0, 8)
+        .map((k) => ({ kind: "flow", key: k }));
+    }
+
+    return [];
+  }, [open, value, pos, env, conduitVarKeys]);
 
   useEffect(() => {
     setActiveIdx((idx) => (idx >= suggestions.length ? 0 : idx));
   }, [suggestions.length]);
 
-  const insertAt = (k) => {
-    const before = (value || "").slice(0, pos).replace(/\[\[([A-Z0-9_]*)$/i, "");
-    const after = (value || "").slice(pos);
-    const next = `${before}[[${k}]]${after}`;
+  const insertSuggestion = (item) => {
+    let before;
+    let after;
+    let next;
+    let caret;
+
+    if (item.kind === "flow") {
+      before = (value || "").slice(0, pos).replace(/\{([a-zA-Z0-9_.]*)$/, "");
+      after = (value || "").slice(pos);
+      next = `${before}{${item.key}}${after}`;
+      caret = before.length + item.key.length + 2;
+    } else {
+      before = (value || "").slice(0, pos).replace(/\[\[([A-Z0-9_]*)$/i, "");
+      after = (value || "").slice(pos);
+      next = `${before}[[${item.key}]]${after}`;
+      caret = before.length + item.key.length + 4;
+    }
+
     onChange(next);
-    const caret = before.length + k.length + 4;
     requestAnimationFrame(() => {
       if (inputRef.current) {
         inputRef.current.setSelectionRange(caret, caret);
@@ -58,7 +87,7 @@ export default function UrlInput({
       if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx((i) => (i - 1 + suggestions.length) % suggestions.length); return; }
       if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        insertAt(suggestions[activeIdx].key);
+        insertSuggestion(suggestions[activeIdx]);
         return;
       }
       if (e.key === "Escape") { setOpen(false); return; }
@@ -73,18 +102,28 @@ export default function UrlInput({
     if (!value) return null;
     const parts = [];
     let lastIdx = 0;
-    const re = /\[\[\s*([A-Z0-9_]+)\s*\]\]|\{\{\s*([A-Z0-9_]+)\s*\}\}/gi;
+    const re = /\[\[\s*([A-Z0-9_]+)\s*\]\]|\{\{\s*([A-Z0-9_]+)\s*\}\}|\{([a-zA-Z0-9_.]+)\}/gi;
     let match;
     while ((match = re.exec(value)) !== null) {
-      const key = match[1] || match[2];
-      const v = env?.variables?.find((x) => x.enabled !== false && x.key === key);
+      const key = match[1] || match[2] || match[3];
+      const isFlow = Boolean(match[3]);
+      const envVar = env?.variables?.find((x) => x.enabled !== false && x.key === key);
+      const flowOk = isFlow && conduitVarKeys.includes(key);
       if (match.index > lastIdx) parts.push({ text: value.slice(lastIdx, match.index), kind: "text" });
-      parts.push({ text: match[0], kind: v ? "var-ok" : "var-missing", key, value: v?.value });
+      parts.push({
+        text: match[0],
+        kind: (isFlow ? flowOk : envVar) ? "var-ok" : "var-missing",
+        key,
+        value: envVar?.value,
+      });
       lastIdx = match.index + match[0].length;
     }
     if (lastIdx < value.length) parts.push({ text: value.slice(lastIdx), kind: "text" });
     return parts;
-  }, [value, env]);
+  }, [value, env, conduitVarKeys]);
+
+  const inputHeight = compact ? "h-8" : "h-9";
+  const inputText = compact ? "text-[12px]" : "text-[13px]";
 
   const resolveVarValue = useCallback((key) => {
     const v = env?.variables?.find((x) => x.enabled !== false && x.key === key);
@@ -114,7 +153,9 @@ export default function UrlInput({
       <div
         aria-hidden
         className={cn(
-          "absolute inset-0 h-9 px-3 font-mono text-[13px] whitespace-pre overflow-hidden flex items-center pointer-events-none",
+          "absolute inset-0 px-3 font-mono whitespace-pre overflow-hidden flex items-center pointer-events-none",
+          inputHeight,
+          inputText,
           grouped ? "rounded-none" : "rounded-md",
         )}
       >
@@ -167,7 +208,9 @@ export default function UrlInput({
         data-testid={testid}
         spellCheck={false}
         className={cn(
-          "relative w-full h-9 px-3 text-[13px] font-mono ring-focus bg-transparent",
+          "relative w-full px-3 font-mono ring-focus bg-transparent",
+          inputHeight,
+          inputText,
           grouped
             ? "border-0 rounded-none focus-visible:outline-none"
             : "rounded-md bg-[hsl(var(--input))] border border-[hsl(var(--border))]",
@@ -181,20 +224,26 @@ export default function UrlInput({
           data-testid={testid ? `${testid}-suggestions` : undefined}
         >
           <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
-            Variables · {env?.name || "no env"}
+            {suggestions[0]?.kind === "flow"
+              ? "Flow variables"
+              : `Variables · ${env?.name || "no env"}`}
           </div>
           {suggestions.map((s, i) => (
             <button
-              key={s.key}
+              key={`${s.kind}-${s.key}`}
               type="button"
-              onMouseDown={(e) => { e.preventDefault(); insertAt(s.key); }}
+              onMouseDown={(e) => { e.preventDefault(); insertSuggestion(s); }}
               className={cn(
                 "w-full flex items-center gap-2 px-2 py-1.5 text-left text-[12.5px]",
                 i === activeIdx ? "bg-[hsl(var(--brand))]/15" : "hover:bg-accent/50",
               )}
             >
-              <span className="font-mono font-semibold text-[hsl(var(--brand))]">[[{s.key}]]</span>
-              <span className="ml-auto truncate text-muted-foreground font-mono text-[11px] max-w-[140px]">{s.value}</span>
+              <span className="font-mono font-semibold text-[hsl(var(--brand))]">
+                {s.kind === "flow" ? `{${s.key}}` : `[[${s.key}]]`}
+              </span>
+              {s.kind === "env" && (
+                <span className="ml-auto truncate text-muted-foreground font-mono text-[11px] max-w-[140px]">{s.value}</span>
+              )}
             </button>
           ))}
         </div>

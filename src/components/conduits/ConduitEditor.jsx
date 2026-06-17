@@ -225,6 +225,8 @@ export default function ConduitEditor({
         <div className="w-[340px] shrink-0 min-h-0 border-l border-border">
           <ConduitStepEditor
             step={selectedStep}
+            allSteps={conduit.steps}
+            selectedEnv={selectedEnv}
             onChange={updateStep}
             onClose={() => setSelectedStepId(null)}
             onDelete={() => selectedStep && deleteStep(selectedStep.id)}
