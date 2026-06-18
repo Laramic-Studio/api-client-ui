@@ -19,6 +19,12 @@ export function buildOutgoingHeaders(req, env) {
       value: interpolate(auth.value || "", env),
       enabled: true,
     });
+  } else if (auth.type === "oauth2" && auth.accessToken) {
+    headers.push({
+      key: "Authorization",
+      value: `Bearer ${interpolate(auth.accessToken, env)}`,
+      enabled: true,
+    });
   }
 
   return headers;

@@ -7,7 +7,10 @@ function prepareCodegen(req) {
   const url = req.url || "";
   const method = req.method || "GET";
   const env = req.env || null;
-  const headers = enabledHeaderRows(buildOutgoingHeaders(req, env));
+  const auth = req.auth?.type === "oauth2" && req.auth?.accessToken
+    ? { ...req.auth, type: "bearer", token: req.auth.accessToken }
+    : req.auth;
+  const headers = enabledHeaderRows(buildOutgoingHeaders({ ...req, auth }, env));
   const { fetchBody, contentType } = prepareFetchBody(req.body, method, env);
 
   const headerMap = Object.fromEntries(headers.map((h) => [h.key, h.value]));

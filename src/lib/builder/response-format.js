@@ -13,6 +13,21 @@ export function inferPrettyLanguage(response) {
   return "plaintext";
 }
 
+export function isHtmlResponse(response) {
+  const contentType = getResponseContentType(response).toLowerCase();
+  if (contentType.includes("html")) return true;
+  const sample = String(response?.rawText || response?.body || "").trim().slice(0, 512).toLowerCase();
+  return sample.startsWith("<!doctype html") || sample.startsWith("<html");
+}
+
+export function getHtmlPreviewContent(response) {
+  if (typeof response?.rawText === "string" && response.rawText.trim()) {
+    return response.rawText;
+  }
+  if (typeof response?.body === "string") return response.body;
+  return formatPrettyBody(response);
+}
+
 export function formatPrettyBody(response) {
   const body = response?.body;
   if (typeof body === "string") return body;
@@ -33,5 +48,5 @@ export function isLikelyCorsError(message) {
 }
 
 export function corsHintMessage() {
-  return "Browser blocked this request (CORS). The API must allow your origin, or use a server-side proxy.";
+  return "Browser blocked this request (CORS). Click Retry via cloud to route through Noidr's server.";
 }

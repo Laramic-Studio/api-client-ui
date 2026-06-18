@@ -6,6 +6,7 @@
 // CONTRACT: every method returns a Promise.
 import { useAppStore } from "@/store/useAppStore";
 import { runMockRequest, runTests as runTestsImpl } from "@/lib/mockEngine";
+import { nanoUid } from "@/lib/generators";
 
 const get = () => useAppStore.getState();
 
@@ -88,8 +89,8 @@ export const client = {
   async send({ method, url, headers, body, env, mode = "mock" }) {
     return runMockRequest({ method, url, headers, body, env, mode });
   },
-  runTests(script, response) {
-    return runTestsImpl(script, response);
+  runTests(script, response, env = null, options = {}) {
+    return runTestsImpl(script, response, env, options);
   },
 
   // ----- Conduits -----

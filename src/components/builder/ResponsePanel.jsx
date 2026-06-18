@@ -7,9 +7,17 @@ import Editor from "@monaco-editor/react";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { BUILDER } from "@/constants/testIds";
 import { Send, Save, Sparkles, MoreHorizontal, PanelRight, PanelBottom, Check, X, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { formatPrettyBody, inferPrettyLanguage } from "@/lib/builder/response-format";
+import TestResultsPanel from "@/components/builder/TestResultsPanel";
+import {
+  formatPrettyBody,
+  getHtmlPreviewContent,
+  inferPrettyLanguage,
+  isHtmlResponse,
+} from "@/lib/builder/response-format";
+import { normalizeTestResults, summarizeTestResults, testsTabLabel, consoleTabLabel } from "@/lib/builder/test-results";
+import ScriptConsolePanel from "@/components/builder/ScriptConsolePanel";
 
 function formatBytes(n) {
   if (!n) return "0 B";
@@ -19,11 +27,22 @@ function formatBytes(n) {
 }
 
 function ResponseMeta({ response, isExampleView }) {
+  const routeLabel = response.sendRoute === "cloud" || response.mode === "proxy"
+    ? "Cloud"
+    : response.sendRoute === "browser" || response.mode === "real"
+      ? "Browser"
+      : null;
+
   return (
     <>
       {isExampleView && (
         <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--brand))] font-mono border border-[hsl(var(--brand))]/30 bg-[hsl(var(--brand))]/10 px-1.5 py-0.5 rounded">
           Example
+        </span>
+      )}
+      {routeLabel && (
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono border border-[hsl(var(--border))] px-1.5 py-0.5 rounded">
+          {routeLabel}
         </span>
       )}
       <StatusBadge status={response.status} />
@@ -85,20 +104,39 @@ function LayoutMenu({ layout, onLayoutChange, onClose }) {
   );
 }
 
-function ResponseTabs({ response, tab, setTab, onSaveExample, onExplain }) {
+function ResponseTabs({ response, tab, setTab, onExplain, onRetryViaCloud, testResults }) {
   const prettyLang = inferPrettyLanguage(response);
   const prettyValue = formatPrettyBody(response);
+  const htmlResponse = isHtmlResponse(response);
+  const htmlPreview = htmlResponse ? getHtmlPreviewContent(response) : "";
+  const normalizedTests = normalizeTestResults(testResults);
+  const testsLabel = testsTabLabel(normalizedTests);
+  const consoleLabel = consoleTabLabel(normalizedTests);
+
+  const tabs = htmlResponse
+    ? [
+        ["preview", "Preview"],
+        ["pretty", "HTML"],
+        ["raw", "Raw"],
+        ["headers", `Headers (${Object.keys(response.headers || {}).length})`],
+        ["cookies", `Cookies (${(response.cookies || []).length})`],
+        ["tests", testsLabel],
+        ["console", consoleLabel],
+      ]
+    : [
+        ["pretty", "Pretty"],
+        ["raw", "Raw"],
+        ["headers", `Headers (${Object.keys(response.headers || {}).length})`],
+        ["cookies", `Cookies (${(response.cookies || []).length})`],
+        ["tests", testsLabel],
+        ["console", consoleLabel],
+      ];
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex-1 min-h-0 flex flex-col">
       <div className="shrink-0 flex items-center border-b border-[hsl(var(--border))]">
         <TabsList className="bg-transparent rounded-none h-9 px-2 justify-start flex-1 min-w-0">
-          {[
-            ["pretty", "Pretty"],
-            ["raw", "Raw"],
-            ["headers", `Headers (${Object.keys(response.headers || {}).length})`],
-            ["cookies", `Cookies (${(response.cookies || []).length})`],
-          ].map(([k, label]) => (
+          {tabs.map(([k, label]) => (
             <TabsTrigger
               key={k}
               value={k}
@@ -122,10 +160,39 @@ function ResponseTabs({ response, tab, setTab, onSaveExample, onExplain }) {
         )}
       </div>
 
-      <TabsContent value="pretty" className="flex-1 min-h-0 m-0 p-0">
+      {htmlResponse && (
+        <TabsContent value="preview" className="flex-1 min-h-0 m-0 p-0 flex flex-col data-[state=inactive]:hidden">
+          {htmlPreview.trim() ? (
+            <div className="relative flex-1 min-h-[240px]">
+              <iframe
+                title="Response preview"
+                sandbox=""
+                srcDoc={htmlPreview}
+                className="absolute inset-0 w-full h-full border-0 bg-white"
+                data-testid="response-html-preview"
+              />
+            </div>
+          ) : (
+            <div className="p-6 text-center text-[12px] text-muted-foreground">
+              No HTML content to preview. Check the Raw tab.
+            </div>
+          )}
+        </TabsContent>
+      )}
+
+      <TabsContent value="pretty" className="flex-1 min-h-0 m-0 p-0 flex flex-col data-[state=inactive]:hidden">
         {response.corsBlocked && (
-          <div className="mx-3 mt-3 rounded-md border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 px-3 py-2 text-[12px] text-foreground/90">
-            {response.body?.message || "Browser blocked this request (CORS)."}
+          <div className="mx-3 mt-3 rounded-md border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 px-3 py-2 text-[12px] text-foreground/90 space-y-2">
+            <div>{response.body?.message || "Browser blocked this request (CORS)."}</div>
+            {onRetryViaCloud && (
+              <button
+                type="button"
+                onClick={onRetryViaCloud}
+                className="h-7 px-2.5 rounded-md text-[11.5px] font-medium border border-[hsl(var(--border))] hover:bg-accent/50"
+              >
+                Retry via cloud
+              </button>
+            )}
           </div>
         )}
         <Editor
@@ -172,7 +239,45 @@ function ResponseTabs({ response, tab, setTab, onSaveExample, onExplain }) {
           <div className="p-6 text-center text-muted-foreground text-[12px]">No cookies in response</div>
         )}
       </TabsContent>
+
+      <TabsContent value="tests" className="flex-1 min-h-0 m-0 p-0 overflow-hidden data-[state=inactive]:hidden">
+        <TestResultsPanel testResults={normalizedTests} />
+      </TabsContent>
+
+      <TabsContent value="console" className="flex-1 min-h-0 m-0 p-0 overflow-hidden data-[state=inactive]:hidden">
+        <ScriptConsolePanel logs={normalizedTests.console} />
+      </TabsContent>
     </Tabs>
+  );
+}
+
+function TestResultsOnlyPanel({ testResults, layout, onLayoutChange, onClose, sending }) {
+  const normalizedTests = normalizeTestResults(testResults);
+
+  return (
+    <div className="h-full flex flex-col bg-[hsl(var(--card))]">
+      <div className="h-12 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))] gap-3">
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Response</div>
+        <span className="text-[12px] text-muted-foreground">
+          {sending ? "Sending request…" : "Pre-request failed — see test results"}
+        </span>
+        <div className="ml-auto">
+          <LayoutMenu layout={layout} onLayoutChange={onLayoutChange} onClose={onClose} />
+        </div>
+      </div>
+      <Tabs defaultValue="tests" className="flex-1 min-h-0 flex flex-col">
+        <TabsList className="shrink-0 bg-transparent border-b border-[hsl(var(--border))] rounded-none h-9 px-2 justify-start">
+          <TabsTrigger value="tests" className="rounded-none h-9 px-3 text-[12.5px]">Tests</TabsTrigger>
+          <TabsTrigger value="console" className="rounded-none h-9 px-3 text-[12.5px]">{consoleTabLabel(normalizedTests)}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="tests" className="flex-1 min-h-0 m-0 p-0 overflow-hidden">
+          <TestResultsPanel testResults={normalizedTests} />
+        </TabsContent>
+        <TabsContent value="console" className="flex-1 min-h-0 m-0 p-0 overflow-hidden">
+          <ScriptConsolePanel logs={normalizedTests.console} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
@@ -182,13 +287,40 @@ export default function ResponsePanel({
   sending = false,
   onSaveExample,
   onExplain,
+  onRetryViaCloud = null,
+  testResults = null,
   layout = "side",
   onLayoutChange,
   onClose,
 }) {
   const [tab, setTab] = useState("pretty");
+  const normalizedTests = normalizeTestResults(testResults);
+  const testSummary = summarizeTestResults(normalizedTests);
+
+  useEffect(() => {
+    if (!response) return;
+    if (testSummary.hasActivity) {
+      if (testSummary.failed > 0) setTab("tests");
+      else if (normalizedTests.console?.length) setTab("console");
+      else setTab("tests");
+      return;
+    }
+    setTab(isHtmlResponse(response) ? "preview" : "pretty");
+  }, [response?.url, response?.status, response?.durationMs, testSummary.hasActivity, testSummary.failed, normalizedTests.console?.length]);
 
   if (!response) {
+    if (testSummary.hasActivity) {
+      return (
+        <TestResultsOnlyPanel
+          testResults={normalizedTests}
+          layout={layout}
+          onLayoutChange={onLayoutChange}
+          onClose={onClose}
+          sending={sending}
+        />
+      );
+    }
+
     return (
       <div className="h-full flex flex-col bg-[hsl(var(--card))]">
         <div className="h-12 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))] gap-3">
@@ -246,8 +378,9 @@ export default function ResponsePanel({
         response={response}
         tab={tab}
         setTab={setTab}
-        onSaveExample={onSaveExample}
         onExplain={onExplain}
+        onRetryViaCloud={onRetryViaCloud}
+        testResults={normalizedTests}
       />
     </div>
   );

@@ -82,6 +82,14 @@ export const useAppStore = create(
         },
       })),
 
+      // ===== Builder preferences (per user, local) =====
+      builderSettings: {
+        autoSaveRequests: false,
+      },
+      setBuilderSettings: (patch) => set((s) => ({
+        builderSettings: { ...s.builderSettings, ...patch },
+      })),
+
       // AI prompt history (browseable in the Ask AI dialog)
       aiPromptHistory: [],
       pushAiPrompt: (entry) => set((s) => ({
@@ -637,6 +645,7 @@ export const useAppStore = create(
         user: s.user,
         currentTeam: s.currentTeam,
         aiSettings: s.aiSettings,
+        builderSettings: s.builderSettings,
         aiPromptHistory: s.aiPromptHistory,
         aiSidebarOpen: s.aiSidebarOpen,
         aiSidebarWidth: s.aiSidebarWidth,

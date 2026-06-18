@@ -2,6 +2,11 @@
 import { uuidV4 } from "@/lib/generators";
 import { prepareFetchBody } from "@/lib/builder/request-body";
 import { corsHintMessage, isLikelyCorsError } from "@/lib/builder/response-format";
+import { proxyRequest } from "@/lib/api/proxy-api";
+import { useAppStore } from "@/store/useAppStore";
+import { runTests } from "@/lib/builder/test-runner";
+
+export { runTests };
 
 // Regex matches [[VAR]] preferred, also accepts {{VAR}} for backward compat
 const INTERPOLATION_RE = /\[\[\s*([A-Z0-9_]+)\s*\]\]|\{\{\s*([A-Z0-9_]+)\s*\}\}/gi;
@@ -93,9 +98,21 @@ const ERROR_BODIES = {
   500: { success: false, error: "Internal Server Error", message: "Something went wrong" },
 };
 
-export async function runMockRequest({ method, url, headers = [], body, env, mode = "mock" }) {
+export async function runMockRequest({
+  method,
+  url,
+  headers = [],
+  body,
+  env,
+  mode = "mock",
+  viaProxy = false,
+}) {
   const fullUrl = normalizeSendUrl(interpolate(url, env));
   const t0 = performance.now();
+
+  if (viaProxy || mode === "proxy") {
+    return runProxyRequest({ method, url: fullUrl, headers, body, env, t0 });
+  }
 
   if (mode === "real") {
     if (!fullUrl?.trim()) {
@@ -113,6 +130,7 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
         url: fullUrl,
         method,
         mode: "real",
+        sendRoute: "browser",
       };
     }
 
@@ -135,6 +153,7 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
         url: fullUrl,
         method,
         mode: "real",
+        sendRoute: "browser",
       };
     }
 
@@ -173,6 +192,7 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
         url: fullUrl,
         method,
         mode: "real",
+        sendRoute: "browser",
       };
     } catch (e) {
       const ms = Math.round(performance.now() - t0);
@@ -191,6 +211,7 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
         url: fullUrl,
         method,
         mode: "real",
+        sendRoute: "browser",
         corsBlocked,
       };
     }
@@ -255,6 +276,78 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
   };
 }
 
+function mapProxyResponse(data, method, fullUrl, t0) {
+  const r = data.response || data;
+  return {
+    ok: r.ok,
+    status: r.status,
+    statusText: r.status_text || r.statusText || (r.ok ? "OK" : "Error"),
+    durationMs: r.duration_ms ?? r.durationMs ?? Math.round(performance.now() - t0),
+    sizeBytes: r.size_bytes ?? r.sizeBytes ?? 0,
+    headers: r.headers || {},
+    cookies: [],
+    body: r.body,
+    rawText: r.raw_text ?? r.rawText ?? "",
+    url: r.url || fullUrl,
+    method: r.method || method,
+    mode: "proxy",
+    sendRoute: "cloud",
+  };
+}
+
+async function runProxyRequest({ method, url, headers, body, env, t0 }) {
+  const teamId = useAppStore.getState().activeWorkspaceId;
+  if (!teamId) {
+    const ms = Math.round(performance.now() - t0);
+    return {
+      ok: false,
+      status: 0,
+      statusText: "Proxy Unavailable",
+      durationMs: ms,
+      sizeBytes: 0,
+      headers: {},
+      cookies: [],
+      body: { success: false, error: "Proxy Unavailable", message: "Select a workspace to use the request proxy." },
+      rawText: "",
+      url,
+      method,
+      mode: "proxy",
+      sendRoute: "cloud",
+    };
+  }
+
+  try {
+    const hdrs = headers
+      .filter((h) => h.enabled !== false && h.key)
+      .map((h) => ({ ...h, value: interpolate(h.value, env) }));
+    const { fetchBody } = prepareFetchBody(body, method, env);
+    const data = await proxyRequest(teamId, {
+      method,
+      url,
+      headers: hdrs,
+      body: fetchBody !== undefined ? { content: fetchBody } : null,
+    });
+    return mapProxyResponse(data, method, url, t0);
+  } catch (e) {
+    const ms = Math.round(performance.now() - t0);
+    return {
+      ok: false,
+      status: 0,
+      statusText: "Proxy Error",
+      durationMs: ms,
+      sizeBytes: 0,
+      headers: {},
+      cookies: [],
+      body: { success: false, error: "Proxy Error", message: String(e?.message || e) },
+      rawText: "",
+      url,
+      method,
+      mode: "proxy",
+      sendRoute: "cloud",
+    };
+  }
+}
+
 function parseCookies(header) {
   if (!header) return [];
   return header.split(",").map((c) => {
@@ -272,46 +365,6 @@ function statusText(code) {
     409: "Conflict", 422: "Unprocessable Entity", 429: "Too Many Requests",
     500: "Internal Server Error", 502: "Bad Gateway", 503: "Service Unavailable",
   }[code] || "OK";
-}
-
-export function runTests(testScript, response) {
-  if (!testScript || !testScript.trim()) return [];
-  // Supported: expect(response.status).toBe(200), .toEqual(), .toBeGreaterThan(), .toBeLessThan()
-  const lines = testScript.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("//"));
-  const results = [];
-  lines.forEach((line, idx) => {
-    const m = line.match(/expect\((.+?)\)\.(toBe|toEqual|toBeGreaterThan|toBeLessThan)\((.+?)\)/);
-    if (!m) {
-      results.push({ id: idx, name: line, passed: false, error: "Unparseable assertion" });
-      return;
-    }
-    const [, lhs, op, rhsRaw] = m;
-    let lhsVal;
-    try {
-      // eslint-disable-next-line no-new-func
-      lhsVal = new Function("response", `return ${lhs};`)(response);
-    } catch (e) {
-      results.push({ id: idx, name: line, passed: false, error: String(e.message) });
-      return;
-    }
-    let rhsVal;
-    try {
-      // eslint-disable-next-line no-new-func
-      rhsVal = new Function(`return ${rhsRaw};`)();
-    } catch {
-      rhsVal = rhsRaw;
-    }
-    let passed = false;
-    if (op === "toBe") passed = lhsVal === rhsVal;
-    else if (op === "toEqual") passed = JSON.stringify(lhsVal) === JSON.stringify(rhsVal);
-    else if (op === "toBeGreaterThan") passed = lhsVal > rhsVal;
-    else if (op === "toBeLessThan") passed = lhsVal < rhsVal;
-    results.push({
-      id: idx, name: line, passed,
-      error: passed ? null : `Expected ${JSON.stringify(rhsVal)}, got ${JSON.stringify(lhsVal)}`,
-    });
-  });
-  return results;
 }
 
 export { interpolate };

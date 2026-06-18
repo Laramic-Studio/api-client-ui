@@ -30,7 +30,16 @@ async function readAiSseStream(res, { onDelta, onActions, signal }) {
     if (signal?.aborted) {
       throw new ApiError("Request cancelled.", { cancelled: true });
     }
-    const { value, done } = await reader.read();
+    let chunk;
+    try {
+      chunk = await reader.read();
+    } catch (err) {
+      if (signal?.aborted || err?.name === "AbortError") {
+        throw new ApiError("Request cancelled.", { cancelled: true });
+      }
+      throw err;
+    }
+    const { value, done } = chunk;
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
@@ -65,16 +74,24 @@ export { createAbortController, isCancelledError };
 
 export async function aiChat({ messages, context, userId, ai, onDelta, onActions, signal }) {
   const token = getAccessToken();
-  const res = await fetch(`${API_URL}/ai/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "text/event-stream",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(aiPayload({ messages, context }, ai, userId)),
-    signal,
-  });
+  let res;
+  try {
+    res = await fetch(`${API_URL}/ai/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(aiPayload({ messages, context }, ai, userId)),
+      signal,
+    });
+  } catch (err) {
+    if (signal?.aborted || err?.name === "AbortError") {
+      throw new ApiError("Request cancelled.", { cancelled: true });
+    }
+    throw err;
+  }
 
   return readAiSseStream(res, { onDelta, onActions, signal });
 }

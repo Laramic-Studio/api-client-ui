@@ -20,7 +20,7 @@ export default function KvEditor({ rows, onChange, addLabel = "Add row", testIdA
       </div>
       <div className="space-y-1.5">
         {rows.length === 0 && (
-          <div className="px-0.5 py-3 text-[12px] text-muted-foreground">No rows yet.</div>
+          <div className="px-0.5 py-3 text-center text-[12px] text-muted-foreground">No rows yet.</div>
         )}
         {rows.map((r, i) => (
           <div key={i} className="grid grid-cols-[32px_1fr_1fr_32px] gap-1.5 items-center">
@@ -59,10 +59,10 @@ export default function KvEditor({ rows, onChange, addLabel = "Add row", testIdA
         variant="ghost"
         size="sm"
         onClick={() => onChange([...rows, { key: "", value: "", enabled: true }])}
-        className="mt-2 h-8 px-0 text-[12px] text-muted-foreground hover:text-foreground"
+        className="mt-2 ml-3 h-8 px-2 text-[12px] text-muted-foreground hover:text-foreground"
         data-testid={testIdAdd}
       >
-        <Plus className="h-3.5 w-3.5 mr-1.5" /> {addLabel}
+        <Plus className="h-3.5 w-3.5" /> {addLabel}
       </Button>
     </div>
   );

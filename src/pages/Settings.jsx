@@ -5,13 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plug, KeyRound, Bell, Briefcase, User as UserIcon, Palette, Sparkles, Bot } from "lucide-react";
+import { Plug, KeyRound, Bell, Briefcase, User as UserIcon, Palette, Sparkles, Bot, Hammer } from "lucide-react";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
 export default function Settings() {
   const user = useAppStore((s) => s.user);
   const ai = useAppStore((s) => s.aiSettings);
   const setAi = useAppStore((s) => s.setAiSettings);
+  const builderSettings = useAppStore((s) => s.builderSettings);
+  const setBuilderSettings = useAppStore((s) => s.setBuilderSettings);
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [notifReq, setNotifReq] = useState(true);
@@ -31,6 +33,7 @@ export default function Settings() {
           {[
             ["profile", "Profile", UserIcon],
             ["appearance", "Appearance", Palette],
+            ["builder", "Builder", Hammer],
             ["ai", "AI", Sparkles],
             ["notifications", "Notifications", Bell],
             ["workspace", "Workspace", Briefcase],
@@ -85,6 +88,23 @@ export default function Settings() {
                 <span className="font-mono text-[12.5px] text-foreground/85">Geist + JetBrains Mono</span>
               </Row>
             </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="builder" className="mt-6 space-y-4 max-w-md">
+          <Card>
+            <Row
+              label="Auto-save requests"
+              hint="When enabled, edits to saved requests in the API Builder are persisted automatically. Off by default — use Save when you prefer manual control."
+            >
+              <Switch
+                checked={builderSettings.autoSaveRequests}
+                onCheckedChange={(v) => {
+                  setBuilderSettings({ autoSaveRequests: v });
+                  toast.success(v ? "Auto-save enabled" : "Auto-save disabled");
+                }}
+              />
+            </Row>
           </Card>
         </TabsContent>
 

@@ -40,8 +40,8 @@ const BODY_TYPES = [
 const TAB_CONTENT_CLASS = "flex-1 min-h-0 m-0 mt-0 p-0 overflow-hidden data-[state=inactive]:hidden flex flex-col";
 
 export default function RequestPanel({
-  req, onChange, onSend, onSave, sending, saving,
-  testResults, finalUrl, breadcrumb = [],
+  req, onChange, onSend, onSave, sending, saving, autoSaveStatus = "idle", autoSaveEnabled = false,
+  finalUrl, breadcrumb = [],
   onAskAI,
   collectionId = null,
   activeEnv = null,
@@ -70,6 +70,16 @@ export default function RequestPanel({
 
   const paramCount = countEnabledKvRows(req.params);
   const headerCount = countEnabledKvRows(req.headers);
+
+  const saveLabel = saving
+    ? "Saving…"
+    : autoSaveEnabled && autoSaveStatus === "saving"
+      ? "Auto-saving…"
+      : autoSaveEnabled && autoSaveStatus === "saved"
+        ? "Saved"
+        : autoSaveEnabled && autoSaveStatus === "error"
+          ? "Save failed"
+          : "Save";
 
   return (
     <div className="h-full flex flex-col">
@@ -109,7 +119,7 @@ export default function RequestPanel({
             className="h-7 px-2.5 rounded-md text-[12px] font-medium border border-[hsl(var(--border))] hover:bg-accent/50 inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            {saving ? "Saving…" : "Save"}
+            {saveLabel}
           </button>
           <EnvPicker collectionId={collectionId} compact />
         </div>
@@ -240,7 +250,7 @@ export default function RequestPanel({
         </TabsContent>
 
         <TabsContent value="authorization" className={cn(TAB_CONTENT_CLASS, "overflow-auto p-3")}>
-          <AuthEditor auth={req.auth || { type: "none" }} onChange={(auth) => onChange({ ...req, auth })} />
+          <AuthEditor auth={req.auth || { type: "none" }} onChange={(auth) => onChange({ ...req, auth })} activeEnv={activeEnv} />
         </TabsContent>
 
         <TabsContent value="headers" className={cn(TAB_CONTENT_CLASS, "overflow-auto")}>
@@ -312,9 +322,10 @@ export default function RequestPanel({
 
         <TabsContent value="scripts" className={TAB_CONTENT_CLASS}>
           <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground">
-            Runs before send only. Globals: <span className="font-mono text-foreground/75">env</span>,{" "}
-            <span className="font-mono text-foreground/75">request</span>,{" "}
-            <span className="font-mono text-foreground/75">console.log</span>
+            Postman-style pre-request script. Use{" "}
+            <span className="font-mono text-foreground/75">variables.set()</span>,{" "}
+            <span className="font-mono text-foreground/75">request.headers</span>,{" "}
+            <span className="font-mono text-foreground/75">console.log</span> — output appears in the response Console tab.
           </div>
           <div className="flex-1 min-h-0">
             <Editor
@@ -330,11 +341,18 @@ export default function RequestPanel({
         </TabsContent>
 
         <TabsContent value="tests" className={TAB_CONTENT_CLASS}>
-          <TestsPanel
-            tests={req.tests}
-            onChange={(v) => onChange({ ...req, tests: v })}
-            results={testResults}
-          />
+          <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground">
+            Postman-style post-response script. Use{" "}
+            <span className="font-mono text-foreground/75">response.json()</span>,{" "}
+            <span className="font-mono text-foreground/75">pm.test()</span>,{" "}
+            <span className="font-mono text-foreground/75">variables.set()</span> — runs automatically on send.
+          </div>
+          <div className="flex-1 min-h-0">
+            <TestsPanel
+              tests={req.tests}
+              onChange={(v) => onChange({ ...req, tests: v })}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="docs" className={TAB_CONTENT_CLASS}>

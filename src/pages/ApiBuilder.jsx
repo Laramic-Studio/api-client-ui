@@ -20,8 +20,18 @@ import { getClient } from "@/lib/api/client";
 import { interpolate } from "@/lib/mockEngine";
 import { buildOutgoingHeaders } from "@/lib/builder/request-auth";
 import { runPreRequestScript } from "@/lib/builder/pre-script";
+import { ensureOAuthAuth, isOAuthConfigured } from "@/lib/builder/oauth";
+import { resolveSendRoute } from "@/lib/builder/send-mode";
+import {
+  emptyTestResults,
+  preScriptFailed,
+  preScriptPassed,
+  withPostResults,
+} from "@/lib/builder/test-results";
 import { getErrorMessage } from "@/hooks/use-auth";
 import { useCollections } from "@/hooks/use-collections";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import { applyOptimisticRequestPatch, useUpdateRequest } from "@/hooks/use-requests";
 import { createEmptyScratch, createScratchTabId, isScratchTab } from "@/lib/builder/scratch";
 import { buildRequestBreadcrumb } from "@/lib/builder/breadcrumb";
 import { exampleToResponse, suggestExampleName } from "@/lib/builder/examples";
@@ -77,6 +87,7 @@ export default function ApiBuilder() {
   const openTab = useAppStore((s) => s.openTab);
   const closeTab = useAppStore((s) => s.closeTab);
   const panels = useAppStore((s) => s.builderPanels);
+  const autoSaveRequests = useAppStore((s) => s.builderSettings.autoSaveRequests);
   const setPanels = useAppStore((s) => s.setBuilderPanels);
   const {
     drafts,
@@ -94,7 +105,10 @@ export default function ApiBuilder() {
 
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState("idle");
   const [explainOpen, setExplainOpen] = useState(false);
+  const [explainRunToken, setExplainRunToken] = useState(0);
+  const updateRequestMutation = useUpdateRequest();
   const queueAiChat = useAppStore((s) => s.queueAiChat);
   const [closePrompt, setClosePrompt] = useState(null);
   const [closeSaveCollectionId, setCloseSaveCollectionId] = useState(null);
@@ -109,6 +123,10 @@ export default function ApiBuilder() {
       setBuilderDraft(tabId, createEmptyScratch(tabId));
     }
   }, [drafts, setBuilderDraft]);
+
+  useEffect(() => {
+    setAutoSaveStatus("idle");
+  }, [activeTabId]);
 
   // URL param → open saved request tab
   useEffect(() => {
@@ -143,7 +161,46 @@ export default function ApiBuilder() {
   const setActiveReq = (next) => {
     if (!activeTabId) return;
     setBuilderDraft(activeTabId, next);
+    scheduleAutoSave(activeTabId, next);
   };
+
+  const buildRequestPayload = useCallback((req) => ({
+    name: req.name || "Untitled request",
+    method: req.method,
+    url: req.url ?? "",
+    params: req.params || [],
+    headers: req.headers || [],
+    auth: req.auth || { type: "none" },
+    body: req.body || { type: "none", content: "" },
+    tests: req.tests ?? "",
+    preScript: req.preScript ?? "",
+    docs: req.docs ?? "",
+  }), []);
+
+  const debouncedAutoSave = useDebouncedCallback(async (tabId, req) => {
+    if (!req?.id || !req?.collectionId || isScratchTab(tabId)) return;
+    setAutoSaveStatus("saving");
+    try {
+      const patch = buildRequestPayload(req);
+      applyOptimisticRequestPatch(req.collectionId, req.id, patch);
+      await updateRequestMutation.mutateAsync({
+        collectionId: req.collectionId,
+        requestId: req.id,
+        patch,
+      });
+      clearBuilderDraft(tabId);
+      setAutoSaveStatus("saved");
+    } catch (err) {
+      setAutoSaveStatus("error");
+      toast.error(getErrorMessage(err, "Auto-save failed."));
+    }
+  }, 700);
+
+  const scheduleAutoSave = useCallback((tabId, req) => {
+    if (!autoSaveRequests) return;
+    if (!req?.id || !req?.collectionId || isScratchTab(tabId)) return;
+    debouncedAutoSave(tabId, req);
+  }, [autoSaveRequests, debouncedAutoSave]);
 
   const finishCloseTab = useCallback((tabId) => {
     clearBuilderTabSession(tabId);
@@ -252,7 +309,7 @@ export default function ApiBuilder() {
     return qs ? `${base}${base.includes("?") ? "&" : "?"}${qs}` : base;
   }, [activeReq, activeEnv]);
 
-  const onSend = async () => {
+  const executeSend = async ({ forceCloud = false } = {}) => {
     if (!activeReq || !activeTabId) return;
     if (isRequestUrlEmpty(activeReq.url)) {
       toast.error("Enter a request URL before sending.");
@@ -260,50 +317,97 @@ export default function ApiBuilder() {
     }
 
     setPanels({ responseOpen: true });
+    setExplainOpen(false);
     setSending(true);
     setBuilderActiveExample(activeTabId, null);
     setBuilderResponse(activeTabId, null);
+    setBuilderTestResults(activeTabId, emptyTestResults());
 
     try {
       let sendReq = activeReq;
+      let sendEnv = activeEnv;
+      let testResultState = emptyTestResults();
+      const envUpdates = {};
+
+      const trackEnvSet = (key, value) => {
+        envUpdates[key] = value;
+      };
+
       if (activeReq.preScript?.trim()) {
         try {
-          sendReq = runPreRequestScript(activeReq, activeEnv, activeReq.preScript);
+          const preResult = runPreRequestScript(activeReq, activeEnv, activeReq.preScript, {
+            onEnvSet: trackEnvSet,
+          });
+          sendReq = preResult.request;
+          sendEnv = preResult.env;
+          testResultState = preScriptPassed(preResult.logs);
         } catch (err) {
+          const failed = preScriptFailed(err.message || "Pre-request script failed.", err.logs || []);
+          setBuilderTestResults(activeTabId, failed);
           toast.error(err.message || "Pre-request script failed.");
           return;
         }
       }
 
+      if (sendReq.auth?.type === "oauth2") {
+        if (!isOAuthConfigured(sendReq.auth, sendEnv)) {
+          toast.warning("OAuth 2.0 is selected but not configured — sending without an OAuth token.");
+        } else {
+          try {
+            const oauthAuth = await ensureOAuthAuth(sendReq.auth, sendEnv);
+            sendReq = { ...sendReq, auth: oauthAuth };
+            if (JSON.stringify(oauthAuth) !== JSON.stringify(activeReq.auth)) {
+              setBuilderDraft(activeTabId, sendReq);
+            }
+          } catch (err) {
+            toast.error(getErrorMessage(err, "OAuth token request failed."));
+            return;
+          }
+        }
+      }
+
       const sendUrl = (() => {
-        const base = interpolate(sendReq.url, activeEnv);
+        const base = interpolate(sendReq.url, sendEnv);
         const qs = (sendReq.params || [])
           .filter((p) => p.enabled !== false && p.key)
-          .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(interpolate(p.value, activeEnv))}`)
+          .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(interpolate(p.value, sendEnv))}`)
           .join("&");
         return qs ? `${base}${base.includes("?") ? "&" : "?"}${qs}` : base;
       })();
 
-      const headers = buildOutgoingHeaders(sendReq, activeEnv);
+      const headers = buildOutgoingHeaders(sendReq, sendEnv);
+      const route = resolveSendRoute({ url: sendUrl, forceCloud });
       const result = await client.send({
         method: sendReq.method,
         url: sendUrl,
         headers,
         body: sendReq.body,
-        env: activeEnv,
-        mode: "real",
+        env: sendEnv,
+        mode: route.viaProxy ? "proxy" : "real",
+        viaProxy: route.viaProxy,
       });
 
       setBuilderResponse(activeTabId, result);
-      const tr = client.runTests(sendReq.tests, result);
-      setBuilderTestResults(activeTabId, tr);
+      const postRun = sendReq.tests?.trim()
+        ? client.runTests(sendReq.tests, result, sendEnv, { onEnvSet: trackEnvSet })
+        : { results: [], logs: [], env: sendEnv };
+      sendEnv = postRun.env || sendEnv;
+      setBuilderTestResults(activeTabId, withPostResults(testResultState, postRun));
+
+      for (const [key, value] of Object.entries(envUpdates)) {
+        handleUpdateVariable(key, value);
+      }
       const collection = collections.find((c) => c.id === sendReq.collectionId);
-      await client.addHistory(buildHistoryEntry({
-        request: sendReq,
-        result,
-        collectionName: collection?.name || "Scratch",
-        requestId: isScratchTab(activeTabId) ? null : sendReq.id,
-      }));
+      try {
+        await client.addHistory(buildHistoryEntry({
+          request: sendReq,
+          result,
+          collectionName: collection?.name || "Scratch",
+          requestId: isScratchTab(activeTabId) ? null : sendReq.id,
+        }));
+      } catch (historyErr) {
+        console.warn("History save failed:", historyErr);
+      }
       pushNotification({
         type: result.ok ? "success" : "danger",
         title: result.ok ? "Request succeeded" : "Request failed",
@@ -316,22 +420,14 @@ export default function ApiBuilder() {
     }
   };
 
+  const onSend = () => executeSend();
+  const onRetryViaCloud = () => executeSend({ forceCloud: true });
+
   const onSave = async () => {
     if (!activeReq || !activeTabId) return;
     setSaving(true);
     try {
-      const payload = {
-        name: activeReq.name || "Untitled request",
-        method: activeReq.method,
-        url: activeReq.url ?? "",
-        params: activeReq.params || [],
-        headers: activeReq.headers || [],
-        auth: activeReq.auth || { type: "none" },
-        body: activeReq.body || { type: "none", content: "" },
-        tests: activeReq.tests ?? "",
-        preScript: activeReq.preScript ?? "",
-        docs: activeReq.docs ?? "",
-      };
+      const payload = buildRequestPayload(activeReq);
 
       let collectionId = activeReq.collectionId;
       if (!collectionId) {
@@ -535,7 +631,8 @@ export default function ApiBuilder() {
       onSave={onSave}
       sending={sending}
       saving={saving}
-      testResults={testResults[activeTabId] || []}
+      autoSaveStatus={autoSaveRequests ? autoSaveStatus : "idle"}
+      autoSaveEnabled={autoSaveRequests}
       finalUrl={finalUrl}
       breadcrumb={requestBreadcrumb}
       onAskAI={() => queueAiChat({ text: "Build an API request that ", autoSend: false })}
@@ -567,7 +664,12 @@ export default function ApiBuilder() {
       isExampleView={Boolean(activeExample)}
       sending={sending && !displayResponse}
       onSaveExample={canSaveExample ? onSaveCurrentResponseAsExample : null}
-      onExplain={activeExample ? null : () => setExplainOpen(true)}
+      onExplain={activeExample ? null : () => {
+        setExplainOpen(true);
+        setExplainRunToken((t) => t + 1);
+      }}
+      onRetryViaCloud={displayResponse?.corsBlocked ? onRetryViaCloud : null}
+      testResults={testResults[activeTabId] || null}
       layout={responseLayout}
       onLayoutChange={handleResponseLayoutChange}
       onClose={handleResponseClose}
@@ -650,7 +752,11 @@ export default function ApiBuilder() {
           </ResizablePanelGroup>
         </div>
         {explainOpen && activeTabId && displayResponse && !activeExample && (
-          <ExplainPanel response={displayResponse} onClose={() => setExplainOpen(false)} />
+          <ExplainPanel
+            response={displayResponse}
+            runToken={explainRunToken}
+            onClose={() => setExplainOpen(false)}
+          />
         )}
       </div>
       <UnsavedTabDialog

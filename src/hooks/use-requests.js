@@ -3,6 +3,7 @@ import * as requestsApi from "@/lib/api/requests-api";
 import * as collectionsApi from "@/lib/api/collections-api";
 import { collectionKeys } from "@/lib/api/query-keys";
 import { refreshCollectionsInStore, useActiveTeamId } from "@/hooks/use-collections";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { useAppStore } from "@/store/useAppStore";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -24,6 +25,14 @@ export function useUpdateRequest() {
       invalidateCollections(queryClient, teamId);
     },
   });
+}
+
+export function useDebouncedRequestUpdate(delay = 700) {
+  const updateRequest = useUpdateRequest();
+
+  return useDebouncedCallback(async ({ collectionId, requestId, patch }) => {
+    await updateRequest.mutateAsync({ collectionId, requestId, patch });
+  }, delay);
 }
 
 export function useDeleteRequest() {

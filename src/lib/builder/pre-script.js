@@ -1,12 +1,9 @@
-function buildEnvView(env) {
-  const variables = {};
-  (env?.variables || [])
-    .filter((v) => v.enabled !== false && v.key)
-    .forEach((v) => {
-      variables[v.key] = v.value ?? "";
-    });
-  return { variables };
-}
+import {
+  createPm,
+  createRequestView,
+  createScriptConsole,
+  createVariableScope,
+} from "@/lib/builder/script-sandbox";
 
 function cloneRequest(req) {
   return {
@@ -20,35 +17,52 @@ function cloneRequest(req) {
 }
 
 /**
- * Runs pre-request script for a single send. Mutations apply to the returned
- * snapshot only — the saved draft is not modified.
+ * Runs a Postman-style pre-request script. Mutations apply to the returned
+ * snapshot only — the saved draft is not modified unless env vars are persisted.
  */
-export function runPreRequestScript(req, env, script) {
+export function runPreRequestScript(req, env, script, { onEnvSet } = {}) {
   const trimmed = (script || "").trim();
-  if (!trimmed) return req;
+  if (!trimmed) {
+    return { request: req, env, logs: [] };
+  }
 
   const request = cloneRequest(req);
-  const envView = buildEnvView(env);
   const logs = [];
-  const console = { log: (...args) => logs.push(args.map(String).join(" ")) };
+  const variables = createVariableScope(env, { onSet: onEnvSet });
+  const requestView = createRequestView(request);
+  const console = createScriptConsole((entry) => logs.push({ phase: "pre", ...entry }));
+  const pm = createPm({ variables, request: requestView });
 
   try {
     // eslint-disable-next-line no-new-func
-    const runner = new Function("env", "request", "console", `${trimmed}\nreturn request;`);
-    const result = runner(envView, request, console);
-    if (!result || typeof result !== "object") {
-      throw new Error("Pre-request script must return the request object.");
-    }
-    return {
-      ...req,
-      method: result.method ?? req.method,
-      url: result.url ?? req.url,
-      params: result.params ?? req.params,
-      headers: result.headers ?? req.headers,
-      auth: result.auth ?? req.auth,
-      body: result.body ?? req.body,
-    };
+    const runner = new Function(
+      "pm",
+      "variables",
+      "varibles",
+      "request",
+      "console",
+      trimmed,
+    );
+    runner(pm, variables, variables, requestView, console);
   } catch (err) {
-    throw new Error(err?.message || "Pre-request script failed.");
+    const error = new Error(err?.message || "Pre-request script failed.");
+    error.logs = logs;
+    throw error;
   }
+
+  const mergedEnv = variables.toEnv(env);
+
+  return {
+    request: {
+      ...req,
+      method: request.method ?? req.method,
+      url: request.url ?? req.url,
+      params: request.params ?? req.params,
+      headers: request.headers ?? req.headers,
+      auth: request.auth ?? req.auth,
+      body: request.body ?? req.body,
+    },
+    env: mergedEnv,
+    logs,
+  };
 }

@@ -20,11 +20,11 @@ export function createAbortController() {
 }
 
 export function isCancelledError(error) {
-  return (
-    error instanceof ApiError
-      ? error.cancelled
-      : axios.isCancel(error)
-  );
+  if (error instanceof ApiError) return error.cancelled;
+  if (axios.isCancel(error)) return true;
+  if (error?.name === "AbortError") return true;
+  const message = String(error?.message || "").toLowerCase();
+  return message.includes("aborted") || message.includes("cancel");
 }
 
 function toApiError(error) {
