@@ -1,5 +1,7 @@
 // Variable interpolation supports BOTH [[VAR]] (new preferred) and {{VAR}} (legacy)
 import { uuidV4 } from "@/lib/generators";
+import { prepareFetchBody } from "@/lib/builder/request-body";
+import { corsHintMessage, isLikelyCorsError } from "@/lib/builder/response-format";
 
 // Regex matches [[VAR]] preferred, also accepts {{VAR}} for backward compat
 const INTERPOLATION_RE = /\[\[\s*([A-Z0-9_]+)\s*\]\]|\{\{\s*([A-Z0-9_]+)\s*\}\}/gi;
@@ -138,12 +140,19 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
 
     try {
       const hdrs = {};
-      headers.filter((h) => h.enabled !== false && h.key).forEach((h) => (hdrs[h.key] = interpolate(h.value, env)));
+      headers.filter((h) => h.enabled !== false && h.key).forEach((h) => {
+        hdrs[h.key] = interpolate(h.value, env);
+      });
+
+      const { fetchBody, contentType } = prepareFetchBody(body, method, env);
       const init = { method, headers: hdrs };
-      if (body && body.type === "json" && body.content && !["GET", "HEAD"].includes(method)) {
-        init.body = interpolate(body.content, env);
-        if (!hdrs["Content-Type"]) hdrs["Content-Type"] = "application/json";
+      if (fetchBody !== undefined) {
+        init.body = fetchBody;
+        if (contentType && !hdrs["Content-Type"] && !hdrs["content-type"]) {
+          hdrs["Content-Type"] = contentType;
+        }
       }
+
       const resp = await fetch(fullUrl, init);
       const text = await resp.text();
       const ms = Math.round(performance.now() - t0);
@@ -167,11 +176,22 @@ export async function runMockRequest({ method, url, headers = [], body, env, mod
       };
     } catch (e) {
       const ms = Math.round(performance.now() - t0);
+      const corsBlocked = isLikelyCorsError(e?.message);
+      const message = corsBlocked ? corsHintMessage() : String(e?.message || e);
       return {
-        ok: false, status: 0, statusText: "Network Error",
-        durationMs: ms, sizeBytes: 0, headers: {}, cookies: [],
-        body: { success: false, error: "Network Error", message: String(e?.message || e) },
-        rawText: "", url: fullUrl, method, mode: "real",
+        ok: false,
+        status: 0,
+        statusText: corsBlocked ? "CORS Error" : "Network Error",
+        durationMs: ms,
+        sizeBytes: 0,
+        headers: {},
+        cookies: [],
+        body: { success: false, error: corsBlocked ? "CORS Error" : "Network Error", message },
+        rawText: "",
+        url: fullUrl,
+        method,
+        mode: "real",
+        corsBlocked,
       };
     }
   }
@@ -256,6 +276,7 @@ function statusText(code) {
 
 export function runTests(testScript, response) {
   if (!testScript || !testScript.trim()) return [];
+  // Supported: expect(response.status).toBe(200), .toEqual(), .toBeGreaterThan(), .toBeLessThan()
   const lines = testScript.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("//"));
   const results = [];
   lines.forEach((line, idx) => {

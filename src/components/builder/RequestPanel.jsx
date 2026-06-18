@@ -22,6 +22,7 @@ import DocsPanel from "@/components/builder/DocsPanel";
 import { METHODS_LIST } from "@/lib/mockData";
 import { GENERATORS } from "@/lib/generators";
 import { CODE_LANGS, generateCode } from "@/lib/codeGen";
+import { countEnabledKvRows } from "@/lib/builder/request-body";
 import { BUILDER } from "@/constants/testIds";
 import { cn } from "@/lib/utils";
 import { isRequestUrlEmpty } from "@/lib/builder/url-variables";
@@ -63,9 +64,12 @@ export default function RequestPanel({
   };
 
   const codeSnippet = useMemo(
-    () => generateCode(codeLang, { ...req, url: finalUrl }),
-    [codeLang, req, finalUrl]
+    () => generateCode(codeLang, { ...req, url: finalUrl, env: activeEnv }),
+    [codeLang, req, finalUrl, activeEnv],
   );
+
+  const paramCount = countEnabledKvRows(req.params);
+  const headerCount = countEnabledKvRows(req.headers);
 
   return (
     <div className="h-full flex flex-col">
@@ -204,9 +208,9 @@ export default function RequestPanel({
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col overflow-hidden">
         <TabsList className="shrink-0 bg-transparent border-b border-[hsl(var(--border))] rounded-none h-9 px-2 justify-start gap-1 overflow-x-auto no-scrollbar">
           {[
-            ["params", "Params", req.params?.length],
+            ["params", "Params", paramCount],
             ["authorization", "Authorization", null],
-            ["headers", "Headers", req.headers?.length],
+            ["headers", "Headers", headerCount],
             ["body", "Body", req.body?.type !== "none" ? "•" : null],
             ["scripts", "Pre-request", null],
             ["tests", "Tests", null],
@@ -307,6 +311,11 @@ export default function RequestPanel({
         </TabsContent>
 
         <TabsContent value="scripts" className={TAB_CONTENT_CLASS}>
+          <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground">
+            Runs before send only. Globals: <span className="font-mono text-foreground/75">env</span>,{" "}
+            <span className="font-mono text-foreground/75">request</span>,{" "}
+            <span className="font-mono text-foreground/75">console.log</span>
+          </div>
           <div className="flex-1 min-h-0">
             <Editor
               height="100%"

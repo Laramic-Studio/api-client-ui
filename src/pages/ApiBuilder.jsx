@@ -18,6 +18,8 @@ import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import { getClient } from "@/lib/api/client";
 import { interpolate } from "@/lib/mockEngine";
+import { buildOutgoingHeaders } from "@/lib/builder/request-auth";
+import { runPreRequestScript } from "@/lib/builder/pre-script";
 import { getErrorMessage } from "@/hooks/use-auth";
 import { useCollections } from "@/hooks/use-collections";
 import { createEmptyScratch, createScratchTabId, isScratchTab } from "@/lib/builder/scratch";
@@ -256,47 +258,62 @@ export default function ApiBuilder() {
       toast.error("Enter a request URL before sending.");
       return;
     }
+
     setPanels({ responseOpen: true });
     setSending(true);
     setBuilderActiveExample(activeTabId, null);
     setBuilderResponse(activeTabId, null);
-    const headers = [...(activeReq.headers || [])];
-    if (activeReq.auth?.type === "bearer" && activeReq.auth.token) {
-      headers.push({ key: "Authorization", value: `Bearer ${interpolate(activeReq.auth.token, activeEnv)}`, enabled: true });
-    } else if (activeReq.auth?.type === "basic" && activeReq.auth.username) {
-      const cred = btoa(`${activeReq.auth.username}:${activeReq.auth.password || ""}`);
-      headers.push({ key: "Authorization", value: `Basic ${cred}`, enabled: true });
-    } else if (activeReq.auth?.type === "apikey") {
-      headers.push({
-        key: activeReq.auth.headerName || "X-API-Key",
-        value: interpolate(activeReq.auth.value || "", activeEnv),
-        enabled: true,
+
+    try {
+      let sendReq = activeReq;
+      if (activeReq.preScript?.trim()) {
+        try {
+          sendReq = runPreRequestScript(activeReq, activeEnv, activeReq.preScript);
+        } catch (err) {
+          toast.error(err.message || "Pre-request script failed.");
+          return;
+        }
+      }
+
+      const sendUrl = (() => {
+        const base = interpolate(sendReq.url, activeEnv);
+        const qs = (sendReq.params || [])
+          .filter((p) => p.enabled !== false && p.key)
+          .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(interpolate(p.value, activeEnv))}`)
+          .join("&");
+        return qs ? `${base}${base.includes("?") ? "&" : "?"}${qs}` : base;
+      })();
+
+      const headers = buildOutgoingHeaders(sendReq, activeEnv);
+      const result = await client.send({
+        method: sendReq.method,
+        url: sendUrl,
+        headers,
+        body: sendReq.body,
+        env: activeEnv,
+        mode: "real",
       });
+
+      setBuilderResponse(activeTabId, result);
+      const tr = client.runTests(sendReq.tests, result);
+      setBuilderTestResults(activeTabId, tr);
+      const collection = collections.find((c) => c.id === sendReq.collectionId);
+      await client.addHistory(buildHistoryEntry({
+        request: sendReq,
+        result,
+        collectionName: collection?.name || "Scratch",
+        requestId: isScratchTab(activeTabId) ? null : sendReq.id,
+      }));
+      pushNotification({
+        type: result.ok ? "success" : "danger",
+        title: result.ok ? "Request succeeded" : "Request failed",
+        desc: `${sendReq.method} ${result.url} → ${result.status}`,
+      });
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Request failed."));
+    } finally {
+      setSending(false);
     }
-    const result = await client.send({
-      method: activeReq.method,
-      url: finalUrl,
-      headers,
-      body: activeReq.body,
-      env: activeEnv,
-      mode: "real",
-    });
-    setBuilderResponse(activeTabId, result);
-    setSending(false);
-    const tr = client.runTests(activeReq.tests, result);
-    setBuilderTestResults(activeTabId, tr);
-    const collection = collections.find((c) => c.id === activeReq.collectionId);
-    await client.addHistory(buildHistoryEntry({
-      request: activeReq,
-      result,
-      collectionName: collection?.name || "Scratch",
-      requestId: isScratchTab(activeTabId) ? null : activeReq.id,
-    }));
-    pushNotification({
-      type: result.ok ? "success" : "danger",
-      title: result.ok ? "Request succeeded" : "Request failed",
-      desc: `${activeReq.method} ${result.url} → ${result.status}`,
-    });
   };
 
   const onSave = async () => {

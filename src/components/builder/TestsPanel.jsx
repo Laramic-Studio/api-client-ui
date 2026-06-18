@@ -4,6 +4,14 @@ import { CheckCircle2, XCircle } from "lucide-react";
 export default function TestsPanel({ tests, onChange, results }) {
   return (
     <div className="h-full min-h-0 flex flex-col">
+      <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground leading-relaxed">
+        One assertion per line; <span className="font-mono text-foreground/75">{"//"}</span> comments allowed.
+        <div className="mt-1 font-mono text-[11px] text-foreground/70 space-y-0.5">
+          <div>expect(response.status).toBe(200)</div>
+          <div>expect(response.body.success).toEqual(true)</div>
+          <div>expect(response.durationMs).toBeLessThan(5000)</div>
+        </div>
+      </div>
       <div className="flex-1 min-h-0">
         <Editor
           height="100%"

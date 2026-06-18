@@ -9,6 +9,7 @@ import { BUILDER } from "@/constants/testIds";
 import { Send, Save, Sparkles, MoreHorizontal, PanelRight, PanelBottom, Check, X, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { formatPrettyBody, inferPrettyLanguage } from "@/lib/builder/response-format";
 
 function formatBytes(n) {
   if (!n) return "0 B";
@@ -85,6 +86,9 @@ function LayoutMenu({ layout, onLayoutChange, onClose }) {
 }
 
 function ResponseTabs({ response, tab, setTab, onSaveExample, onExplain }) {
+  const prettyLang = inferPrettyLanguage(response);
+  const prettyValue = formatPrettyBody(response);
+
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex-1 min-h-0 flex flex-col">
       <div className="shrink-0 flex items-center border-b border-[hsl(var(--border))]">
@@ -119,11 +123,16 @@ function ResponseTabs({ response, tab, setTab, onSaveExample, onExplain }) {
       </div>
 
       <TabsContent value="pretty" className="flex-1 min-h-0 m-0 p-0">
+        {response.corsBlocked && (
+          <div className="mx-3 mt-3 rounded-md border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 px-3 py-2 text-[12px] text-foreground/90">
+            {response.body?.message || "Browser blocked this request (CORS)."}
+          </div>
+        )}
         <Editor
           height="100%"
-          defaultLanguage="json"
-          language="json"
-          value={typeof response.body === "string" ? response.body : JSON.stringify(response.body, null, 2)}
+          defaultLanguage={prettyLang}
+          language={prettyLang}
+          value={prettyValue}
           theme="vs-dark"
           options={{
             readOnly: true, minimap: { enabled: false }, fontSize: 13,

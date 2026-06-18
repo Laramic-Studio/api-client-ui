@@ -45,6 +45,7 @@ export default function History() {
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// timeline</div>
           <h1 className="text-2xl font-medium tracking-tight">History</h1>
+          <p className="text-[12px] text-muted-foreground mt-1">Stored in this browser only — not synced across devices.</p>
         </div>
         <div className="ml-auto relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
