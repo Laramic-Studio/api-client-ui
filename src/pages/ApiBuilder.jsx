@@ -1,7 +1,7 @@
 // Orchestrator for the 3-pane API Builder. Composed of small subcomponents
 // in /app/frontend/src/components/builder/*. The Zustand store owns persistence
 // (open tabs, panel widths, request data); this file only wires interactions.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
@@ -9,8 +9,10 @@ import CollectionsExplorer from "@/components/builder/CollectionsExplorer";
 import RequestTabs from "@/components/builder/RequestTabs";
 import RequestPanel from "@/components/builder/RequestPanel";
 import ResponsePanel from "@/components/builder/ResponsePanel";
-import AskAIDialog from "@/components/builder/AskAIDialog";
 import ExplainPanel from "@/components/builder/ExplainPanel";
+
+import { useRegisterAiPage } from "@/providers/AiContextProvider";
+import { applyBuilderSpec, builderSnapshot } from "@/lib/ai/builder-spec";
 
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections } from "@/lib/store/selectors";
@@ -90,10 +92,15 @@ export default function ApiBuilder() {
 
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [askAIOpen, setAskAIOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
+  const queueAiChat = useAppStore((s) => s.queueAiChat);
   const [closePrompt, setClosePrompt] = useState(null);
   const [closeSaveCollectionId, setCloseSaveCollectionId] = useState(null);
+  const activeReqRef = useRef(null);
+  const activeTabIdRef = useRef(null);
+  const activeEnvRef = useRef(null);
+  const setActiveReqRef = useRef(() => {});
+  const onSaveRef = useRef(null);
 
   const ensureScratchDraft = useCallback((tabId) => {
     if (!drafts[tabId]) {
@@ -338,6 +345,7 @@ export default function ApiBuilder() {
       setSaving(false);
     }
   };
+  onSaveRef.current = onSave;
 
   const onOpenRequest = (requestId, collectionId) => {
     const found = findRequest(requestId);
@@ -411,20 +419,6 @@ export default function ApiBuilder() {
     navigate("/builder");
   };
 
-  const applyAISpec = (spec) => {
-    if (!spec || !activeReq) return;
-    setActiveReq({
-      ...activeReq,
-      name: spec.name || activeReq.name || "AI request",
-      method: spec.method || activeReq.method,
-      url: spec.url || activeReq.url,
-      params: spec.params || [],
-      headers: spec.headers || activeReq.headers || [],
-      body: spec.body || activeReq.body || { type: "none", content: "" },
-      tests: spec.tests ?? activeReq.tests,
-    });
-  };
-
   const handleUpdateVariable = useCallback(async (key, value) => {
     if (!activeEnv?.id) return;
     const variables = [...(activeEnv.variables || [])];
@@ -441,11 +435,6 @@ export default function ApiBuilder() {
       toast.error(getErrorMessage(err, "Could not update variable."));
     }
   }, [activeEnv, client]);
-
-  const envVarNames = useMemo(
-    () => (activeEnv?.variables || []).filter((v) => v.enabled !== false).map((v) => v.key),
-    [activeEnv],
-  );
 
   const handleRequestRenamed = useCallback((requestId, name) => {
     const draft = drafts[requestId];
@@ -482,6 +471,45 @@ export default function ApiBuilder() {
     setPanels({ responseOpen: true });
   }, [setPanels]);
 
+  activeReqRef.current = activeReq;
+  activeTabIdRef.current = activeTabId;
+  activeEnvRef.current = activeEnv;
+  setActiveReqRef.current = setActiveReq;
+
+  useRegisterAiPage("api-builder", {
+    getSnapshot: () => {
+      const tabId = activeTabIdRef.current;
+      const req = activeReqRef.current;
+      if (!req || !tabId) return { hasOpenRequest: false };
+
+      const state = useAppStore.getState();
+      const draft = state.builderSession.drafts[tabId];
+      const saved = isScratchTab(tabId) ? null : state.findRequest(tabId).request;
+
+      return builderSnapshot({
+        activeTabId: tabId,
+        activeReq: req,
+        isDirty: isTabDirty(tabId, draft, saved),
+        activeEnv: activeEnvRef.current,
+      });
+    },
+    actionHandlers: {
+      "builder.apply_draft": (payload) => {
+        const req = activeReqRef.current;
+        const tabId = activeTabIdRef.current;
+        if (!req || !tabId) throw new Error("No request open.");
+        if (!payload?.spec) throw new Error("Missing spec in payload.");
+        setActiveReqRef.current(applyBuilderSpec(req, payload.spec));
+        return { message: "Draft updated — review the request and save when ready." };
+      },
+      "builder.save_request": async () => {
+        if (!onSaveRef.current) throw new Error("Nothing to save.");
+        await onSaveRef.current();
+        return { message: "Request saved to collection." };
+      },
+    },
+  });
+
   const requestPane = activeReq ? (
     <RequestPanel
       req={activeReq}
@@ -493,7 +521,7 @@ export default function ApiBuilder() {
       testResults={testResults[activeTabId] || []}
       finalUrl={finalUrl}
       breadcrumb={requestBreadcrumb}
-      onAskAI={() => setAskAIOpen(true)}
+      onAskAI={() => queueAiChat({ text: "Build an API request that ", autoSend: false })}
       collectionId={activeReq.collectionId || activeColIdForEnv}
       activeEnv={activeEnv}
       onUpdateVariable={handleUpdateVariable}
@@ -608,12 +636,6 @@ export default function ApiBuilder() {
           <ExplainPanel response={displayResponse} onClose={() => setExplainOpen(false)} />
         )}
       </div>
-      <AskAIDialog
-        open={askAIOpen}
-        onOpenChange={setAskAIOpen}
-        envVars={envVarNames}
-        onApply={applyAISpec}
-      />
       <UnsavedTabDialog
         open={Boolean(closePrompt)}
         onOpenChange={(open) => { if (!open) setClosePrompt(null); }}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections } from "@/lib/store/selectors";
+import { useRegisterAiPage } from "@/providers/AiContextProvider";
 import { useNavigate } from "react-router-dom";
 import MethodBadge from "@/components/shared/MethodBadge";
 import {
@@ -44,6 +45,18 @@ export default function Collections() {
   const filtered = collections
     .filter((c) => (showArchived ? c.archived : !c.archived))
     .filter((c) => c.name.toLowerCase().includes(q.toLowerCase()));
+
+  useRegisterAiPage("collections", {
+    getSnapshot: () => ({
+      collectionCount: filtered.length,
+      collections: filtered.map((c) => ({
+        id: c.id,
+        name: c.name,
+        requestCount: (c.requests || []).length,
+        archived: Boolean(c.archived),
+      })),
+    }),
+  });
 
   const patchCollection = (id, patch) => {
     updateLocal(id, patch);

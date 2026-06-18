@@ -112,11 +112,12 @@ export default function Settings() {
               </div>
               <Switch
                 checked={ai.useOwnKey}
+                disabled={ai.provider === "ollama"}
                 onCheckedChange={(v) => setAi({ useOwnKey: v })}
                 data-testid="ai-use-own-key"
               />
             </div>
-            {ai.useOwnKey && (
+            {ai.useOwnKey && ai.provider !== "ollama" && (
               <div className="space-y-2">
                 <Label className="text-[11px] uppercase font-mono text-muted-foreground">API key</Label>
                 <Input
@@ -129,12 +130,21 @@ export default function Settings() {
                 />
               </div>
             )}
+            {ai.provider === "ollama" && (
+              <div className="text-[11.5px] text-muted-foreground">
+                Uses the Ollama instance configured on the server (e.g. <span className="font-mono text-foreground/80">qwen2.5:3b</span>).
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[11px] uppercase font-mono text-muted-foreground">Provider</Label>
-                <Select value={ai.provider} onValueChange={(v) => setAi({ provider: v })}>
+                <Select value={ai.provider} onValueChange={(v) => setAi({
+                  provider: v,
+                  ...(v === "ollama" ? { model: "qwen2.5:3b", useOwnKey: false } : {}),
+                })}>
                   <SelectTrigger className="bg-muted border-border h-9 mt-1 text-[13px]" data-testid="ai-provider"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover border-border">
+                    <SelectItem value="ollama">Ollama · Local</SelectItem>
                     <SelectItem value="gemini">Google · Gemini</SelectItem>
                     <SelectItem value="openai">OpenAI</SelectItem>
                     <SelectItem value="anthropic">Anthropic · Claude</SelectItem>
@@ -146,7 +156,7 @@ export default function Settings() {
                 <Input
                   value={ai.model}
                   onChange={(e) => setAi({ model: e.target.value })}
-                  placeholder="gemini-3-flash-preview"
+                  placeholder={ai.provider === "ollama" ? "qwen2.5:3b" : "gemini-3-flash-preview"}
                   data-testid="ai-model"
                   className="bg-muted border-border h-9 mt-1 font-mono text-[13px]"
                 />

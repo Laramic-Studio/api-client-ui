@@ -1,4 +1,5 @@
 import EnvironmentVariablesTable from "@/components/environments/EnvironmentVariablesTable";
+import { useRegisterAiPage } from "@/providers/AiContextProvider";
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections, selectWorkspaceEnvironments } from "@/lib/store/selectors";
 import { useEffect, useMemo, useState } from "react";
@@ -41,6 +42,20 @@ export default function Environments() {
 
   const [selectedId, setSelectedId] = useState(filtered[0]?.id);
   const selected = filtered.find((e) => e.id === selectedId) || filtered[0];
+
+  useRegisterAiPage("environments", {
+    getSnapshot: () => ({
+      scope,
+      selectedEnvironmentId: selected?.id || null,
+      selectedEnvironmentName: selected?.name || null,
+      environmentCount: filtered.length,
+      variables: (selected?.variables || []).map((v) => ({
+        key: v.key,
+        enabled: v.enabled !== false,
+        secret: Boolean(v.secret),
+      })),
+    }),
+  });
 
   useEffect(() => {
     if (!filtered.some((e) => e.id === selectedId)) {
@@ -128,19 +143,38 @@ export default function Environments() {
                 onClick={() => setSelectedId(e.id)}
                 data-testid={ENV.envItem(e.id)}
                 className={cn(
-                  "w-full flex items-center gap-2 h-10 px-2 rounded text-[13px] hover:bg-accent/50",
+                  "w-full flex items-center mt-1.5 gap-2 h-10 px-2 rounded text-[13px] hover:bg-accent/50",
                   selectedId === e.id && "bg-accent text-foreground",
                 )}
+                style={{ height: 40 }}
               >
-                {col ? <Folder className="h-3.5 w-3.5 text-[hsl(var(--warning))]" /> : <Globe className="h-3.5 w-3.5 text-[hsl(var(--brand))]" />}
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="truncate">{e.name}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider truncate">
+                <span
+                  className="inline-flex items-center justify-center rounded bg-accent/30  mr-1"
+                  style={{ height: 24, width: 24 }}
+                >
+                  {col ? (
+                    <Folder className="w-full h-full text-[hsl(var(--warning))]" />
+                  ) : (
+                    <Globe className="w-full h-full text-[hsl(var(--brand))]" />
+                  )}
+                </span>
+
+                <div className="flex-1 min-w-0 text-left flex flex-col justify-center" style={{ height: 24 }}>
+                  <div className="truncate capitalize leading-none">{e.name}</div>
+                  <div className="text-[10px] mt-1 text-muted-foreground uppercase tracking-wider truncate leading-none">
                     {col ? col.name : "Workspace"}
                   </div>
                 </div>
-                {e.active && <span className="text-[10px] font-mono uppercase text-[hsl(var(--brand))]">Active</span>}
+                {e.active && (
+                  <span
+                    className="text-[8px] font-rowdies uppercase text-[hsl(var(--brand))] flex items-center"
+                    style={{ height: 24 }}
+                  >
+                    Active
+                  </span>
+                )}
               </button>
+         
             );
           })}
         </div>

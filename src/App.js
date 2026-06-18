@@ -7,6 +7,9 @@ import { useAppStore } from "@/store/useAppStore";
 import { setClient } from "@/lib/api/client";
 import { fetchClient } from "@/lib/api/fetch-client";
 import { AuthBootstrapGate } from "@/components/auth/guards";
+import { AiContextProvider } from "@/providers/AiContextProvider";
+import "@/lib/ai/actions/registry";
+import "@/lib/ai/actions/environments";
 import AppRoutes from "@/routes/AppRoutes";
 
 export default function App() {
@@ -25,7 +28,9 @@ export default function App() {
     <TooltipProvider delayDuration={150}>
       <BrowserRouter>
         <AuthBootstrapGate>
-          <AppRoutes />
+          <AiContextProvider>
+            <AppRoutes />
+          </AiContextProvider>
         </AuthBootstrapGate>
         <Toaster
           position="bottom-right"

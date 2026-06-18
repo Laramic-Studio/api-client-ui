@@ -143,7 +143,7 @@ export default function RequestPanel({
           type="button"
           onClick={onAskAI}
           data-testid="builder-ask-ai"
-          title="Ask AI to build this request"
+          title="Open AI assistant to build this request"
           className="h-9 px-2.5 rounded-md bg-[hsl(var(--brand))]/15 text-[hsl(var(--brand))] hover:bg-[hsl(var(--brand))]/25 text-[12px] font-medium inline-flex items-center gap-1.5 border border-[hsl(var(--brand))]/30"
         >
           <Sparkles className="h-3.5 w-3.5" /> Ask AI

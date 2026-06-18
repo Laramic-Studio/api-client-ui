@@ -79,3 +79,15 @@ export const MOCK = {
 export const DASH = {
   stat: (key) => `dash-stat-${key}`,
 };
+
+export const AI = {
+  sidebar: "ai-sidebar",
+  chat: "ai-chat",
+  input: "ai-input",
+  send: "ai-send",
+  stop: "ai-stop",
+  clear: "ai-clear",
+  close: "ai-close",
+  toggle: "ai-toggle",
+  resizeHandle: "ai-resize-handle",
+};

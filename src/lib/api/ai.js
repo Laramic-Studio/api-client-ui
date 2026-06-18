@@ -1,8 +1,10 @@
 // Lightweight frontend wrapper for the AI backend endpoints.
-import { createApiClient, createAbortController, isCancelledError } from "@/lib/api/http";
+import { createApiClient, createAbortController, isCancelledError, ApiError } from "@/lib/api/http";
+import { API_URL } from "@/lib/config";
+import { getAccessToken } from "@/lib/auth/tokens";
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || "";
-const aiApi = createApiClient(API_BASE);
+const LEGACY_AI_BASE = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
+const aiApi = createApiClient(LEGACY_AI_BASE);
 
 function aiPayload(extra, ai, userId) {
   const base = { user_id: userId, ...extra };
@@ -12,7 +14,70 @@ function aiPayload(extra, ai, userId) {
   return base;
 }
 
+async function readAiSseStream(res, { onDelta, onActions, signal }) {
+  if (!res.ok || !res.body) {
+    const t = await res.text();
+    throw new Error(`AI request failed: ${res.status} ${t}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+  let proposedActions = [];
+
+  for (;;) {
+    if (signal?.aborted) {
+      throw new ApiError("Request cancelled.", { cancelled: true });
+    }
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) {
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (payload === "[DONE]") return { full, proposedActions };
+      try {
+        const j = JSON.parse(payload);
+        if (j.delta) {
+          full += j.delta;
+          onDelta?.(j.delta, full);
+        }
+        if (j.proposed_actions) {
+          proposedActions = j.proposed_actions;
+          onActions?.(proposedActions);
+        }
+        if (j.error) throw new Error(j.error);
+      } catch (err) {
+        if (err instanceof Error && err.message !== "Unexpected end of JSON input") {
+          if (payload.startsWith("{")) throw err;
+        }
+      }
+    }
+  }
+
+  return { full, proposedActions };
+}
+
 export { createAbortController, isCancelledError };
+
+export async function aiChat({ messages, context, userId, ai, onDelta, onActions, signal }) {
+  const token = getAccessToken();
+  const res = await fetch(`${API_URL}/ai/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(aiPayload({ messages, context }, ai, userId)),
+    signal,
+  });
+
+  return readAiSseStream(res, { onDelta, onActions, signal });
+}
 
 export async function aiBuildRequest({ prompt, envVars, userId, ai, signal }) {
   const { data } = await aiApi.post("/api/ai/build", aiPayload({ prompt, env_vars: envVars }, ai, userId), {
@@ -28,43 +93,14 @@ export async function aiBuildRequest({ prompt, envVars, userId, ai, signal }) {
 export async function aiExplainResponse({
   method, url, status, body, headers, userId, ai, onDelta, signal,
 }) {
-  const res = await fetch(`${API_BASE}/api/ai/explain`, {
+  const res = await fetch(`${LEGACY_AI_BASE}/api/ai/explain`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(aiPayload({ method, url, status, body, headers }, ai, userId)),
     signal,
   });
 
-  if (!res.ok || !res.body) {
-    const t = await res.text();
-    throw new Error(`AI explain failed: ${res.status} ${t}`);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let full = "";
-
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-    for (const line of lines) {
-      if (!line.startsWith("data:")) continue;
-      const payload = line.slice(5).trim();
-      if (payload === "[DONE]") return full;
-      try {
-        const j = JSON.parse(payload);
-        if (j.delta) { full += j.delta; onDelta?.(j.delta, full); }
-        if (j.error) throw new Error(j.error);
-      } catch {
-        // ignore partial chunks
-      }
-    }
-  }
-
+  const { full } = await readAiSseStream(res, { onDelta, signal });
   return full;
 }
 

@@ -89,6 +89,31 @@ export const useAppStore = create(
       })),
       clearAiPrompts: () => set({ aiPromptHistory: [] }),
 
+      // ===== AI sidebar =====
+      aiSidebarOpen: true,
+      aiSidebarWidth: 360,
+      toggleAiSidebar: () => set((s) => ({ aiSidebarOpen: !s.aiSidebarOpen })),
+      setAiSidebarOpen: (v) => set({ aiSidebarOpen: v }),
+      setAiSidebarWidth: (w) => set({ aiSidebarWidth: Math.min(560, Math.max(280, w)) }),
+      aiMessages: [],
+      appendAiMessage: (msg) => set((s) => ({
+        aiMessages: [...s.aiMessages, { ts: Date.now(), id: nanoUid("aim"), ...msg }],
+      })),
+      updateAiMessage: (id, patch) => set((s) => ({
+        aiMessages: s.aiMessages.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+      })),
+      clearAiMessages: () => set({ aiMessages: [] }),
+      aiChatPrefill: "",
+      aiChatAutoSend: false,
+      queueAiChat: ({ text = "", autoSend = false }) => set({
+        aiChatPrefill: text,
+        aiChatAutoSend: autoSend,
+        aiSidebarOpen: true,
+      }),
+      clearAiChatPrefill: () => set({ aiChatPrefill: "", aiChatAutoSend: false }),
+      aiPageContext: null,
+      setAiPageContext: (ctx) => set({ aiPageContext: ctx }),
+
       // ===== Public share links =====
       shareLinks: {},
       createShareLink: (collectionId) => {
@@ -619,6 +644,8 @@ export const useAppStore = create(
         currentTeam: s.currentTeam,
         aiSettings: s.aiSettings,
         aiPromptHistory: s.aiPromptHistory,
+        aiSidebarOpen: s.aiSidebarOpen,
+        aiSidebarWidth: s.aiSidebarWidth,
         shareLinks: s.shareLinks,
         activeEnvByCollection: s.activeEnvByCollection,
         sidebarCollapsed: s.sidebarCollapsed,

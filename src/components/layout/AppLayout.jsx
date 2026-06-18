@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import CommandPalette from "@/components/layout/CommandPalette";
+import AiSidebar from "@/components/ai/AiSidebar";
 import { useAppStore } from "@/store/useAppStore";
 
 export default function AppLayout() {
@@ -11,6 +12,7 @@ export default function AppLayout() {
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
   const sidebarWidth = useAppStore((s) => s.sidebarWidth);
   const setSidebarWidth = useAppStore((s) => s.setSidebarWidth);
+  const toggleAiSidebar = useAppStore((s) => s.toggleAiSidebar);
   const navigate = useNavigate();
 
   // global shortcuts
@@ -19,12 +21,13 @@ export default function AppLayout() {
       const isMac = navigator.platform.toUpperCase().includes("MAC");
       const cmd = isMac ? e.metaKey : e.ctrlKey;
       if (cmd && e.key.toLowerCase() === "k") { e.preventDefault(); setCommandOpen(true); }
+      if (cmd && e.key.toLowerCase() === "j") { e.preventDefault(); toggleAiSidebar(); }
       if (cmd && e.key.toLowerCase() === "/") { e.preventDefault(); navigate("/builder"); }
       if (cmd && e.key === "b") { e.preventDefault(); toggleSidebar(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [setCommandOpen, navigate, toggleSidebar]);
+  }, [setCommandOpen, navigate, toggleSidebar, toggleAiSidebar]);
 
   // Auto-collapse on small screens (responsive) AND when entering /builder
   useEffect(() => {
@@ -95,9 +98,12 @@ export default function AppLayout() {
       </aside>
       <div className="flex-1 min-w-0 flex flex-col">
         <Topbar />
-        <main className="flex-1 min-h-0 overflow-hidden bg-background">
-          <Outlet />
-        </main>
+        <div className="flex-1 min-h-0 flex overflow-hidden">
+          <main className="flex-1 min-h-0 min-w-0 overflow-hidden bg-background">
+            <Outlet />
+          </main>
+          <AiSidebar />
+        </div>
       </div>
       <CommandPalette />
     </div>

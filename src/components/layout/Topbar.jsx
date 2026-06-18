@@ -10,11 +10,12 @@ import {
   User as UserIcon,
   Loader2,
   Check,
+  Sparkles,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useLogout } from "@/hooks/use-auth";
 import { getErrorMessage, useSwitchTeam } from "@/hooks/use-teams";
-import { NAV, AUTH } from "@/constants/testIds";
+import { NAV, AUTH, AI } from "@/constants/testIds";
 import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -36,6 +37,8 @@ import { toast } from "sonner";
 export default function Topbar() {
   const user = useAppStore((s) => s.user);
   const setCommandOpen = useAppStore((s) => s.setCommandOpen);
+  const aiSidebarOpen = useAppStore((s) => s.aiSidebarOpen);
+  const toggleAiSidebar = useAppStore((s) => s.toggleAiSidebar);
   const notifications = useAppStore((s) => s.notifications);
   const markAllRead = useAppStore((s) => s.markAllRead);
   const workspaces = useAppStore((s) => s.workspaces);
@@ -137,6 +140,19 @@ export default function Topbar() {
       </button>
 
       <div className="ml-auto flex items-center gap-1">
+        <button
+          onClick={toggleAiSidebar}
+          data-testid={AI.toggle}
+          className={cn(
+            "h-9 w-9 grid place-items-center rounded-md hover:bg-accent/50 text-foreground/85",
+            aiSidebarOpen && "bg-[hsl(var(--brand))]/15 text-[hsl(var(--brand))]",
+          )}
+          aria-label="Toggle AI assistant"
+          title="Assistant (⌘J)"
+        >
+          <Sparkles className="h-4 w-4" />
+        </button>
+
         <button
           onClick={toggleTheme}
           data-testid={NAV.themeToggle}
