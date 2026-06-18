@@ -3,3 +3,4 @@
 
 // export const API_URL = (process.env.REACT_APP_API_URL || "http://noidr-api.test/api").replace(/\/$/, "");
 export const API_URL = "http://noidr-api.test/api";
+export const DOCS_URL = (process.env.REACT_APP_DOCS_URL || "http://noidr-api.test/docs").replace(/\/$/, "");

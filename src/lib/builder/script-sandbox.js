@@ -1,3 +1,5 @@
+import { replaceInTemplate } from "@/lib/builder/interpolate";
+
 function upsertHeaderRow(headers, key, value) {
   const normalized = String(key);
   const idx = headers.findIndex(
@@ -42,6 +44,9 @@ export function createVariableScope(env, { onSet } = {}) {
     },
     has(key) {
       return overlay.has(key) || readFromEnv(key) !== undefined;
+    },
+    replaceIn(template) {
+      return replaceInTemplate(template, env, overlay);
     },
     toEnv(baseEnv) {
       if (!baseEnv) return baseEnv;
@@ -159,8 +164,9 @@ export function createScriptConsole(onLog) {
   };
 }
 
-export function createPm({ variables, request, response, onTest }) {
-  const pm = {
+/** Noidr script API — Postman-compatible sandbox (use `nr`, not `pm`). */
+export function createNr({ variables, request, response, onTest }) {
+  return {
     variables,
     environment: variables,
     collectionVariables: variables,
@@ -171,12 +177,11 @@ export function createPm({ variables, request, response, onTest }) {
       onTest?.({ name, fn });
     },
   };
-  return pm;
 }
 
 export function runSandboxScript(script, context) {
   const {
-    pm,
+    nr,
     variables,
     request,
     response,
@@ -187,7 +192,7 @@ export function runSandboxScript(script, context) {
 
   // eslint-disable-next-line no-new-func
   const runner = new Function(
-    "pm",
+    "nr",
     "variables",
     "varibles",
     "request",
@@ -198,5 +203,5 @@ export function runSandboxScript(script, context) {
     script,
   );
 
-  runner(pm, variables, variables, request, response, console, expect, test);
+  runner(nr, variables, variables, request, response, console, expect, test);
 }

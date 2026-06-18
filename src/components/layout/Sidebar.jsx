@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useMemo } from "react";
 import { StackedLogo } from "./stack-logo";
+import { DOCS_URL } from "@/lib/config";
 
 const NAV_ITEMS = [
   { to: "/dashboard", icon: LayoutGrid, label: "Dashboard", key: "dashboard" },
@@ -32,7 +33,7 @@ const NAV_ITEMS = [
   { to: "/builder", icon: Send, label: "APIs", key: "apis", enabled: true },
   { to: "/environments", icon: Boxes, label: "Environments", key: "environments", enabled: true },
   { to: "/mock-servers", icon: ServerCog, label: "Mock Servers", key: "mock-servers" },
-  { to: "/documentation", icon: BookOpenText, label: "Documentation", key: "documentation" },
+  { href: DOCS_URL, icon: BookOpenText, label: "Documentation", key: "documentation", enabled: true, external: true },
   { to: "/history", icon: HistoryIcon, label: "History", key: "history" },
   { to: "/monitoring", icon: Activity, label: "Monitoring", key: "monitoring" },
   { to: "/workspaces", icon: Briefcase, label: "Workspaces", key: "workspaces", enabled: true },
@@ -204,7 +205,25 @@ function NavRow({ item, collapsed }) {
   const Icon = item.icon;
 
   if (enabled) {
-    const link = (
+    const className = cn(
+      "group flex items-center transition-colors rounded-md",
+      collapsed
+        ? "h-9 w-9 justify-center mx-auto text-muted-foreground hover:text-foreground hover:bg-accent/40"
+        : "h-9 px-2.5 gap-2.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-accent/50 border-l-2 border-transparent pl-[calc(0.625rem-2px)]",
+    );
+
+    const link = item.external ? (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-testid={NAV.item(item.key)}
+        className={className}
+      >
+        <Icon className={cn("shrink-0", collapsed ? "h-[18px] w-[18px]" : "h-4 w-4")} strokeWidth={1.75} />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </a>
+    ) : (
       <NavLink
         to={item.to}
         data-testid={NAV.item(item.key)}

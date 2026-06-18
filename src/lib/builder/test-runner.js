@@ -1,5 +1,5 @@
 import {
-  createPm,
+  createNr,
   createResponseView,
   createScriptConsole,
   createVariableScope,
@@ -104,7 +104,7 @@ function runFullPostScript(script, response, env, { onEnvSet } = {}) {
   const variables = createVariableScope(env, { onSet: onEnvSet });
   const responseView = createResponseView(response);
   const console = createScriptConsole((entry) => logs.push({ phase: "post", ...entry }));
-  const pm = createPm({
+  const nr = createNr({
     variables,
     request: null,
     response: responseView,
@@ -115,7 +115,7 @@ function runFullPostScript(script, response, env, { onEnvSet } = {}) {
 
   try {
     runSandboxScript(script, {
-      pm,
+      nr,
       variables,
       request: null,
       response: responseView,
@@ -161,7 +161,7 @@ function runFullPostScript(script, response, env, { onEnvSet } = {}) {
 }
 
 function looksLikeFullScript(script) {
-  return /\b(console\.|response\.|variables\.|pm\.|varibles\.|if\s*\(|for\s*\(|while\s*\(|const\s+|let\s+|var\s+)/.test(script);
+  return /\b(console\.|response\.|variables\.|nr\.|varibles\.|if\s*\(|for\s*\(|while\s*\(|const\s+|let\s+|var\s+)/.test(script);
 }
 
 export function runTests(testScript, response, env = null, options = {}) {
@@ -170,7 +170,7 @@ export function runTests(testScript, response, env = null, options = {}) {
   const script = stripComments(testScript).trim();
   if (!script) return { results: [], logs: [], env };
 
-  if (/\b(pm\.)?test\s*\(/.test(script) || looksLikeFullScript(script)) {
+  if (/\b(nr\.)?test\s*\(/.test(script) || looksLikeFullScript(script)) {
     return runFullPostScript(script, response, env, options);
   }
 

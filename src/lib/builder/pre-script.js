@@ -1,5 +1,5 @@
 import {
-  createPm,
+  createNr,
   createRequestView,
   createScriptConsole,
   createVariableScope,
@@ -31,19 +31,19 @@ export function runPreRequestScript(req, env, script, { onEnvSet } = {}) {
   const variables = createVariableScope(env, { onSet: onEnvSet });
   const requestView = createRequestView(request);
   const console = createScriptConsole((entry) => logs.push({ phase: "pre", ...entry }));
-  const pm = createPm({ variables, request: requestView });
+  const nr = createNr({ variables, request: requestView });
 
   try {
     // eslint-disable-next-line no-new-func
     const runner = new Function(
-      "pm",
+      "nr",
       "variables",
       "varibles",
       "request",
       "console",
       trimmed,
     );
-    runner(pm, variables, variables, requestView, console);
+    runner(nr, variables, variables, requestView, console);
   } catch (err) {
     const error = new Error(err?.message || "Pre-request script failed.");
     error.logs = logs;

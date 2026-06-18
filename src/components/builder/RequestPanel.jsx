@@ -322,10 +322,10 @@ export default function RequestPanel({
 
         <TabsContent value="scripts" className={TAB_CONTENT_CLASS}>
           <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground">
-            Postman-style pre-request script. Use{" "}
-            <span className="font-mono text-foreground/75">variables.set()</span>,{" "}
+            Pre-request script. Use{" "}
+            <span className="font-mono text-foreground/75">nr.variables.set()</span>,{" "}
             <span className="font-mono text-foreground/75">request.headers</span>,{" "}
-            <span className="font-mono text-foreground/75">console.log</span> — output appears in the response Console tab.
+            <span className="font-mono text-foreground/75">[[ $randomEmail ]]</span> — logs go to the bottom Console.
           </div>
           <div className="flex-1 min-h-0">
             <Editor
@@ -342,10 +342,10 @@ export default function RequestPanel({
 
         <TabsContent value="tests" className={TAB_CONTENT_CLASS}>
           <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground">
-            Postman-style post-response script. Use{" "}
+            Post-response script. Use{" "}
             <span className="font-mono text-foreground/75">response.json()</span>,{" "}
-            <span className="font-mono text-foreground/75">pm.test()</span>,{" "}
-            <span className="font-mono text-foreground/75">variables.set()</span> — runs automatically on send.
+            <span className="font-mono text-foreground/75">nr.test()</span>,{" "}
+            <span className="font-mono text-foreground/75">nr.variables.replaceIn(&apos;[[ $randomFirstName ]]&apos;)</span>
           </div>
           <div className="flex-1 min-h-0">
             <TestsPanel

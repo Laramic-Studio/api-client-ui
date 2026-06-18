@@ -11,13 +11,14 @@ import { AI } from "@/constants/testIds";
 export default function AiChat() {
   const [input, setInput] = useState("");
   const bottomRef = useRef(null);
-  const prefillHandled = useRef("");
+  const prefillHandled = useRef(0);
   const location = useLocation();
   const ai = useAppStore((s) => s.aiSettings);
   const messages = useAppStore((s) => s.aiMessages);
   const clearMessages = useAppStore((s) => s.clearAiMessages);
   const aiChatPrefill = useAppStore((s) => s.aiChatPrefill);
   const aiChatAutoSend = useAppStore((s) => s.aiChatAutoSend);
+  const aiChatPrefillToken = useAppStore((s) => s.aiChatPrefillToken);
   const clearAiChatPrefill = useAppStore((s) => s.clearAiChatPrefill);
   const {
     send,
@@ -31,14 +32,14 @@ export default function AiChat() {
   const suggestions = pageSuggestions(location.pathname);
 
   useEffect(() => {
-    if (!aiChatPrefill || prefillHandled.current === aiChatPrefill) return;
-    prefillHandled.current = aiChatPrefill;
+    if (!aiChatPrefill || !aiChatPrefillToken || prefillHandled.current === aiChatPrefillToken) return;
+    prefillHandled.current = aiChatPrefillToken;
     setInput(aiChatPrefill);
     clearAiChatPrefill();
     if (aiChatAutoSend) {
       send(aiChatPrefill);
     }
-  }, [aiChatPrefill, aiChatAutoSend, clearAiChatPrefill, send]);
+  }, [aiChatPrefill, aiChatPrefillToken, aiChatAutoSend, clearAiChatPrefill, send]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

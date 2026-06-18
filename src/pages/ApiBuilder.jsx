@@ -9,7 +9,9 @@ import CollectionsExplorer from "@/components/builder/CollectionsExplorer";
 import RequestTabs from "@/components/builder/RequestTabs";
 import RequestPanel from "@/components/builder/RequestPanel";
 import ResponsePanel from "@/components/builder/ResponsePanel";
-import ExplainPanel from "@/components/builder/ExplainPanel";
+import { buildExplainPrompt } from "@/lib/builder/explain-prompt";
+import BuilderConsolePanel from "@/components/builder/BuilderConsolePanel";
+import BuilderStatusBar from "@/components/builder/BuilderStatusBar";
 
 import { useRegisterAiPage } from "@/providers/AiContextProvider";
 import { applyBuilderSpec, builderSnapshot } from "@/lib/ai/builder-spec";
@@ -28,6 +30,10 @@ import {
   preScriptPassed,
   withPostResults,
 } from "@/lib/builder/test-results";
+import {
+  createNetworkConsoleEntry,
+  scriptLogsToConsoleEntries,
+} from "@/lib/builder/builder-console";
 import { getErrorMessage } from "@/hooks/use-auth";
 import { useCollections } from "@/hooks/use-collections";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
@@ -46,10 +52,13 @@ function useBuilderSession() {
   const responses = useAppStore((s) => s.builderSession.responses);
   const testResults = useAppStore((s) => s.builderSession.testResults);
   const activeExamples = useAppStore((s) => s.builderSession.activeExamples);
+  const consoleEntries = useAppStore((s) => s.builderSession.consoleEntries);
   const setBuilderDraft = useAppStore((s) => s.setBuilderDraft);
   const clearBuilderDraft = useAppStore((s) => s.clearBuilderDraft);
   const setBuilderResponse = useAppStore((s) => s.setBuilderResponse);
   const setBuilderTestResults = useAppStore((s) => s.setBuilderTestResults);
+  const appendBuilderConsoleEntries = useAppStore((s) => s.appendBuilderConsoleEntries);
+  const clearBuilderConsole = useAppStore((s) => s.clearBuilderConsole);
   const setBuilderActiveExample = useAppStore((s) => s.setBuilderActiveExample);
   const clearBuilderActiveExample = useAppStore((s) => s.clearBuilderActiveExample);
   const clearBuilderTabSession = useAppStore((s) => s.clearBuilderTabSession);
@@ -59,10 +68,13 @@ function useBuilderSession() {
     responses,
     testResults,
     activeExamples,
+    consoleEntries,
     setBuilderDraft,
     clearBuilderDraft,
     setBuilderResponse,
     setBuilderTestResults,
+    appendBuilderConsoleEntries,
+    clearBuilderConsole,
     setBuilderActiveExample,
     clearBuilderActiveExample,
     clearBuilderTabSession,
@@ -94,10 +106,13 @@ export default function ApiBuilder() {
     responses,
     testResults,
     activeExamples,
+    consoleEntries,
     setBuilderDraft,
     clearBuilderDraft,
     setBuilderResponse,
     setBuilderTestResults,
+    appendBuilderConsoleEntries,
+    clearBuilderConsole,
     setBuilderActiveExample,
     clearBuilderActiveExample,
     clearBuilderTabSession,
@@ -106,8 +121,6 @@ export default function ApiBuilder() {
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState("idle");
-  const [explainOpen, setExplainOpen] = useState(false);
-  const [explainRunToken, setExplainRunToken] = useState(0);
   const updateRequestMutation = useUpdateRequest();
   const queueAiChat = useAppStore((s) => s.queueAiChat);
   const [closePrompt, setClosePrompt] = useState(null);
@@ -317,7 +330,6 @@ export default function ApiBuilder() {
     }
 
     setPanels({ responseOpen: true });
-    setExplainOpen(false);
     setSending(true);
     setBuilderActiveExample(activeTabId, null);
     setBuilderResponse(activeTabId, null);
@@ -328,9 +340,15 @@ export default function ApiBuilder() {
       let sendEnv = activeEnv;
       let testResultState = emptyTestResults();
       const envUpdates = {};
+      const consoleBatch = [];
 
       const trackEnvSet = (key, value) => {
         envUpdates[key] = value;
+      };
+
+      const appendConsole = () => {
+        if (!consoleBatch.length) return;
+        appendBuilderConsoleEntries(consoleBatch);
       };
 
       if (activeReq.preScript?.trim()) {
@@ -341,9 +359,12 @@ export default function ApiBuilder() {
           sendReq = preResult.request;
           sendEnv = preResult.env;
           testResultState = preScriptPassed(preResult.logs);
+          consoleBatch.push(...scriptLogsToConsoleEntries(preResult.logs));
         } catch (err) {
           const failed = preScriptFailed(err.message || "Pre-request script failed.", err.logs || []);
           setBuilderTestResults(activeTabId, failed);
+          consoleBatch.push(...scriptLogsToConsoleEntries(err.logs || []));
+          appendConsole();
           toast.error(err.message || "Pre-request script failed.");
           return;
         }
@@ -393,6 +414,15 @@ export default function ApiBuilder() {
         : { results: [], logs: [], env: sendEnv };
       sendEnv = postRun.env || sendEnv;
       setBuilderTestResults(activeTabId, withPostResults(testResultState, postRun));
+      consoleBatch.push(createNetworkConsoleEntry({
+        method: sendReq.method,
+        url: result.url,
+        status: result.status,
+        statusText: result.statusText,
+        durationMs: result.durationMs,
+      }));
+      consoleBatch.push(...scriptLogsToConsoleEntries(postRun.logs));
+      appendConsole();
 
       for (const [key, value] of Object.entries(envUpdates)) {
         handleUpdateVariable(key, value);
@@ -571,6 +601,12 @@ export default function ApiBuilder() {
 
   const responseLayout = panels.responseLayout || "side";
   const responseOpen = panels.responseOpen !== false;
+  const consoleOpen = panels.consoleOpen === true;
+  const consoleHeight = panels.consoleHeight || 28;
+
+  const handleToggleConsole = useCallback(() => {
+    setPanels({ consoleOpen: !consoleOpen });
+  }, [consoleOpen, setPanels]);
 
   const handleResponseLayoutChange = useCallback((layout) => {
     setPanels({ responseLayout: layout, responseOpen: true });
@@ -651,6 +687,14 @@ export default function ApiBuilder() {
     </div>
   );
 
+  const handleExplainResponse = useCallback(() => {
+    if (!displayResponse || activeExample) return;
+    queueAiChat({
+      text: buildExplainPrompt(displayResponse),
+      autoSend: true,
+    });
+  }, [displayResponse, activeExample, queueAiChat]);
+
   const canSaveExample = Boolean(
     responses[activeTabId]
     && !activeExample
@@ -664,16 +708,80 @@ export default function ApiBuilder() {
       isExampleView={Boolean(activeExample)}
       sending={sending && !displayResponse}
       onSaveExample={canSaveExample ? onSaveCurrentResponseAsExample : null}
-      onExplain={activeExample ? null : () => {
-        setExplainOpen(true);
-        setExplainRunToken((t) => t + 1);
-      }}
+      onExplain={activeExample ? null : handleExplainResponse}
       onRetryViaCloud={displayResponse?.corsBlocked ? onRetryViaCloud : null}
       testResults={testResults[activeTabId] || null}
       layout={responseLayout}
       onLayoutChange={handleResponseLayoutChange}
       onClose={handleResponseClose}
     />
+  );
+
+  const builderWorkspace = (
+    <ResizablePanelGroup
+      direction="horizontal"
+      onLayout={(sizes) => {
+        if (responseLayout === "side" && responseOpen) {
+          setPanels({ explorer: sizes[0], builder: sizes[1], response: sizes[2] });
+        } else {
+          setPanels({ explorer: sizes[0], builder: sizes[1] });
+        }
+      }}
+      className="h-full"
+    >
+      <ResizablePanel defaultSize={panels.explorer || 22} minSize={14} maxSize={36}>
+        <CollectionsExplorer
+          activeRequestId={explorerActiveId}
+          activeExampleId={activeExampleId}
+          onOpenRequest={onOpenRequest}
+          onOpenExample={onOpenExample}
+          onRequestRenamed={handleRequestRenamed}
+          onExampleDeleted={handleExampleDeleted}
+        />
+      </ResizablePanel>
+
+      <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 w-px" />
+
+      {responseLayout === "side" ? (
+        <>
+          <ResizablePanel defaultSize={panels.builder || 45} minSize={28}>
+            {requestPane}
+          </ResizablePanel>
+
+          {responseOpen && (
+            <>
+              <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 w-px" />
+
+              <ResizablePanel defaultSize={panels.response || 33} minSize={20}>
+                {responsePane}
+              </ResizablePanel>
+            </>
+          )}
+        </>
+      ) : (
+        <ResizablePanel defaultSize={panels.builder || 78} minSize={40}>
+          {responseOpen ? (
+            <ResizablePanelGroup
+              direction="vertical"
+              onLayout={(sizes) => setPanels({ stackRequest: sizes[0], stackResponse: sizes[1] })}
+              className="h-full"
+            >
+              <ResizablePanel defaultSize={panels.stackRequest || 58} minSize={24}>
+                {requestPane}
+              </ResizablePanel>
+
+              <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 h-px" />
+
+              <ResizablePanel defaultSize={panels.stackResponse || 42} minSize={18}>
+                {responsePane}
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : (
+            requestPane
+          )}
+        </ResizablePanel>
+      )}
+    </ResizablePanelGroup>
   );
 
   return (
@@ -686,79 +794,34 @@ export default function ApiBuilder() {
       />
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex-1 min-h-0">
-          <ResizablePanelGroup
-            direction="horizontal"
-            onLayout={(sizes) => {
-              if (responseLayout === "side" && responseOpen) {
-                setPanels({ explorer: sizes[0], builder: sizes[1], response: sizes[2] });
-              } else {
-                setPanels({ explorer: sizes[0], builder: sizes[1] });
-              }
-            }}
-            className="h-full"
-          >
-            <ResizablePanel defaultSize={panels.explorer || 22} minSize={14} maxSize={36}>
-              <CollectionsExplorer
-                activeRequestId={explorerActiveId}
-                activeExampleId={activeExampleId}
-                onOpenRequest={onOpenRequest}
-                onOpenExample={onOpenExample}
-                onRequestRenamed={handleRequestRenamed}
-                onExampleDeleted={handleExampleDeleted}
-              />
-            </ResizablePanel>
-
-            <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 w-px" />
-
-            {responseLayout === "side" ? (
-              <>
-                <ResizablePanel defaultSize={panels.builder || 45} minSize={28}>
-                  {requestPane}
-                </ResizablePanel>
-
-                {responseOpen && (
-                  <>
-                    <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 w-px" />
-
-                    <ResizablePanel defaultSize={panels.response || 33} minSize={20}>
-                      {responsePane}
-                    </ResizablePanel>
-                  </>
-                )}
-              </>
-            ) : (
-              <ResizablePanel defaultSize={panels.builder || 78} minSize={40}>
-                {responseOpen ? (
-                  <ResizablePanelGroup
-                    direction="vertical"
-                    onLayout={(sizes) => setPanels({ stackRequest: sizes[0], stackResponse: sizes[1] })}
-                    className="h-full"
-                  >
-                    <ResizablePanel defaultSize={panels.stackRequest || 58} minSize={24}>
-                      {requestPane}
-                    </ResizablePanel>
-
-                    <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 h-px" />
-
-                    <ResizablePanel defaultSize={panels.stackResponse || 42} minSize={18}>
-                      {responsePane}
-                    </ResizablePanel>
-                  </ResizablePanelGroup>
-                ) : (
-                  requestPane
-                )}
+          {consoleOpen ? (
+            <ResizablePanelGroup
+              direction="vertical"
+              onLayout={(sizes) => setPanels({ consoleHeight: sizes[1] })}
+              className="h-full"
+            >
+              <ResizablePanel defaultSize={100 - consoleHeight} minSize={30}>
+                {builderWorkspace}
               </ResizablePanel>
-            )}
-          </ResizablePanelGroup>
+              <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 h-px" />
+              <ResizablePanel defaultSize={consoleHeight} minSize={12}>
+                <BuilderConsolePanel
+                  entries={consoleEntries}
+                  onClear={clearBuilderConsole}
+                  onClose={() => setPanels({ consoleOpen: false })}
+                />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : (
+            builderWorkspace
+          )}
         </div>
-        {explainOpen && activeTabId && displayResponse && !activeExample && (
-          <ExplainPanel
-            response={displayResponse}
-            runToken={explainRunToken}
-            onClose={() => setExplainOpen(false)}
-          />
-        )}
       </div>
+      <BuilderStatusBar
+        consoleOpen={consoleOpen}
+        onToggleConsole={handleToggleConsole}
+        consoleEntries={consoleEntries}
+      />
       <UnsavedTabDialog
         open={Boolean(closePrompt)}
         onOpenChange={(open) => { if (!open) setClosePrompt(null); }}

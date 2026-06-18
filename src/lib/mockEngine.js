@@ -5,20 +5,9 @@ import { corsHintMessage, isLikelyCorsError } from "@/lib/builder/response-forma
 import { proxyRequest } from "@/lib/api/proxy-api";
 import { useAppStore } from "@/store/useAppStore";
 import { runTests } from "@/lib/builder/test-runner";
+import { interpolate } from "@/lib/builder/interpolate";
 
-export { runTests };
-
-// Regex matches [[VAR]] preferred, also accepts {{VAR}} for backward compat
-const INTERPOLATION_RE = /\[\[\s*([A-Z0-9_]+)\s*\]\]|\{\{\s*([A-Z0-9_]+)\s*\}\}/gi;
-
-function interpolate(str, env) {
-  if (!str) return "";
-  return str.replace(INTERPOLATION_RE, (_m, k1, k2) => {
-    const k = k1 || k2;
-    const v = env?.variables?.find((x) => x.enabled !== false && x.key === k);
-    return v ? v.value : `[[${k}]]`;
-  });
-}
+export { runTests, interpolate };
 
 /** Add http:// when the user types localhost:3000/path without a scheme. */
 function normalizeSendUrl(url) {
@@ -366,5 +355,3 @@ function statusText(code) {
     500: "Internal Server Error", 502: "Bad Gateway", 503: "Service Unavailable",
   }[code] || "OK";
 }
-
-export { interpolate };

@@ -16,8 +16,7 @@ import {
   inferPrettyLanguage,
   isHtmlResponse,
 } from "@/lib/builder/response-format";
-import { normalizeTestResults, summarizeTestResults, testsTabLabel, consoleTabLabel } from "@/lib/builder/test-results";
-import ScriptConsolePanel from "@/components/builder/ScriptConsolePanel";
+import { normalizeTestResults, summarizeTestResults, testsTabLabel } from "@/lib/builder/test-results";
 
 function formatBytes(n) {
   if (!n) return "0 B";
@@ -111,7 +110,6 @@ function ResponseTabs({ response, tab, setTab, onExplain, onRetryViaCloud, testR
   const htmlPreview = htmlResponse ? getHtmlPreviewContent(response) : "";
   const normalizedTests = normalizeTestResults(testResults);
   const testsLabel = testsTabLabel(normalizedTests);
-  const consoleLabel = consoleTabLabel(normalizedTests);
 
   const tabs = htmlResponse
     ? [
@@ -121,7 +119,6 @@ function ResponseTabs({ response, tab, setTab, onExplain, onRetryViaCloud, testR
         ["headers", `Headers (${Object.keys(response.headers || {}).length})`],
         ["cookies", `Cookies (${(response.cookies || []).length})`],
         ["tests", testsLabel],
-        ["console", consoleLabel],
       ]
     : [
         ["pretty", "Pretty"],
@@ -129,7 +126,6 @@ function ResponseTabs({ response, tab, setTab, onExplain, onRetryViaCloud, testR
         ["headers", `Headers (${Object.keys(response.headers || {}).length})`],
         ["cookies", `Cookies (${(response.cookies || []).length})`],
         ["tests", testsLabel],
-        ["console", consoleLabel],
       ];
 
   return (
@@ -243,10 +239,6 @@ function ResponseTabs({ response, tab, setTab, onExplain, onRetryViaCloud, testR
       <TabsContent value="tests" className="flex-1 min-h-0 m-0 p-0 overflow-hidden data-[state=inactive]:hidden">
         <TestResultsPanel testResults={normalizedTests} />
       </TabsContent>
-
-      <TabsContent value="console" className="flex-1 min-h-0 m-0 p-0 overflow-hidden data-[state=inactive]:hidden">
-        <ScriptConsolePanel logs={normalizedTests.console} />
-      </TabsContent>
     </Tabs>
   );
 }
@@ -265,18 +257,7 @@ function TestResultsOnlyPanel({ testResults, layout, onLayoutChange, onClose, se
           <LayoutMenu layout={layout} onLayoutChange={onLayoutChange} onClose={onClose} />
         </div>
       </div>
-      <Tabs defaultValue="tests" className="flex-1 min-h-0 flex flex-col">
-        <TabsList className="shrink-0 bg-transparent border-b border-[hsl(var(--border))] rounded-none h-9 px-2 justify-start">
-          <TabsTrigger value="tests" className="rounded-none h-9 px-3 text-[12.5px]">Tests</TabsTrigger>
-          <TabsTrigger value="console" className="rounded-none h-9 px-3 text-[12.5px]">{consoleTabLabel(normalizedTests)}</TabsTrigger>
-        </TabsList>
-        <TabsContent value="tests" className="flex-1 min-h-0 m-0 p-0 overflow-hidden">
-          <TestResultsPanel testResults={normalizedTests} />
-        </TabsContent>
-        <TabsContent value="console" className="flex-1 min-h-0 m-0 p-0 overflow-hidden">
-          <ScriptConsolePanel logs={normalizedTests.console} />
-        </TabsContent>
-      </Tabs>
+      <TestResultsPanel testResults={normalizedTests} />
     </div>
   );
 }
@@ -300,13 +281,11 @@ export default function ResponsePanel({
   useEffect(() => {
     if (!response) return;
     if (testSummary.hasActivity) {
-      if (testSummary.failed > 0) setTab("tests");
-      else if (normalizedTests.console?.length) setTab("console");
-      else setTab("tests");
+      setTab("tests");
       return;
     }
     setTab(isHtmlResponse(response) ? "preview" : "pretty");
-  }, [response?.url, response?.status, response?.durationMs, testSummary.hasActivity, testSummary.failed, normalizedTests.console?.length]);
+  }, [response?.url, response?.status, response?.durationMs, testSummary.hasActivity, testSummary.failed]);
 
   if (!response) {
     if (testSummary.hasActivity) {

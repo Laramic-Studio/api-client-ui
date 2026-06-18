@@ -113,12 +113,14 @@ export const useAppStore = create(
       clearAiMessages: () => set({ aiMessages: [] }),
       aiChatPrefill: "",
       aiChatAutoSend: false,
+      aiChatPrefillToken: 0,
       queueAiChat: ({ text = "", autoSend = false }) => set({
         aiChatPrefill: text,
         aiChatAutoSend: autoSend,
+        aiChatPrefillToken: Date.now(),
         aiSidebarOpen: true,
       }),
-      clearAiChatPrefill: () => set({ aiChatPrefill: "", aiChatAutoSend: false }),
+      clearAiChatPrefill: () => set({ aiChatPrefill: "", aiChatAutoSend: false, aiChatPrefillToken: 0 }),
       aiPageContext: null,
       setAiPageContext: (ctx) => set({ aiPageContext: ctx }),
 
@@ -159,6 +161,8 @@ export const useAppStore = create(
         responseOpen: true,
         stackRequest: 58,
         stackResponse: 42,
+        consoleOpen: false,
+        consoleHeight: 28,
       },
       setBuilderPanels: (next) => set({ builderPanels: { ...get().builderPanels, ...next } }),
 
@@ -168,6 +172,7 @@ export const useAppStore = create(
         responses: {},
         testResults: {},
         activeExamples: {},
+        consoleEntries: [],
       },
       setBuilderDraft: (tabId, draft) => set((s) => ({
         builderSession: {
@@ -195,6 +200,21 @@ export const useAppStore = create(
           testResults: { ...s.builderSession.testResults, [tabId]: results },
         },
       })),
+      appendBuilderConsoleEntries: (entries) => set((s) => ({
+        builderSession: {
+          ...s.builderSession,
+          consoleEntries: [
+            ...s.builderSession.consoleEntries,
+            ...(Array.isArray(entries) ? entries : [entries]),
+          ],
+        },
+      })),
+      clearBuilderConsole: () => set((s) => ({
+        builderSession: {
+          ...s.builderSession,
+          consoleEntries: [],
+        },
+      })),
       setBuilderActiveExample: (tabId, exampleId) => set((s) => ({
         builderSession: {
           ...s.builderSession,
@@ -211,7 +231,13 @@ export const useAppStore = create(
         const { [tabId]: _t, ...testResults } = s.builderSession.testResults;
         const { [tabId]: _e, ...activeExamples } = s.builderSession.activeExamples;
         return {
-          builderSession: { drafts, responses, testResults, activeExamples },
+          builderSession: {
+            drafts,
+            responses,
+            testResults,
+            activeExamples,
+            consoleEntries: s.builderSession.consoleEntries,
+          },
         };
       }),
 

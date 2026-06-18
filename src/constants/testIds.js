@@ -54,6 +54,11 @@ export const BUILDER = {
   responseTime: "response-time",
   responseSize: "response-size",
   responseTab: (key) => `response-tab-${key}`,
+  consoleToggle: "builder-console-toggle",
+  consolePanel: "builder-console-panel",
+  consoleClear: "builder-console-clear",
+  consoleClose: "builder-console-close",
+  statusBar: "builder-status-bar",
 };
 
 export const COLL = {

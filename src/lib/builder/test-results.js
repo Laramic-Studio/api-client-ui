@@ -2,7 +2,6 @@ export function emptyTestResults() {
   return {
     pre: { status: "skipped", results: [], logs: [] },
     post: { status: "skipped", results: [], logs: [] },
-    console: [],
   };
 }
 
@@ -14,7 +13,6 @@ export function preScriptPassed(logs = []) {
       logs,
     },
     post: { status: "skipped", results: [], logs: [] },
-    console: logs,
   };
 }
 
@@ -31,7 +29,6 @@ export function preScriptFailed(error, logs = []) {
       logs,
     },
     post: { status: "skipped", results: [], logs: [] },
-    console: logs,
   };
 }
 
@@ -39,7 +36,6 @@ export function withPostResults(base, postResults, postLogs = []) {
   const results = postResults?.results ?? postResults ?? [];
   const logs = postResults?.logs ?? postLogs ?? [];
   const hasScript = results.length > 0;
-  const consoleLogs = [...(base.console || []), ...logs];
 
   return {
     ...base,
@@ -50,7 +46,6 @@ export function withPostResults(base, postResults, postLogs = []) {
       results,
       logs,
     },
-    console: consoleLogs,
   };
 }
 
@@ -75,11 +70,6 @@ export function testsTabLabel(testResults) {
   return "Tests";
 }
 
-export function consoleTabLabel(testResults) {
-  const count = testResults?.console?.length || 0;
-  return count > 0 ? `Console (${count})` : "Console";
-}
-
 export function normalizeTestResults(value) {
   if (!value) return emptyTestResults();
   if (Array.isArray(value)) {
@@ -91,7 +81,6 @@ export function normalizeTestResults(value) {
     return {
       pre: { ...pre, logs: pre.logs || [] },
       post: { ...post, logs: post.logs || [] },
-      console: value.console || [...(pre.logs || []), ...(post.logs || [])],
     };
   }
   return emptyTestResults();
