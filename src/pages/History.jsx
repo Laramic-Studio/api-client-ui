@@ -3,8 +3,16 @@ import { useAppStore } from "@/store/useAppStore";
 import MethodBadge from "@/components/shared/MethodBadge";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import { Search, Star, Trash2, Play } from "lucide-react";
+import { Search, Star, Trash2, Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { getErrorMessage } from "@/hooks/use-auth";
+import {
+  useClearHistory,
+  useDeleteHistoryEntry,
+  useHistory,
+  useToggleHistoryFavorite,
+} from "@/hooks/use-history";
 
 const METHODS = ["ALL", "GET", "POST", "PUT", "PATCH", "DELETE"];
 const STATUSES = [
@@ -15,10 +23,12 @@ const STATUSES = [
 ];
 
 export default function History() {
+  const user = useAppStore((s) => s.user);
   const history = useAppStore((s) => s.history);
-  const toggleFav = useAppStore((s) => s.toggleHistoryFavorite);
-  const del = useAppStore((s) => s.deleteHistory);
-  const clear = useAppStore((s) => s.clearHistory);
+  const { isLoading } = useHistory();
+  const toggleFavorite = useToggleHistoryFavorite();
+  const deleteEntry = useDeleteHistoryEntry();
+  const clearHistory = useClearHistory();
   const [q, setQ] = useState("");
   const [m, setM] = useState("ALL");
   const [s, setS] = useState("ALL");
@@ -34,10 +44,12 @@ export default function History() {
       if (s === "4xx" && !(h.status >= 400 && h.status < 500)) return false;
       if (s === "5xx" && !(h.status >= 500)) return false;
     }
-    const haystack = `${h.method} ${h.url} ${h.requestName || ""}`.toLowerCase();
+    const haystack = `${h.method} ${h.url} ${h.requestName || ""} ${h.userName || ""}`.toLowerCase();
     if (q && !haystack.includes(q.toLowerCase())) return false;
     return true;
   });
+
+  const canModify = (entry) => !user?.id || entry.userId === user.id;
 
   return (
     <div className="h-full overflow-hidden flex flex-col">
@@ -45,7 +57,9 @@ export default function History() {
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// timeline</div>
           <h1 className="text-2xl font-medium tracking-tight">History</h1>
-          <p className="text-[12px] text-muted-foreground mt-1">Stored in this browser only — not synced across devices.</p>
+          <p className="text-[12px] text-muted-foreground mt-1">
+            Workspace request log — synced per team, attributed to each member.
+          </p>
         </div>
         <div className="ml-auto relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -82,12 +96,16 @@ export default function History() {
           <Star className="h-3 w-3" /> Favorites
         </button>
         <button onClick={() => setConfirmClear(true)} className="h-7 px-2 rounded text-[11px] border border-border text-muted-foreground hover:bg-accent/50">
-          Clear
+          Clear mine
         </button>
       </div>
 
       <div className="flex-1 overflow-auto">
-        {filtered.length === 0 ? (
+        {isLoading && history.length === 0 ? (
+          <div className="grid place-items-center h-full text-[13px] text-muted-foreground gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" /> Loading history…
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="grid place-items-center h-full text-[13px] text-muted-foreground">No history matches your filters</div>
         ) : (
           <div className="divide-y divide-border">
@@ -100,25 +118,31 @@ export default function History() {
                     <div className="text-[11px] text-muted-foreground font-mono truncate">{h.url}</div>
                   )}
                   <div className="text-[10px] text-muted-foreground mt-0.5 font-mono uppercase tracking-wider">
-                    {h.collectionName} • {new Date(h.timestamp).toLocaleString()} • {h.durationMs}ms • {(h.sizeBytes / 1024).toFixed(1)} KB
+                    {h.collectionName} • {h.userName || "Unknown"} • {new Date(h.timestamp).toLocaleString()} • {h.durationMs}ms • {(h.sizeBytes / 1024).toFixed(1)} KB
                   </div>
                 </div>
                 <StatusBadge status={h.status} />
-                <button
-                  onClick={() => toggleFav(h.id)}
-                  className={cn("h-7 w-7 grid place-items-center rounded hover:bg-accent/50", h.favorite ? "text-[hsl(var(--warning))]" : "text-muted-foreground")}
-                >
-                  <Star className={cn("h-3.5 w-3.5", h.favorite && "fill-[hsl(var(--warning))]")} />
-                </button>
-                <button className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground" title="Re-run (Module 7)">
+                {canModify(h) && (
+                  <button
+                    onClick={() => toggleFavorite.mutate(h.id, {
+                      onError: (err) => toast.error(getErrorMessage(err, "Could not update favorite.")),
+                    })}
+                    className={cn("h-7 w-7 grid place-items-center rounded hover:bg-accent/50", h.favorite ? "text-[hsl(var(--warning))]" : "text-muted-foreground")}
+                  >
+                    <Star className={cn("h-3.5 w-3.5", h.favorite && "fill-[hsl(var(--warning))]")} />
+                  </button>
+                )}
+                <button className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground" title="Re-run (coming soon)">
                   <Play className="h-3.5 w-3.5" />
                 </button>
-                <button
-                  onClick={() => setDeleteTarget(h)}
-                  className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {canModify(h) && (
+                  <button
+                    onClick={() => setDeleteTarget(h)}
+                    className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))]"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -130,19 +154,24 @@ export default function History() {
         title="Delete history entry"
         description={deleteTarget ? `Remove "${deleteTarget.requestName || deleteTarget.url}" from history?` : ""}
         onConfirm={() => {
-          if (deleteTarget) del(deleteTarget.id);
-          setDeleteTarget(null);
+          if (!deleteTarget) return;
+          deleteEntry.mutate(deleteTarget.id, {
+            onSuccess: () => setDeleteTarget(null),
+            onError: (err) => toast.error(getErrorMessage(err, "Could not delete entry.")),
+          });
         }}
       />
       <ConfirmDialog
         open={confirmClear}
         onOpenChange={setConfirmClear}
-        title="Clear history"
-        description="Remove all history entries? This cannot be undone."
-        confirmLabel="Clear all"
+        title="Clear your history"
+        description="Remove all history entries you sent in this workspace? This cannot be undone."
+        confirmLabel="Clear mine"
         onConfirm={() => {
-          clear();
-          setConfirmClear(false);
+          clearHistory.mutate(undefined, {
+            onSuccess: () => setConfirmClear(false),
+            onError: (err) => toast.error(getErrorMessage(err, "Could not clear history.")),
+          });
         }}
       />
     </div>

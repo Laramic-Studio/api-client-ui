@@ -17,6 +17,9 @@ import * as teamsApi from "@/lib/api/teams-api";
 import { useAppStore } from "@/store/useAppStore";
 import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
 import { refreshCollectionsInStore } from "@/hooks/use-collections";
+import { refreshHistoryInStore } from "@/hooks/use-history";
+import { mapApiHistoryEntry, mapHistoryEntryToApi } from "@/lib/api/map-history";
+import * as historyApi from "@/lib/api/history-api";
 import { mapApiConduit, mapApiConduitRun, mapConduitToApi } from "@/lib/api/map-conduit";
 import * as conduitsApi from "@/lib/api/conduits-api";
 import { client as mockClient } from "@/lib/api/client";
@@ -293,5 +296,40 @@ export const fetchClient = {
     const teamId = useAppStore.getState().activeWorkspaceId;
     const data = await conduitsApi.storeConduitRun(teamId, conduitId, payload);
     return mapApiConduitRun(data.run);
+  },
+
+  async listHistory() {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    if (!teamId) return [];
+    return refreshHistoryInStore(teamId);
+  },
+
+  async addHistory(entry) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    if (!teamId) return null;
+    const data = await historyApi.createHistoryEntry(teamId, mapHistoryEntryToApi(entry));
+    await refreshHistoryInStore(teamId);
+    return mapApiHistoryEntry(data.entry);
+  },
+
+  async deleteHistory(id) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    if (!teamId) return;
+    await historyApi.deleteHistoryEntry(teamId, id);
+    await refreshHistoryInStore(teamId);
+  },
+
+  async clearHistory() {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    if (!teamId) return;
+    await historyApi.clearHistory(teamId);
+    await refreshHistoryInStore(teamId);
+  },
+
+  async toggleHistoryFavorite(id) {
+    const teamId = useAppStore.getState().activeWorkspaceId;
+    if (!teamId) return;
+    await historyApi.toggleHistoryFavorite(teamId, id);
+    await refreshHistoryInStore(teamId);
   },
 };

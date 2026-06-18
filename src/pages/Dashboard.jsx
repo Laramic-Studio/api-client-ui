@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections, selectWorkspaceEnvironments } from "@/lib/store/selectors";
+import { useHistory } from "@/hooks/use-history";
 import {
   LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, AreaChart, Area, PieChart, Pie, Cell, Legend,
 } from "recharts";
@@ -32,6 +33,7 @@ function StatCard({ label, value, delta, icon: Icon, testid }) {
 }
 
 export default function Dashboard() {
+  useHistory();
   const history = useAppStore((s) => s.history);
   const collections = useAppStore(selectWorkspaceCollections);
   const env = useAppStore(selectWorkspaceEnvironments);

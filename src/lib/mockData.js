@@ -216,7 +216,7 @@ export function buildInitialState() {
     environmentsMap[ws.id] = seedEnvironments(ws.id);
   });
 
-  const history = seedHistory(collectionsMap[activeWorkspaceId], 50);
+  const history = [];
   const team = seedTeam(20);
   const mockServers = seedMockServers(50);
   const notifications = seedNotifications();

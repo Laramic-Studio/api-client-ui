@@ -601,15 +601,9 @@ export const useAppStore = create(
         return envs.find((e) => e.active) || envs[0];
       },
 
-      // ===== History =====
-      addHistory: (entry) =>
-        set((s) => ({
-          history: [{ id: nanoUid("hist"), timestamp: Date.now(), ...entry }, ...s.history].slice(0, 500),
-        })),
-      toggleHistoryFavorite: (id) =>
-        set((s) => ({ history: s.history.map((h) => (h.id === id ? { ...h, favorite: !h.favorite } : h)) })),
-      deleteHistory: (id) => set((s) => ({ history: s.history.filter((h) => h.id !== id) })),
-      clearHistory: () => set({ history: [] }),
+      // ===== History (server-synced cache; not persisted locally) =====
+      history: [],
+      setHistory: (entries) => set({ history: entries }),
 
       // ===== Mock servers =====
       createMockEndpoint: (m) => {
@@ -658,7 +652,6 @@ export const useAppStore = create(
         activeWorkspaceId: s.activeWorkspaceId,
         collectionsMap: s.collectionsMap,
         environmentsMap: s.environmentsMap,
-        history: s.history,
         team: s.team,
         mockServers: s.mockServers,
         notifications: s.notifications,

@@ -1,7 +1,7 @@
 // Generate request code snippets for cURL, JS, TS, Python, PHP, C#, Go.
 import { interpolate } from "@/lib/mockEngine";
 import { buildOutgoingHeaders, enabledHeaderRows } from "@/lib/builder/request-auth";
-import { countEnabledKvRows } from "@/lib/builder/request-body";
+import { prepareFetchBody } from "@/lib/builder/request-body";
 
 function prepareCodegen(req) {
   const url = req.url || "";

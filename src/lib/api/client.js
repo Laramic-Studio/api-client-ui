@@ -141,12 +141,24 @@ export const client = {
     return async_(() => ({ id: `run_${Date.now()}`, ...payload }));
   },
 
-  // ----- History / mock servers / team / notifications (read-through) -----
+  // ----- History (mock fallback when fetchClient not used) -----
   async listHistory() { return async_(() => get().history); },
-  async addHistory(entry) { return async_(() => get().addHistory(entry)); },
-  async deleteHistory(id) { return async_(() => get().deleteHistory(id)); },
-  async clearHistory() { return async_(() => get().clearHistory()); },
-  async toggleHistoryFavorite(id) { return async_(() => get().toggleHistoryFavorite(id)); },
+  async addHistory(entry) {
+    return async_(() => {
+      const item = { id: nanoUid("hist"), timestamp: Date.now(), userId: get().user?.id, ...entry };
+      get().setHistory([item, ...get().history].slice(0, 500));
+      return item;
+    });
+  },
+  async deleteHistory(id) {
+    return async_(() => get().setHistory(get().history.filter((h) => h.id !== id)));
+  },
+  async clearHistory() { return async_(() => get().setHistory([])); },
+  async toggleHistoryFavorite(id) {
+    return async_(() => get().setHistory(
+      get().history.map((h) => (h.id === id ? { ...h, favorite: !h.favorite } : h)),
+    ));
+  },
   async listMockServers() { return async_(() => get().mockServers); },
   async listTeam() { return async_(() => get().team); },
   async listNotifications() { return async_(() => get().notifications); },

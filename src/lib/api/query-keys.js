@@ -26,6 +26,11 @@ export const conduitKeys = {
   runs: (teamId, conduitId) => [...conduitKeys.all, "runs", String(teamId), String(conduitId)],
 };
 
+export const historyKeys = {
+  all: ["history"],
+  list: (teamId) => [...historyKeys.all, "list", String(teamId)],
+};
+
 export const invitationKeys = {
   all: ["invitations"],
   detail: (code) => [...invitationKeys.all, String(code)],
