@@ -90,64 +90,58 @@ export default function AiChat() {
         </div>
       </ScrollArea>
 
-      <div className="shrink-0 border-t border-border p-3 space-y-2 bg-background">
-        <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-          <span>
-            {ai.provider}/{ai.model}
-            {ai.useOwnKey ? " · your key" : ""}
-          </span>
-          {messages.length > 0 && (
+      <div className="shrink-0 border-t border-border p-0 bg-background relative h-36">
+        {/* Bottom left: model/agent info */}
+        <div className="absolute left-3 bottom-3 text-[10px] font-rowdies uppercase tracking-wider text-muted-foreground pointer-events-none z-10">
+          {ai.provider}/{ai.model}
+          {ai.useOwnKey ? " · your key" : ""}
+        </div>
+        {/* Main textarea taking all width/height except area of send button/agent info */}
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          placeholder="Ask anything…"
+          data-testid={AI.input}
+          className="absolute inset-0 border w-full h-full resize-none rounded-none bg-muted border-none py-3 px-4 text-[13px] focus:outline-none"
+          style={{
+            minHeight: "100%",
+            maxHeight: "100%",
+          }}
+        />
+  
+        {/* Bottom right: send/stop button */}
+        <div className="absolute right-3 bottom-3 z-20">
+          {streaming ? (
             <button
               type="button"
-              onClick={clearMessages}
-              className="inline-flex items-center gap-1 hover:text-foreground"
-              data-testid={AI.clear}
+              onClick={stop}
+              className="h-9 w-9 grid place-items-center rounded-md border border-border hover:bg-accent/40 bg-background"
+              aria-label="Stop"
+              data-testid={AI.stop}
             >
-              <Trash2 className="h-3 w-3" /> Clear
+              <Square className="h-3.5 w-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!input.trim()}
+              className="h-9 w-9 grid place-items-center rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-white disabled:opacity-50"
+              aria-label="Send"
+              data-testid={AI.send}
+            >
+              {streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
             </button>
           )}
         </div>
-        <div className="flex gap-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            placeholder="Ask anything…"
-            rows={2}
-            data-testid={AI.input}
-            className="flex-1 min-h-[52px] max-h-32 resize-none rounded-md bg-muted border border-border px-3 py-2 text-[13px] ring-focus"
-          />
-          <div className="flex flex-col gap-1">
-            {streaming ? (
-              <button
-                type="button"
-                onClick={stop}
-                className="h-9 w-9 grid place-items-center rounded-md border border-border hover:bg-accent/40"
-                aria-label="Stop"
-                data-testid={AI.stop}
-              >
-                <Square className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={submit}
-                disabled={!input.trim()}
-                className="h-9 w-9 grid place-items-center rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-white disabled:opacity-50"
-                aria-label="Send"
-                data-testid={AI.send}
-              >
-                {streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-              </button>
-            )}
-          </div>
-        </div>
       </div>
+
     </div>
   );
 }

@@ -2,6 +2,7 @@
 // (Params, Authorization, Headers, Body, Pre-request, Tests, Docs).
 import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useAppStore } from "@/store/useAppStore";
 import {
   Save, Send, Play, Code2, Copy, Sparkles, Loader2, ChevronRight, PanelRight,
 } from "lucide-react";
@@ -48,8 +49,17 @@ export default function RequestPanel({
   onUpdateVariable,
   responseOpen = true,
   onOpenResponse,
+  requestTabId = null,
 }) {
-  const [activeTab, setActiveTab] = useState("params");
+  const storedTab = useAppStore((s) => (
+    requestTabId ? s.builderSession.requestPanelTabs?.[requestTabId] : null
+  ));
+  const setBuilderRequestPanelTab = useAppStore((s) => s.setBuilderRequestPanelTab);
+  const activeTab = storedTab || "params";
+
+  const setActiveTab = (tab) => {
+    if (requestTabId) setBuilderRequestPanelTab(requestTabId, tab);
+  };
   const [showCodeGen, setShowCodeGen] = useState(false);
   const [codeLang, setCodeLang] = useState("curl");
   const urlEmpty = isRequestUrlEmpty(req?.url);

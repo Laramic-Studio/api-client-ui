@@ -46,13 +46,14 @@ import { isRequestUrlEmpty } from "@/lib/builder/url-variables";
 import { isTabDirty } from "@/lib/builder/dirty";
 import UnsavedTabDialog from "@/components/builder/UnsavedTabDialog";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 function useBuilderSession() {
   const drafts = useAppStore((s) => s.builderSession.drafts);
   const responses = useAppStore((s) => s.builderSession.responses);
   const testResults = useAppStore((s) => s.builderSession.testResults);
   const activeExamples = useAppStore((s) => s.builderSession.activeExamples);
-  const consoleEntries = useAppStore((s) => s.builderSession.consoleEntries);
+  const consoleEntries = useAppStore((s) => s.builderSession.consoleEntries || []);
   const setBuilderDraft = useAppStore((s) => s.setBuilderDraft);
   const clearBuilderDraft = useAppStore((s) => s.clearBuilderDraft);
   const setBuilderResponse = useAppStore((s) => s.setBuilderResponse);
@@ -677,6 +678,7 @@ export default function ApiBuilder() {
       onUpdateVariable={handleUpdateVariable}
       responseOpen={responseOpen}
       onOpenResponse={handleOpenResponse}
+      requestTabId={activeTabId}
     />
   ) : (
     <div className="h-full grid place-items-center text-center p-8 text-muted-foreground">
@@ -794,27 +796,39 @@ export default function ApiBuilder() {
       />
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex-1 min-h-0">
-          {consoleOpen ? (
-            <ResizablePanelGroup
-              direction="vertical"
-              onLayout={(sizes) => setPanels({ consoleHeight: sizes[1] })}
-              className="h-full"
+          <ResizablePanelGroup
+            direction="vertical"
+            onLayout={(sizes) => {
+              if (consoleOpen && sizes[1] != null) {
+                setPanels({ consoleHeight: sizes[1] });
+              }
+            }}
+            className="h-full"
+          >
+            <ResizablePanel defaultSize={consoleOpen ? 100 - consoleHeight : 100} minSize={24}>
+              {builderWorkspace}
+            </ResizablePanel>
+            <ResizableHandle
+              className={cn(
+                "bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 h-px",
+                !consoleOpen && "hidden",
+              )}
+            />
+            <ResizablePanel
+              defaultSize={consoleOpen ? consoleHeight : 0}
+              minSize={consoleOpen ? 12 : 0}
+              maxSize={consoleOpen ? 70 : 0}
+              className={cn(!consoleOpen && "hidden min-h-0")}
             >
-              <ResizablePanel defaultSize={100 - consoleHeight} minSize={30}>
-                {builderWorkspace}
-              </ResizablePanel>
-              <ResizableHandle className="bg-[hsl(var(--border))] hover:bg-[hsl(var(--brand))]/40 h-px" />
-              <ResizablePanel defaultSize={consoleHeight} minSize={12}>
+              {consoleOpen && (
                 <BuilderConsolePanel
                   entries={consoleEntries}
                   onClear={clearBuilderConsole}
                   onClose={() => setPanels({ consoleOpen: false })}
                 />
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          ) : (
-            builderWorkspace
-          )}
+              )}
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </div>
       <BuilderStatusBar

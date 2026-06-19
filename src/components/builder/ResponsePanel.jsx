@@ -280,12 +280,12 @@ export default function ResponsePanel({
 
   useEffect(() => {
     if (!response) return;
-    if (testSummary.hasActivity) {
+    if (testSummary.failed > 0) {
       setTab("tests");
       return;
     }
     setTab(isHtmlResponse(response) ? "preview" : "pretty");
-  }, [response?.url, response?.status, response?.durationMs, testSummary.hasActivity, testSummary.failed]);
+  }, [response?.url, response?.status, response?.durationMs, testSummary.failed]);
 
   if (!response) {
     if (testSummary.hasActivity) {

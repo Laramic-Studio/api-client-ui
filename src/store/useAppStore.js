@@ -173,6 +173,7 @@ export const useAppStore = create(
         testResults: {},
         activeExamples: {},
         consoleEntries: [],
+        requestPanelTabs: {},
       },
       setBuilderDraft: (tabId, draft) => set((s) => ({
         builderSession: {
@@ -204,7 +205,7 @@ export const useAppStore = create(
         builderSession: {
           ...s.builderSession,
           consoleEntries: [
-            ...s.builderSession.consoleEntries,
+            ...(s.builderSession.consoleEntries || []),
             ...(Array.isArray(entries) ? entries : [entries]),
           ],
         },
@@ -213,6 +214,12 @@ export const useAppStore = create(
         builderSession: {
           ...s.builderSession,
           consoleEntries: [],
+        },
+      })),
+      setBuilderRequestPanelTab: (tabId, panelTab) => set((s) => ({
+        builderSession: {
+          ...s.builderSession,
+          requestPanelTabs: { ...(s.builderSession.requestPanelTabs || {}), [tabId]: panelTab },
         },
       })),
       setBuilderActiveExample: (tabId, exampleId) => set((s) => ({
@@ -230,6 +237,7 @@ export const useAppStore = create(
         const { [tabId]: _r, ...responses } = s.builderSession.responses;
         const { [tabId]: _t, ...testResults } = s.builderSession.testResults;
         const { [tabId]: _e, ...activeExamples } = s.builderSession.activeExamples;
+        const { [tabId]: _p, ...requestPanelTabs } = s.builderSession.requestPanelTabs || {};
         return {
           builderSession: {
             drafts,
@@ -237,6 +245,7 @@ export const useAppStore = create(
             testResults,
             activeExamples,
             consoleEntries: s.builderSession.consoleEntries,
+            requestPanelTabs,
           },
         };
       }),
@@ -665,7 +674,18 @@ export const useAppStore = create(
     {
       name: "noidr-web-store",
       storage: createJSONStorage(() => localStorage),
-      version: 4,
+      version: 5,
+      migrate: (persisted, version) => {
+        const state = persisted ?? {};
+        if (version < 5 && state.builderSession) {
+          state.builderSession = {
+            ...state.builderSession,
+            consoleEntries: state.builderSession.consoleEntries ?? [],
+            requestPanelTabs: state.builderSession.requestPanelTabs ?? {},
+          };
+        }
+        return state;
+      },
       partialize: (s) => ({
         seeded: s.seeded,
         user: s.user,
