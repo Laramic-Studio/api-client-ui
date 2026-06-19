@@ -1,4 +1,5 @@
 import { applyBuilderSpec } from "@/lib/ai/builder-spec";
+import { buildExplainPrompt } from "@/lib/builder/explain-prompt";
 import { buildDocsFromResponse } from "@/lib/ai/build-docs-from-response";
 import { normalizeDocs } from "@/lib/docs/migrate";
 import {
@@ -345,8 +346,20 @@ export function createBuilderAiBindings(ctxRef) {
     },
 
     "builder.explain_response": () => {
-      ctx().handleExplainResponse?.();
-      return { message: "Queued response explanation in the AI assistant." };
+      const { tabId } = requireOpenDraft(ctx());
+      const state = useAppStore.getState();
+      const activeExampleId = state.builderSession?.activeExampleId?.[tabId];
+      if (activeExampleId) {
+        throw new Error("Cannot explain while viewing an example.");
+      }
+      const response = state.builderSession?.responses?.[tabId];
+      if (!response) {
+        throw new Error("No response to explain. Send a request first.");
+      }
+      return {
+        message: "Explaining response…",
+        chainSend: buildExplainPrompt(response),
+      };
     },
 
     "builder.save_response_as_example": async (payload) => {

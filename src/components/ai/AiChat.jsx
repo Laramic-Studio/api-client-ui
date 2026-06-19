@@ -1,21 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Loader2, Send, Sparkles, Square, Trash2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Send, Sparkles, Square } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useAiChat } from "@/hooks/use-ai-chat";
 import { pageSuggestions } from "@/lib/ai/context";
 import AiMessage from "@/components/ai/AiMessage";
 import { AI } from "@/constants/testIds";
 
+const INPUT_MIN_HEIGHT = 88;
+const INPUT_MAX_HEIGHT = 220;
+
 export default function AiChat() {
   const [input, setInput] = useState("");
   const bottomRef = useRef(null);
+  const scrollRef = useRef(null);
+  const textareaRef = useRef(null);
   const prefillHandled = useRef(0);
   const location = useLocation();
   const ai = useAppStore((s) => s.aiSettings);
   const messages = useAppStore((s) => s.aiMessages);
-  const clearMessages = useAppStore((s) => s.clearAiMessages);
   const aiChatPrefill = useAppStore((s) => s.aiChatPrefill);
   const aiChatAutoSend = useAppStore((s) => s.aiChatAutoSend);
   const aiChatPrefillToken = useAppStore((s) => s.aiChatPrefillToken);
@@ -23,7 +26,7 @@ export default function AiChat() {
   const {
     send,
     stop,
-    streaming,
+    isBusy,
     runningActionId,
     runAction,
     dismissAction,
@@ -31,35 +34,48 @@ export default function AiChat() {
 
   const suggestions = pageSuggestions(location.pathname);
 
+  const resizeInput = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const next = Math.min(Math.max(el.scrollHeight, INPUT_MIN_HEIGHT), INPUT_MAX_HEIGHT);
+    el.style.height = `${next}px`;
+  };
+
+  useEffect(() => {
+    resizeInput();
+  }, [input]);
+
   useEffect(() => {
     if (!aiChatPrefill || !aiChatPrefillToken || prefillHandled.current === aiChatPrefillToken) return;
+    if (aiChatAutoSend && isBusy) return;
     prefillHandled.current = aiChatPrefillToken;
     setInput(aiChatPrefill);
     clearAiChatPrefill();
     if (aiChatAutoSend) {
       send(aiChatPrefill);
     }
-  }, [aiChatPrefill, aiChatPrefillToken, aiChatAutoSend, clearAiChatPrefill, send]);
+  }, [aiChatPrefill, aiChatPrefillToken, aiChatAutoSend, clearAiChatPrefill, send, isBusy]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streaming]);
+  }, [messages, isBusy]);
 
   const submit = async () => {
     const text = input.trim();
-    if (!text || streaming) return;
+    if (!text || isBusy) return;
     setInput("");
     await send(text);
   };
 
   return (
     <div className="flex flex-col h-full min-h-0" data-testid={AI.chat}>
-      <ScrollArea className="flex-1 min-h-0">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         <div className="p-3 space-y-4">
           {messages.length === 0 && (
             <div className="py-8 px-2 text-center space-y-3">
               <Sparkles className="h-8 w-8 mx-auto text-[hsl(var(--brand))]/70" />
-              <div className="text-[13.5px] font-medium">NoIDR Assistant</div>
+              <div className="text-[13.5px] font-medium">Echo</div>
               <div className="text-[12px] text-muted-foreground leading-relaxed max-w-[240px] mx-auto">
                 I know this page and your workspace. Ask anything — I&apos;ll propose actions for you to run.
               </div>
@@ -69,7 +85,8 @@ export default function AiChat() {
                     key={s}
                     type="button"
                     onClick={() => setInput(s)}
-                    className="px-2 py-1 rounded border border-border text-[11px] text-muted-foreground hover:bg-accent/40 hover:text-foreground/85"
+                    disabled={isBusy}
+                    className="px-2 py-1 rounded border border-border text-[11px] text-muted-foreground hover:bg-accent/40 hover:text-foreground/85 disabled:opacity-50"
                   >
                     {s}
                   </button>
@@ -88,16 +105,16 @@ export default function AiChat() {
           ))}
           <div ref={bottomRef} />
         </div>
-      </ScrollArea>
+      </div>
 
-      <div className="shrink-0 border-t border-border p-0 bg-background relative h-36">
-        {/* Bottom left: model/agent info */}
+      <div className="shrink-0 border-t border-border bg-background relative">
         <div className="absolute left-3 bottom-3 text-[10px] font-rowdies uppercase tracking-wider text-muted-foreground pointer-events-none z-10">
           {ai.provider}/{ai.model}
           {ai.useOwnKey ? " · your key" : ""}
         </div>
-        {/* Main textarea taking all width/height except area of send button/agent info */}
+
         <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -106,18 +123,16 @@ export default function AiChat() {
               submit();
             }
           }}
-          placeholder="Ask anything…"
+          placeholder={isBusy ? "Echo is working…" : "Ask Echo anything…"}
+          disabled={isBusy}
           data-testid={AI.input}
-          className="absolute inset-0 border w-full h-full resize-none rounded-none bg-muted border-none py-3 px-4 text-[13px] focus:outline-none"
-          style={{
-            minHeight: "100%",
-            maxHeight: "100%",
-          }}
+          rows={3}
+          className="block w-full resize-none border-none bg-muted py-3 pl-4 pr-14 text-[13px] leading-relaxed focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 overflow-y-auto"
+          style={{ minHeight: INPUT_MIN_HEIGHT, maxHeight: INPUT_MAX_HEIGHT }}
         />
-  
-        {/* Bottom right: send/stop button */}
+
         <div className="absolute right-3 bottom-3 z-20">
-          {streaming ? (
+          {isBusy ? (
             <button
               type="button"
               onClick={stop}
@@ -136,12 +151,11 @@ export default function AiChat() {
               aria-label="Send"
               data-testid={AI.send}
             >
-              {streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              <Send className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
       </div>
-
     </div>
   );
 }

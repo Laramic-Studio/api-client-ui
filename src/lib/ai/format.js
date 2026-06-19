@@ -1,3 +1,12 @@
+const DEFAULT_PROMPT_DISPLAY_MAX = 280;
+
+/** Shorten long user prompts in the chat UI (full text still sent to the model). */
+export function truncatePromptForDisplay(text, max = DEFAULT_PROMPT_DISPLAY_MAX) {
+  const trimmed = String(text || "").trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max).trim()}…`;
+}
+
 const ACTIONS_BLOCK_RE = /```actions\s*\n([\s\S]*?)\n?```/gi;
 const ACTIONS_BLOCK_PARSE_RE = /```actions\s*\n([\s\S]*?)\n?```/i;
 

@@ -199,4 +199,30 @@
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
+
+  .echo-logo-animated .echo-logo-bar {
+    transform-origin: center;
+    animation: echoLogoPulse 1.2s ease-in-out infinite;
+  }
+  .echo-logo-animated .echo-logo-bar-1 { animation-delay: 0s; }
+  .echo-logo-animated .echo-logo-bar-2 { animation-delay: 0.15s; }
+  .echo-logo-animated .echo-logo-bar-3 { animation-delay: 0.3s; }
+
+  @keyframes echoLogoPulse {
+    0%, 100% { opacity: 0.35; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-0.5px); }
+  }
+
+  .echo-thinking-dots span {
+    animation: echoThinkingDot 1.4s ease-in-out infinite;
+    opacity: 0.2;
+  }
+  .echo-thinking-dots span:nth-child(1) { animation-delay: 0s; }
+  .echo-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .echo-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes echoThinkingDot {
+    0%, 60%, 100% { opacity: 0.2; }
+    30% { opacity: 1; }
+  }
 }

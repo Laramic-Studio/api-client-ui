@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { aiToolRegistry } from "@/ai-tools";
@@ -8,8 +8,18 @@ import { useAiContext } from "@/providers/AiContextProvider";
 import { aiChat, createAbortController, isCancelledError } from "@/lib/api/ai";
 import { loadAiCatalogExtras } from "@/lib/ai/catalog";
 import { autoRunProposedActions, runApprovedAction } from "@/lib/ai/auto-run";
-import { finalizeAssistantContent, stripActionsBlock } from "@/lib/ai/format";
+import { finalizeAssistantContent, stripActionsBlock, truncatePromptForDisplay } from "@/lib/ai/format";
 import { nanoUid } from "@/lib/generators";
+
+function setAssistantStep(updateMessage, assistantId, label, status = "active", detail = null) {
+  updateMessage(assistantId, {
+    currentStep: { label, status, detail },
+  });
+}
+
+function clearAssistantStep(updateMessage, assistantId) {
+  updateMessage(assistantId, { currentStep: null, processing: false });
+}
 
 export function useAiChat() {
   const navigate = useNavigate();
@@ -23,28 +33,77 @@ export function useAiChat() {
   const bumpUsage = useAppStore((s) => s.bumpAiUsage);
   const messages = useAppStore((s) => s.aiMessages);
   const [streaming, setStreaming] = useState(false);
+  const [processingActions, setProcessingActions] = useState(false);
   const [runningActionId, setRunningActionId] = useState(null);
+  const [activeTurns, setActiveTurns] = useState(0);
   const abortRef = useRef(null);
+  const runTurnRef = useRef(null);
+
+  const beginTurn = () => {
+    setActiveTurns((n) => n + 1);
+  };
+
+  const endTurn = () => {
+    setActiveTurns((n) => Math.max(0, n - 1));
+  };
+
+  const isBusy = streaming || processingActions || runningActionId != null || activeTurns > 0;
 
   const stop = () => {
     abortRef.current?.abort();
     abortRef.current = null;
     setStreaming(false);
+    setProcessingActions(false);
+    setActiveTurns(0);
   };
 
-  const send = async (text) => {
+  runTurnRef.current = async (text, { appendUser = true } = {}) => {
     const history = [
       ...useAppStore.getState().aiMessages.map((m) => ({ role: m.role, content: m.content })),
       { role: "user", content: text },
     ];
 
-    appendMessage({ role: "user", content: text });
+    if (appendUser) {
+      appendMessage({
+        role: "user",
+        content: text,
+        displayContent: truncatePromptForDisplay(text),
+      });
+    }
+
     const assistantId = nanoUid("aim");
-    appendMessage({ role: "assistant", content: "", streaming: true, id: assistantId, proposedActions: [] });
+    appendMessage({
+      role: "assistant",
+      content: "",
+      streaming: true,
+      id: assistantId,
+      proposedActions: [],
+      currentStep: null,
+      processing: false,
+    });
+
+    const onStep = (step) => {
+      setAssistantStep(
+        updateMessage,
+        assistantId,
+        step.label,
+        step.status || "active",
+        step.detail ?? null,
+      );
+    };
+
+    const appendTurnMessage = (msg) => {
+      if (msg?.role === "system") {
+        onStep({ label: msg.content, status: "active" });
+        return;
+      }
+      appendMessage(msg);
+    };
 
     const controller = createAbortController();
     abortRef.current = controller;
     setStreaming(true);
+    setAssistantStep(updateMessage, assistantId, "Echo is thinking", "active");
 
     const streamState = { full: "", proposedActions: [] };
     const syncAssistantMessage = (streamingFlag = true) => {
@@ -91,11 +150,16 @@ export function useAiChat() {
       const finalContent = finalizeAssistantContent(full, streamState.proposedActions);
 
       if (streamState.proposedActions.length) {
+        setProcessingActions(true);
+        updateMessage(assistantId, { processing: true, streaming: false });
+
         const autoRan = await autoRunProposedActions(streamState.proposedActions, {
           executeAction,
           navigate,
-          appendMessage,
+          appendMessage: appendTurnMessage,
+          onStep,
         });
+
         if (autoRan.ran > 0 || autoRan.skippedIds?.length) {
           updateMessage(assistantId, {
             proposedActions: streamState.proposedActions.filter(
@@ -119,24 +183,52 @@ export function useAiChat() {
             });
           }
         }
+
+        clearAssistantStep(updateMessage, assistantId);
+        setProcessingActions(false);
+
+        for (const prompt of autoRan.chainSends || []) {
+          await runTurnRef.current?.(prompt, { appendUser: true });
+        }
+      } else {
+        clearAssistantStep(updateMessage, assistantId);
       }
 
       bumpUsage("chat");
+      return assistantId;
     } catch (e) {
       if (isCancelledError(e)) {
+        clearAssistantStep(updateMessage, assistantId);
         syncAssistantMessage(false);
-        return;
+        return assistantId;
       }
+      setAssistantStep(updateMessage, assistantId, e.message || "Something went wrong.", "error");
       updateMessage(assistantId, {
         content: e.message || "Something went wrong.",
         streaming: false,
+        processing: false,
       });
       toast.error(e.message || "AI request failed");
+      return assistantId;
     } finally {
       setStreaming(false);
+      setProcessingActions(false);
       abortRef.current = null;
     }
   };
+
+  const runTurn = useCallback(async (text, options) => {
+    return runTurnRef.current?.(text, options);
+  }, []);
+
+  const send = useCallback(async (text) => {
+    beginTurn();
+    try {
+      await runTurn(text);
+    } finally {
+      endTurn();
+    }
+  }, [runTurn]);
 
   const runAction = async (action) => {
     setRunningActionId(action.id);
@@ -158,6 +250,15 @@ export function useAiChat() {
         updateMessage(msg.id, {
           proposedActions: msg.proposedActions.filter((a) => a.id !== action.id),
         });
+      }
+
+      if (result?.chainSend) {
+        beginTurn();
+        try {
+          await runTurn(result.chainSend, { appendUser: true });
+        } finally {
+          endTurn();
+        }
       }
     } catch (e) {
       toast.error(e.message || "Action failed");
@@ -182,6 +283,8 @@ export function useAiChat() {
     send,
     stop,
     streaming,
+    processingActions,
+    isBusy,
     runningActionId,
     runAction,
     dismissAction: (actionId) => {
@@ -189,4 +292,4 @@ export function useAiChat() {
       if (msg) dismissAction(msg.id, actionId);
     },
   };
-};
+}

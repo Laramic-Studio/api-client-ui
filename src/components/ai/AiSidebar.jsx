@@ -53,7 +53,7 @@ export default function AiSidebar() {
       />
       <div className="h-11 shrink-0 flex items-center gap-2 px-3 border-b border-border">
         <Sparkles className="h-4 w-4 text-[hsl(var(--brand))]" />
-        <div className="text-[13px] font-medium">Assistant</div>
+        <div className="text-[13px] font-medium">Echo</div>
         <button
           type="button"
           onClick={() => setOpen(false)}
