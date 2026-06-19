@@ -1,4 +1,33 @@
 import { resolveAiPageId } from "@/lib/ai/pages";
+import { isScratchTab } from "@/lib/builder/scratch";
+import { useAppStore } from "@/store/useAppStore";
+import { aiToolRegistry } from "@/ai-tools";
+
+export const DEFAULT_ACTION_WAIT = { timeoutMs: 12_000, intervalMs: 50 };
+
+export function pageLabel(pageId) {
+  if (!pageId) return "page";
+  return pageId.replace(/-/g, " ");
+}
+
+/** Default route to open when a page-scoped action needs its bindings. */
+export function resolvePageRoute(pageId) {
+  if (!pageId) return null;
+  if (pageId === "api-builder") {
+    const tabId = useAppStore.getState().activeTabId;
+    if (tabId && !isScratchTab(tabId)) return `/builder/${tabId}`;
+    return "/builder";
+  }
+  const staticRoutes = {
+    conduits: "/conduits",
+    environments: "/environments",
+    collections: "/collections",
+    settings: "/settings",
+    team: "/team",
+    workspaces: "/workspaces",
+  };
+  return staticRoutes[pageId] || null;
+}
 
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -74,14 +103,51 @@ export async function waitForNavigationTarget(actionType, payload, options = {})
 }
 
 /**
- * Generic poll helper.
+ * Navigate (if needed) and wait until an action can execute.
+ * Used by auto-run and manual action approval.
  */
-export async function pollUntil(check, { timeoutMs = 10_000, intervalMs = 50 } = {}) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const value = await check();
-    if (value) return value;
-    await sleep(intervalMs);
+export async function ensureActionReady(
+  type,
+  {
+    navigate,
+    appendMessage,
+    getRoute: getRouteFn = getRoute,
+    ...waitOptions
+  } = {},
+) {
+  const waitOpts = { ...DEFAULT_ACTION_WAIT, ...waitOptions, getRoute: getRouteFn };
+  let route = getRouteFn();
+
+  if (aiToolRegistry.canExecute(type, route)) {
+    return { ready: true, route };
   }
-  return null;
+
+  const meta = aiToolRegistry.getActionMeta(type);
+  const pageId = meta?.pageId;
+  const targetPath = pageId ? resolvePageRoute(pageId) : null;
+
+  if (pageId && targetPath && !routeMatchesTarget(route, targetPath)) {
+    appendMessage?.({
+      role: "system",
+      content: `Opening ${pageLabel(pageId)}…`,
+    });
+    navigate?.(targetPath);
+    await waitForRouteMatch(targetPath, waitOpts);
+    await aiToolRegistry.waitForPageReady(pageId, waitOpts);
+    route = getRouteFn();
+  }
+
+  if (aiToolRegistry.canExecute(type, route)) {
+    return { ready: true, route };
+  }
+
+  if (meta?.scope === "page" || meta?.requiresBinding) {
+    appendMessage?.({
+      role: "system",
+      content: `Waiting for ${pageLabel(pageId)} to load…`,
+    });
+  }
+
+  const wait = await aiToolRegistry.waitForActionReady(type, waitOpts);
+  return { ready: wait.ready, route: wait.route || route };
 }

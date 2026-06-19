@@ -7,7 +7,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { useAiContext } from "@/providers/AiContextProvider";
 import { aiChat, createAbortController, isCancelledError } from "@/lib/api/ai";
 import { loadAiCatalogExtras } from "@/lib/ai/catalog";
-import { autoRunProposedActions } from "@/lib/ai/auto-run";
+import { autoRunProposedActions, runApprovedAction } from "@/lib/ai/auto-run";
 import { finalizeAssistantContent, stripActionsBlock } from "@/lib/ai/format";
 import { nanoUid } from "@/lib/generators";
 
@@ -96,13 +96,26 @@ export function useAiChat() {
           navigate,
           appendMessage,
         });
-        if (autoRan.ran > 0) {
+        if (autoRan.ran > 0 || autoRan.skippedIds?.length) {
           updateMessage(assistantId, {
-            proposedActions: streamState.proposedActions.filter((a) => a.risk !== "low"),
+            proposedActions: streamState.proposedActions.filter(
+              (a) => a.risk !== "low" || !autoRan.completedIds?.includes(a.id),
+            ),
           });
+
+          const enrichmentParts = [];
           if (!stripActionsBlock(full)) {
+            enrichmentParts.push(`${finalContent}\n\n✓ ${autoRan.ran} action(s) completed.`);
+          } else if (finalContent) {
+            enrichmentParts.push(finalContent);
+          }
+          if (autoRan.enrichments?.length) {
+            enrichmentParts.push(...autoRan.enrichments);
+          }
+
+          if (enrichmentParts.length) {
             updateMessage(assistantId, {
-              content: `${finalContent}\n\n✓ ${autoRan.ran} action(s) completed.`,
+              content: enrichmentParts.join("\n\n"),
             });
           }
         }
@@ -129,19 +142,23 @@ export function useAiChat() {
     setRunningActionId(action.id);
 
     try {
-      if (!aiToolRegistry.isAllowed(action.type, location.pathname)) {
-        throw new Error(`Action "${action.type}" is not available on this page.`);
-      }
-
-      const result = await executeAction(action.type, action.payload || {}, {
+      const result = await runApprovedAction(action, {
+        executeAction,
         navigate,
-        route: location.pathname,
+        appendMessage,
       });
 
       appendMessage({
         role: "system",
         content: result?.message || `${action.label} completed.`,
       });
+
+      const msg = messages.find((m) => m.proposedActions?.some((a) => a.id === action.id));
+      if (msg) {
+        updateMessage(msg.id, {
+          proposedActions: msg.proposedActions.filter((a) => a.id !== action.id),
+        });
+      }
     } catch (e) {
       toast.error(e.message || "Action failed");
       appendMessage({

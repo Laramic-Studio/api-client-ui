@@ -127,3 +127,13 @@ export function isEmptyDocs(raw) {
 
   return !docsToPlainText(raw);
 }
+
+/** Stable key segment so Lexical remounts when docs change externally (e.g. AI set_docs). */
+export function docsRevisionKey(raw) {
+  const s = String(raw ?? "");
+  let hash = 0;
+  for (let i = 0; i < s.length; i += 1) {
+    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+  }
+  return `${hash >>> 0}-${s.length}`;
+}

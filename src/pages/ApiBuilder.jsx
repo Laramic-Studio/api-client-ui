@@ -369,7 +369,7 @@ export default function ApiBuilder() {
     if (!activeReq || !activeTabId) return;
     if (isRequestUrlEmpty(activeReq.url)) {
       toast.error("Enter a request URL before sending.");
-      return;
+      return { ok: false, error: "Enter a request URL before sending." };
     }
 
     setPanels({ responseOpen: true });
@@ -409,7 +409,7 @@ export default function ApiBuilder() {
           consoleBatch.push(...scriptLogsToConsoleEntries(err.logs || []));
           appendConsole();
           toast.error(err.message || "Pre-request script failed.");
-          return;
+          return { ok: false, error: err.message || "Pre-request script failed." };
         }
       }
 
@@ -425,7 +425,7 @@ export default function ApiBuilder() {
             }
           } catch (err) {
             toast.error(getErrorMessage(err, "OAuth token request failed."));
-            return;
+            return { ok: false, error: getErrorMessage(err, "OAuth token request failed.") };
           }
         }
       }
@@ -486,8 +486,10 @@ export default function ApiBuilder() {
         title: result.ok ? "Request succeeded" : "Request failed",
         desc: `${sendReq.method} ${result.url} → ${result.status}`,
       });
+      return { ok: result.ok, result };
     } catch (err) {
       toast.error(getErrorMessage(err, "Request failed."));
+      throw err;
     } finally {
       setSending(false);
     }

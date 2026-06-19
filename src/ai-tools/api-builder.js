@@ -64,13 +64,19 @@ export const apiBuilderTool = defineTool({
     ),
     "builder.send_request": boundAction(
       "Send request",
-      "Execute the open request via browser or proxy",
+      "Execute the open request; response summary is returned in chat automatically",
       "low",
       "{}",
     ),
     "builder.send_request_via_cloud": boundAction(
       "Send via cloud",
       "Retry/send through the cloud proxy (use when CORS blocks the browser)",
+      "low",
+      "{}",
+    ),
+    "builder.summarize_response": boundAction(
+      "Summarize response",
+      "Summarize the last response for the open request tab (status, body preview)",
       "low",
       "{}",
     ),
@@ -273,12 +279,21 @@ export const apiBuilderTool = defineTool({
     ),
     "builder.set_docs": boundAction(
       "Set request docs",
-      "Replace markdown/HTML docs for the open request",
+      "Replace markdown/HTML docs for the open request (JSON payload.docs string only)",
       "low",
-      '{"docs":"## Overview\\n..."}',
+      '{"docs":"# Endpoint\\n\\nDescription here. Use \\\\n for newlines in JSON."}',
       (payload) => {
-        if (payload?.docs == null) throw new Error("docs is required.");
+        const raw = payload?.docs ?? payload?.content ?? payload?.markdown ?? payload?.text;
+        if (raw == null || String(raw).trim() === "") {
+          throw new Error("docs markdown string is required in payload.docs.");
+        }
       },
+    ),
+    "builder.document_from_response": boundAction(
+      "Document from response",
+      "Generate docs from the open request and last response (after send)",
+      "low",
+      "{}",
     ),
     "builder.set_request_tab": boundAction(
       "Focus request editor tab",

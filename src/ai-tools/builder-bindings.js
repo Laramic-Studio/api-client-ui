@@ -1,5 +1,10 @@
 import { applyBuilderSpec } from "@/lib/ai/builder-spec";
+import { buildDocsFromResponse } from "@/lib/ai/build-docs-from-response";
 import { normalizeDocs } from "@/lib/docs/migrate";
+import {
+  formatResponseSummaryForChat,
+  getActiveBuilderResponseSummary,
+} from "@/lib/ai/response-summary";
 import {
   renameExampleInList,
   setDefaultExampleInList,
@@ -91,15 +96,29 @@ export function createBuilderAiBindings(ctxRef) {
     },
 
     "builder.send_request": async () => {
-      if (!ctx().onSendRef?.current) throw new Error("No request open.");
-      await ctx().onSendRef.current();
-      return { message: "Request sent — check the response panel." };
+      if (!ctx().executeSendRef?.current) throw new Error("No request open.");
+      const out = await ctx().executeSendRef.current();
+      if (!out?.result) throw new Error(out?.error || "Request did not complete.");
+      return {
+        message: formatResponseSummaryForChat(out.result),
+        enrichAssistant: true,
+      };
     },
 
     "builder.send_request_via_cloud": async () => {
       if (!ctx().executeSendRef?.current) throw new Error("No request open.");
-      await ctx().executeSendRef.current({ forceCloud: true });
-      return { message: "Request sent via cloud proxy." };
+      const out = await ctx().executeSendRef.current({ forceCloud: true });
+      if (!out?.result) throw new Error(out?.error || "Request did not complete.");
+      return {
+        message: formatResponseSummaryForChat(out.result),
+        enrichAssistant: true,
+      };
+    },
+
+    "builder.summarize_response": () => {
+      const summary = getActiveBuilderResponseSummary();
+      if (!summary) throw new Error("No response yet — send the request first.");
+      return { message: summary, enrichAssistant: true };
     },
 
     "builder.new_scratch_tab": () => {
@@ -243,8 +262,32 @@ export function createBuilderAiBindings(ctxRef) {
     },
 
     "builder.set_docs": (payload) => {
-      patchDraft(ctx(), { docs: normalizeDocs(payload.docs) });
-      return { message: "Request docs updated." };
+      const raw = payload?.docs ?? payload?.content ?? payload?.markdown ?? payload?.text;
+      if (raw == null || String(raw).trim() === "") {
+        throw new Error("docs content is required (payload.docs as markdown string).");
+      }
+      const docs = normalizeDocs(String(raw));
+      const { tabId } = requireOpenDraft(ctx());
+      patchDraft(ctx(), { docs });
+      useAppStore.getState().setBuilderRequestPanelTab(tabId, "docs");
+      return { message: "Documentation updated on the open request." };
+    },
+
+    "builder.document_from_response": () => {
+      const req = ctx().activeReqRef?.current;
+      const tabId = ctx().activeTabIdRef?.current;
+      if (!req || !tabId) throw new Error("No request open in the builder.");
+
+      const response = useAppStore.getState().builderSession?.responses?.[tabId];
+      if (!response) throw new Error("No response yet — send the request first.");
+
+      const markdown = buildDocsFromResponse(req, response);
+      if (!markdown) throw new Error("Could not build documentation from the response.");
+
+      const docs = normalizeDocs(markdown);
+      patchDraft(ctx(), { docs });
+      useAppStore.getState().setBuilderRequestPanelTab(tabId, "docs");
+      return { message: "Documentation generated from the last response." };
     },
 
     "builder.set_request_tab": (payload) => {

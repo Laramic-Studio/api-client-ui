@@ -1,16 +1,18 @@
 import { aiToolRegistry } from "@/ai-tools";
 import {
+  DEFAULT_ACTION_WAIT,
+  ensureActionReady,
   getRoute,
   isNavigationAction,
+  pageLabel,
   waitForNavigationTarget,
 } from "@/lib/ai/action-readiness";
 
-const DEFAULT_WAIT = { timeoutMs: 12_000, intervalMs: 50 };
-
-function pageLabel(pageId) {
-  if (!pageId) return "page";
-  return pageId.replace(/-/g, " ");
-}
+const ENRICH_ASSISTANT_ACTIONS = new Set([
+  "builder.send_request",
+  "builder.send_request_via_cloud",
+  "builder.summarize_response",
+]);
 
 /** Navigation actions run first so page bindings can load before page-scoped steps. */
 function prioritizeActionChain(actions) {
@@ -28,64 +30,71 @@ function prioritizeActionChain(actions) {
  * Waits for routes and page bindings so cross-page chains work in one turn.
  */
 export async function autoRunProposedActions(actions, { executeAction, navigate, appendMessage }) {
-  if (!actions?.length) return { ran: 0, failed: false };
+  if (!actions?.length) {
+    return { ran: 0, failed: false, enrichments: [], completedIds: [], skippedIds: [] };
+  }
 
   const candidates = prioritizeActionChain(actions.filter((a) => a.risk === "low"));
-  if (!candidates.length) return { ran: 0, failed: false };
+  if (!candidates.length) {
+    return { ran: 0, failed: false, enrichments: [], completedIds: [], skippedIds: [] };
+  }
 
   let ran = 0;
+  /** @type {string[]} */
+  const enrichments = [];
+  /** @type {string[]} */
+  const completedIds = [];
+  /** @type {string[]} */
+  const skippedIds = [];
 
   for (const action of candidates) {
-    const meta = aiToolRegistry.getActionMeta(action.type);
-    let route = getRoute();
+    const ready = await ensureActionReady(action.type, {
+      navigate,
+      appendMessage,
+      getRoute,
+      ...DEFAULT_ACTION_WAIT,
+    });
 
-    if (!aiToolRegistry.canExecute(action.type, route)) {
-      const canWait = meta?.scope === "page" || meta?.requiresBinding;
-
-      if (canWait) {
-        appendMessage?.({
-          role: "system",
-          content: `Waiting for ${pageLabel(meta?.pageId)} to load…`,
-        });
-
-        const wait = await aiToolRegistry.waitForActionReady(action.type, {
-          ...DEFAULT_WAIT,
-          getRoute,
-        });
-
-        if (!wait.ready) {
-          appendMessage?.({
-            role: "system",
-            content: `Skipped ${action.label} — ${pageLabel(meta?.pageId)} did not become ready in time.`,
-          });
-          continue;
-        }
-
-        route = wait.route;
-      } else {
-        appendMessage?.({
-          role: "system",
-          content: `Skipped ${action.label} — not available right now.`,
-        });
-        continue;
-      }
+    if (!ready.ready) {
+      skippedIds.push(action.id);
+      appendMessage?.({
+        role: "system",
+        content: `Skipped ${action.label} — ${pageLabel(aiToolRegistry.getActionMeta(action.type)?.pageId)} did not become ready in time.`,
+      });
+      continue;
     }
 
     try {
       const result = await executeAction(action.type, action.payload || {}, {
         navigate,
-        route,
+        route: ready.route,
       });
       ran += 1;
-      appendMessage?.({
-        role: "system",
-        content: result?.message || `${action.label} completed.`,
-      });
+      completedIds.push(action.id);
+
+      const enrich = result?.enrichAssistant && result?.message
+        ? result.message
+        : ENRICH_ASSISTANT_ACTIONS.has(action.type) && result?.message
+          ? result.message
+          : null;
+
+      if (enrich) {
+        enrichments.push(enrich);
+        appendMessage?.({
+          role: "system",
+          content: `${action.label} completed.`,
+        });
+      } else {
+        appendMessage?.({
+          role: "system",
+          content: result?.message || `${action.label} completed.`,
+        });
+      }
 
       if (isNavigationAction(action.type)) {
-        const nav = await waitForNavigationTarget(action.type, action.payload || {}, DEFAULT_WAIT);
+        const nav = await waitForNavigationTarget(action.type, action.payload || {}, DEFAULT_ACTION_WAIT);
         if (nav.pageId) {
-          const page = await aiToolRegistry.waitForPageReady(nav.pageId, DEFAULT_WAIT);
+          const page = await aiToolRegistry.waitForPageReady(nav.pageId, DEFAULT_ACTION_WAIT);
           if (!page.ready) {
             appendMessage?.({
               role: "system",
@@ -100,13 +109,35 @@ export async function autoRunProposedActions(actions, { executeAction, navigate,
         }
       }
     } catch (err) {
+      skippedIds.push(action.id);
       appendMessage?.({
         role: "system",
         content: err.message || `${action.label} failed.`,
       });
-      return { ran, failed: true };
+      return { ran, failed: true, enrichments, completedIds, skippedIds };
     }
   }
 
-  return { ran, failed: false };
+  return { ran, failed: false, enrichments, completedIds, skippedIds };
+}
+
+/** Manual approval path — same readiness logic as auto-run. */
+export async function runApprovedAction(action, { executeAction, navigate, appendMessage }) {
+  const ready = await ensureActionReady(action.type, {
+    navigate,
+    appendMessage,
+    getRoute,
+    ...DEFAULT_ACTION_WAIT,
+  });
+
+  if (!ready.ready) {
+    throw new Error(
+      `Action "${action.type}" is not ready — open ${pageLabel(aiToolRegistry.getActionMeta(action.type)?.pageId)} and try again.`,
+    );
+  }
+
+  return executeAction(action.type, action.payload || {}, {
+    navigate,
+    route: ready.route,
+  });
 }

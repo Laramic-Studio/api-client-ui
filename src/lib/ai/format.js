@@ -3,30 +3,52 @@ const ACTIONS_BLOCK_PARSE_RE = /```actions\s*\n([\s\S]*?)\n?```/i;
 
 export function stripActionsBlock(text) {
   if (!text) return "";
-  return text.replace(ACTIONS_BLOCK_RE, "").trim();
+  let cleaned = String(text).replace(ACTIONS_BLOCK_RE, "").trim();
+  // Strip markdown tables / doc content leaked after a broken actions fence
+  cleaned = cleaned.replace(/\n?\[[\s\S]*?"type"\s*:\s*"builder\.[^[\]]*"[\s\S]*?\]\s*`{0,3}\s*$/i, "").trim();
+  cleaned = cleaned.replace(/\n?"risk"\s*:\s*"(?:low|medium|high)"\s*\}\s*\]\s*`{0,3}\s*$/gi, "").trim();
+  cleaned = cleaned.replace(/\n?```\s*$/g, "").trim();
+  return cleaned;
 }
 
 /** Client-side fallback when the backend did not emit proposed_actions. */
 export function parseProposedActionsFromText(full) {
-  const match = String(full || "").match(ACTIONS_BLOCK_PARSE_RE);
-  if (!match?.[1]) return [];
+  const text = String(full || "");
+  const match = text.match(ACTIONS_BLOCK_PARSE_RE);
 
-  let decoded;
-  try {
-    decoded = JSON.parse(match[1].trim());
-  } catch {
-    return [];
+  if (match?.[1]) {
+    try {
+      const decoded = JSON.parse(match[1].trim());
+      if (Array.isArray(decoded)) {
+        return decoded.map((action, index) => {
+          const type = String(action.type || "");
+          let risk = String(action.risk || "low");
+          if ([
+            "builder.set_docs",
+            "builder.document_from_response",
+            "builder.send_request",
+            "builder.summarize_response",
+            "builder.apply_draft",
+          ].includes(type)) {
+            risk = "low";
+          }
+          return {
+            id: action.id || `act-${index}-${type || "unknown"}`,
+            type,
+            label: String(action.label || "Run action"),
+            description: action.description != null ? String(action.description) : null,
+            payload: action.payload && typeof action.payload === "object" ? action.payload : {},
+            risk,
+          };
+        });
+      }
+    } catch {
+      const salvaged = salvageDocsActionFromText(text);
+      if (salvaged.length) return salvaged;
+    }
   }
-  if (!Array.isArray(decoded)) return [];
 
-  return decoded.map((action, index) => ({
-    id: action.id || `act-${index}-${action.type || "unknown"}`,
-    type: String(action.type || ""),
-    label: String(action.label || "Run action"),
-    description: action.description != null ? String(action.description) : null,
-    payload: action.payload && typeof action.payload === "object" ? action.payload : {},
-    risk: String(action.risk || "low"),
-  }));
+  return salvageDocsActionFromText(text);
 }
 
 function summarizeProposedActions(proposedActions) {
@@ -35,6 +57,29 @@ function summarizeProposedActions(proposedActions) {
     return `• ${action.label}${detail}`;
   });
   return `Running these actions:\n${lines.join("\n")}`;
+}
+
+/** Best-effort recovery when the model breaks JSON but intended builder.set_docs. */
+function salvageDocsActionFromText(full) {
+  const typeMatch = String(full || "").match(/"type"\s*:\s*"(builder\.set_docs)"/);
+  if (!typeMatch) return [];
+
+  const docsMatch = String(full).match(/"docs"\s*:\s*"((?:\\.|[^"\\])*)"/);
+  if (!docsMatch) return [];
+
+  try {
+    const docs = JSON.parse(`"${docsMatch[1]}"`);
+    return [{
+      id: "act-salvaged-set-docs",
+      type: "builder.set_docs",
+      label: "Update documentation",
+      description: null,
+      payload: { docs },
+      risk: "low",
+    }];
+  } catch {
+    return [];
+  }
 }
 
 /**

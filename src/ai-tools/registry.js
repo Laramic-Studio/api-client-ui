@@ -1,6 +1,6 @@
 import { resolveAiPageId } from "@/lib/ai/pages";
 import { actionManifest } from "@/ai-tools/types";
-import { pollUntil } from "@/lib/ai/action-readiness";
+import { pollUntil } from "@/lib/ai/poll-until";
 
 /** @typedef {import('@/ai-tools/types').AiToolDefinition} AiToolDefinition */
 /** @typedef {import('@/ai-tools/types').AiActionContext} AiActionContext */

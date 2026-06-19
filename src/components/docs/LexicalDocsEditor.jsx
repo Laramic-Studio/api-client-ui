@@ -9,7 +9,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { cn } from "@/lib/utils";
 import { docsEditorTheme } from "@/lib/docs/theme";
-import { parseDocs, serializeDocs, ensureValidDocsState } from "@/lib/docs/format";
+import { parseDocs, serializeDocs, ensureValidDocsState, docsRevisionKey } from "@/lib/docs/format";
 import { DOCS_LEXICAL_NODES } from "@/components/docs/lexical-nodes";
 import { DocsRequestProvider } from "@/components/docs/DocsRequestContext";
 import { LegacyImportPlugin } from "@/components/docs/LegacyImportPlugin";
@@ -53,6 +53,10 @@ export default function LexicalDocsEditor({
   placeholder = "Describe this endpoint — purpose, auth notes, parameters, examples…",
 }) {
   const parsed = useMemo(() => parseDocs(value), [value]);
+  const composerKey = useMemo(
+    () => `${editorKey}-${docsRevisionKey(value)}`,
+    [editorKey, value],
+  );
 
   const initialConfig = useMemo(() => ({
     namespace: "NoidrDocsEditor",
@@ -83,7 +87,7 @@ export default function LexicalDocsEditor({
 
   return (
     <DocsRequestProvider request={request}>
-      <LexicalComposer initialConfig={initialConfig} key={editorKey}>
+      <LexicalComposer initialConfig={initialConfig} key={composerKey}>
         {parsed.format === "legacy" && (
           <LegacyImportPlugin legacyText={parsed.legacyText} onMigrated={handleMigrated} />
         )}
