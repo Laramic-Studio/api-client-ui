@@ -5,6 +5,7 @@ import MethodBadge from "@/components/shared/MethodBadge";
 import { BookOpenText, Search, Copy, Link as LinkIcon, KeyRound, Share2, Globe } from "lucide-react";
 import { toast } from "sonner";
 import Editor from "@monaco-editor/react";
+import LazyDocsViewer from "@/components/docs/LazyDocsViewer";
 
 export default function Documentation() {
   const collections = useAppStore(selectWorkspaceCollections);
@@ -153,7 +154,13 @@ export default function Documentation() {
                   </button>
                 </div>
                 <h2 className="mt-3 text-xl font-medium tracking-tight">{activeReq.name}</h2>
-                <p className="mt-1 text-[13px] text-muted-foreground">Endpoint within the {activeCol?.name} collection.</p>
+                {activeReq.docs ? (
+                  <div className="mt-3">
+                    <LazyDocsViewer value={activeReq.docs} />
+                  </div>
+                ) : (
+                  <p className="mt-1 text-[13px] text-muted-foreground">Endpoint within the {activeCol?.name} collection.</p>
+                )}
               </div>
 
               <Section title="Request headers">

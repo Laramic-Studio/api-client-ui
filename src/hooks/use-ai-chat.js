@@ -46,6 +46,15 @@ export function useAiChat() {
     abortRef.current = controller;
     setStreaming(true);
 
+    const streamState = { full: "", proposedActions: [] };
+    const syncAssistantMessage = (streamingFlag = true) => {
+      updateMessage(assistantId, {
+        content: finalizeAssistantContent(streamState.full, streamState.proposedActions),
+        proposedActions: streamState.proposedActions,
+        streaming: streamingFlag,
+      });
+    };
+
     try {
       const teamId = useAppStore.getState().activeWorkspaceId;
       const catalogExtras = await loadAiCatalogExtras(queryClient, teamId);
@@ -66,39 +75,43 @@ export function useAiChat() {
         ai,
         signal: controller.signal,
         onDelta: (_delta, fullText) => {
-          updateMessage(assistantId, {
-            content: finalizeAssistantContent(fullText, []),
-            streaming: true,
-          });
+          streamState.full = fullText;
+          syncAssistantMessage(true);
         },
         onActions: (actions) => {
-          updateMessage(assistantId, { proposedActions: actions });
+          streamState.proposedActions = actions;
+          syncAssistantMessage(true);
         },
       });
 
-      updateMessage(assistantId, {
-        content: stripActionsBlock(full),
-        streaming: false,
-        proposedActions: proposedActions || [],
-      });
+      streamState.full = full;
+      streamState.proposedActions = proposedActions || [];
+      syncAssistantMessage(false);
 
-      if (proposedActions?.length) {
-        const autoRan = await autoRunProposedActions(proposedActions, {
+      const finalContent = finalizeAssistantContent(full, streamState.proposedActions);
+
+      if (streamState.proposedActions.length) {
+        const autoRan = await autoRunProposedActions(streamState.proposedActions, {
           executeAction,
           navigate,
           appendMessage,
         });
         if (autoRan.ran > 0) {
           updateMessage(assistantId, {
-            proposedActions: proposedActions.filter((a) => a.risk !== "low"),
+            proposedActions: streamState.proposedActions.filter((a) => a.risk !== "low"),
           });
+          if (!stripActionsBlock(full)) {
+            updateMessage(assistantId, {
+              content: `${finalContent}\n\n✓ ${autoRan.ran} action(s) completed.`,
+            });
+          }
         }
       }
 
       bumpUsage("chat");
     } catch (e) {
       if (isCancelledError(e)) {
-        updateMessage(assistantId, { streaming: false });
+        syncAssistantMessage(false);
         return;
       }
       updateMessage(assistantId, {

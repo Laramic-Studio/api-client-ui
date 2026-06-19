@@ -14,7 +14,8 @@ import BuilderConsolePanel from "@/components/builder/BuilderConsolePanel";
 import BuilderStatusBar from "@/components/builder/BuilderStatusBar";
 
 import { useBindAiTool } from "@/providers/AiContextProvider";
-import { applyBuilderSpec, builderSnapshot } from "@/lib/ai/builder-spec";
+import { builderSnapshot } from "@/lib/ai/builder-spec";
+import { buildExampleFromActiveResponse, createBuilderAiBindings } from "@/ai-tools/builder-bindings";
 
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections } from "@/lib/store/selectors";
@@ -44,6 +45,7 @@ import { exampleToResponse, suggestExampleName } from "@/lib/builder/examples";
 import { buildHistoryEntry } from "@/lib/builder/history";
 import { isRequestUrlEmpty } from "@/lib/builder/url-variables";
 import { isTabDirty } from "@/lib/builder/dirty";
+import { normalizeDocs } from "@/lib/docs/migrate";
 import UnsavedTabDialog from "@/components/builder/UnsavedTabDialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -132,7 +134,9 @@ export default function ApiBuilder() {
   const setActiveReqRef = useRef(() => {});
   const onSaveRef = useRef(null);
   const onSendRef = useRef(null);
+  const executeSendRef = useRef(null);
   const onOpenRequestRef = useRef(null);
+  const bindingsCtxRef = useRef({});
 
   const ensureScratchDraft = useCallback((tabId) => {
     if (!drafts[tabId]) {
@@ -190,7 +194,7 @@ export default function ApiBuilder() {
     body: req.body || { type: "none", content: "" },
     tests: req.tests ?? "",
     preScript: req.preScript ?? "",
-    docs: req.docs ?? "",
+    docs: normalizeDocs(req.docs ?? ""),
   }), []);
 
   const debouncedAutoSave = useDebouncedCallback(async (tabId, req) => {
@@ -266,7 +270,7 @@ export default function ApiBuilder() {
         body: draft.body || { type: "none", content: "" },
         tests: draft.tests ?? "",
         preScript: draft.preScript ?? "",
-        docs: draft.docs ?? "",
+        docs: normalizeDocs(draft.docs ?? ""),
       };
 
       let collectionId = closeSaveCollectionId || draft.collectionId;
@@ -304,6 +308,42 @@ export default function ApiBuilder() {
     if (!closePrompt) return;
     finishCloseTab(closePrompt.tabId);
     setClosePrompt(null);
+  };
+
+  const closeTabSave = async (tabId, collectionIdOverride = null) => {
+    const draft = drafts[tabId] || (tabId === activeTabId ? activeReq : null);
+    if (!draft) throw new Error("No draft to save.");
+
+    setSaving(true);
+    try {
+      const payload = buildRequestPayload(draft);
+      let collectionId = collectionIdOverride || closeSaveCollectionId || draft.collectionId;
+      if (!collectionId) {
+        let target = collections[0];
+        if (!target) target = await client.createCollection("My Collection");
+        collectionId = target.id;
+      }
+
+      if (isScratchTab(tabId)) {
+        const saved = await client.addRequest(collectionId, {
+          ...payload,
+          examples: draft.examples || [],
+          folderId: draft.folderId || null,
+        });
+        finishCloseTab(tabId);
+        openTab({ id: saved.id, collectionId, label: saved.name });
+        navigate(`/builder/${saved.id}`);
+        toast.success(`Saved ${saved.name}`);
+      } else {
+        await client.updateRequest(collectionId, draft.id, payload);
+        clearBuilderDraft(tabId);
+        finishCloseTab(tabId);
+        toast.success("Request saved");
+      }
+    } finally {
+      setSaving(false);
+      setClosePrompt(null);
+    }
   };
 
   const handleTabSelect = useCallback((tabId) => {
@@ -455,6 +495,7 @@ export default function ApiBuilder() {
 
   const onSend = () => executeSend();
   onSendRef.current = onSend;
+  executeSendRef.current = executeSend;
   const onRetryViaCloud = () => executeSend({ forceCloud: true });
 
   const onSave = async () => {
@@ -629,10 +670,49 @@ export default function ApiBuilder() {
     setPanels({ responseOpen: true });
   }, [setPanels]);
 
+  const handleExplainResponse = useCallback(() => {
+    if (!displayResponse || activeExample) return;
+    queueAiChat({
+      text: buildExplainPrompt(displayResponse),
+      autoSend: true,
+    });
+  }, [displayResponse, activeExample, queueAiChat]);
+
   activeReqRef.current = activeReq;
   activeTabIdRef.current = activeTabId;
   activeEnvRef.current = activeEnv;
   setActiveReqRef.current = setActiveReq;
+
+  bindingsCtxRef.current = {
+    activeReqRef,
+    activeTabIdRef,
+    activeEnvRef,
+    activeColIdRef: { current: activeColIdForEnv },
+    setActiveReqRef,
+    onSaveRef,
+    onSendRef,
+    executeSendRef,
+    onOpenRequestRef,
+    navigate,
+    setPanels,
+    newScratchTab,
+    handleTabSelect,
+    finishCloseTab,
+    attemptCloseTab,
+    closeTabSave,
+    handleUpdateVariable,
+    handleOpenResponse,
+    handleResponseClose,
+    handleResponseLayoutChange,
+    handleToggleConsole,
+    handleExplainResponse,
+    queueAiChat,
+    onOpenExample,
+    onAddExample,
+    onSaveCurrentResponseAsExample,
+    handleExampleDeleted,
+    buildExampleFromResponse: () => buildExampleFromActiveResponse(activeTabId, activeReq, responses),
+  };
 
   useBindAiTool("api-builder", {
     getSnapshot: () => {
@@ -653,25 +733,7 @@ export default function ApiBuilder() {
         testResults: builderSession.testResults,
       });
     },
-    bindings: {
-      "builder.apply_draft": (payload) => {
-        const req = activeReqRef.current;
-        const tabId = activeTabIdRef.current;
-        if (!req || !tabId) throw new Error("No request open.");
-        setActiveReqRef.current(applyBuilderSpec(req, payload.spec));
-        return { message: "Draft updated — review the request and save when ready." };
-      },
-      "builder.save_request": async () => {
-        if (!onSaveRef.current) throw new Error("Nothing to save.");
-        await onSaveRef.current();
-        return { message: "Request saved to collection." };
-      },
-      "builder.send_request": async () => {
-        if (!onSendRef.current) throw new Error("No request open.");
-        await onSendRef.current();
-        return { message: "Request sent — check the response panel for results." };
-      },
-    },
+    bindings: createBuilderAiBindings(bindingsCtxRef),
   });
 
   const requestPane = activeReq ? (
@@ -702,14 +764,6 @@ export default function ApiBuilder() {
       </div>
     </div>
   );
-
-  const handleExplainResponse = useCallback(() => {
-    if (!displayResponse || activeExample) return;
-    queueAiChat({
-      text: buildExplainPrompt(displayResponse),
-      autoSend: true,
-    });
-  }, [displayResponse, activeExample, queueAiChat]);
 
   const canSaveExample = Boolean(
     responses[activeTabId]

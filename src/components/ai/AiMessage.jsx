@@ -32,7 +32,7 @@ export default function AiMessage({ message, onRunAction, onDismissAction, runni
             isSystem && "bg-muted/50 text-muted-foreground text-[12px] italic border-0",
           )}
         >
-          {message.content || (message.streaming ? "…" : "")}
+          {(message.content && message.content.trim()) || (message.streaming ? "…" : message.proposedActions?.length ? "Preparing actions…" : "No response.")}
         </div>
         {message.proposedActions?.length > 0 && (
           <div className="space-y-2">

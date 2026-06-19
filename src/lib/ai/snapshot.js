@@ -1,3 +1,5 @@
+import { docsToPlainText } from "@/lib/docs/format";
+
 const MAX_BODY = 4000;
 const MAX_SCRIPT = 2000;
 const MAX_DOCS = 1000;
@@ -43,7 +45,7 @@ export function summarizeRequestForAi(req, { includeScripts = true } = {}) {
     ...(includeScripts && {
       preScript: truncateText(req.preScript, MAX_SCRIPT),
       tests: truncateText(req.tests, MAX_SCRIPT),
-      docs: truncateText(req.docs, MAX_DOCS),
+      docs: truncateText(docsToPlainText(req.docs), MAX_DOCS),
     }),
   };
 }

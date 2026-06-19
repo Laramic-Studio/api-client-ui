@@ -1,4 +1,5 @@
 import { mapApiExample } from "@/lib/builder/examples";
+import { normalizeDocs } from "@/lib/docs/migrate";
 
 function mapBodyFromApi(request) {
   const bodyType = request.bodyType || request.body_type || "none";
@@ -30,7 +31,7 @@ export function mapApiRequest(request) {
     tests: request.tests ?? "",
     preScript: request.preScript || request.pre_script || "",
     starred: Boolean(request.starred),
-    docs: request.description ?? "",
+    docs: normalizeDocs(request.description ?? ""),
     examples: (request.examples || []).map(mapApiExample).filter(Boolean),
     folderId: request.folderId ?? request.folder_id ?? null,
     order: request.order ?? request.sortOrder ?? request.sort_order ?? 0,

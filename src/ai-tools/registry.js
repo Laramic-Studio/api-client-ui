@@ -1,5 +1,6 @@
 import { resolveAiPageId } from "@/lib/ai/pages";
 import { actionManifest } from "@/ai-tools/types";
+import { pollUntil } from "@/lib/ai/action-readiness";
 
 /** @typedef {import('@/ai-tools/types').AiToolDefinition} AiToolDefinition */
 /** @typedef {import('@/ai-tools/types').AiActionContext} AiActionContext */
@@ -74,13 +75,15 @@ class AiToolRegistry {
         if (!registered) continue;
 
         const ready = this.#isReady(registered, currentPageId);
+        const chainable = registered.scope === "page" && entry.risk === "low";
         manifest.push({
           ...entry,
           tool: tool.id,
           scope: registered.scope,
           pageId: registered.pageId || null,
           ready,
-          autoRun: ready && entry.risk === "low",
+          autoRun: entry.risk === "low" && (ready || chainable),
+          chainable,
         });
       }
     }
@@ -157,6 +160,80 @@ class AiToolRegistry {
 
   listActionTypes() {
     return [...this.#actions.keys()];
+  }
+
+  /** @param {string} type */
+  getActionMeta(type) {
+    const entry = this.#actions.get(type);
+    if (!entry) return null;
+    return {
+      type: entry.type,
+      toolId: entry.toolId,
+      scope: entry.scope,
+      pageId: entry.pageId || null,
+      requiresBinding: Boolean(entry.def.requiresBinding),
+      risk: entry.def.risk,
+    };
+  }
+
+  /** True when a page has registered live bindings (at least one bound action). */
+  isPageBound(pageId) {
+    if (!pageId) return false;
+    const config = this.#pageBindings.get(pageId);
+    if (!config?.getBinding) return false;
+
+    for (const entry of this.#actions.values()) {
+      if (entry.pageId !== pageId) continue;
+      if (entry.def.requiresBinding && config.getBinding(entry.type)) {
+        return true;
+      }
+      if (!entry.def.requiresBinding && entry.def.execute) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Wait until a page's runtime bindings are registered (after React mount).
+   * @param {string} pageId
+   * @param {{ timeoutMs?: number, intervalMs?: number }} [options]
+   */
+  async waitForPageReady(pageId, options = {}) {
+    if (!pageId) return { ready: true, pageId: null };
+    if (this.isPageBound(pageId)) return { ready: true, pageId };
+
+    const ready = await pollUntil(
+      () => (this.isPageBound(pageId) ? pageId : null),
+      options,
+    );
+
+    return { ready: Boolean(ready), pageId };
+  }
+
+  /**
+   * Wait until a specific action can execute on the current route.
+   * @param {string} type
+   * @param {{ timeoutMs?: number, intervalMs?: number, getRoute?: () => string }} [options]
+   */
+  async waitForActionReady(type, options = {}) {
+    const { getRoute = () => window.location.pathname } = options;
+    const entry = this.#actions.get(type);
+    if (!entry) return { ready: false, route: getRoute() };
+
+    if (this.canExecute(type, getRoute())) {
+      return { ready: true, route: getRoute() };
+    }
+
+    const result = await pollUntil(
+      () => {
+        const route = getRoute();
+        return this.canExecute(type, route) ? route : null;
+      },
+      options,
+    );
+
+    return { ready: Boolean(result), route: result || getRoute() };
   }
 
   #isReady(entry, currentPageId) {

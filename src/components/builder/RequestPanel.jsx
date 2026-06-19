@@ -1,6 +1,6 @@
 // The middle pane of the builder: method+URL+send row, plus the request tabs
 // (Params, Authorization, Headers, Body, Pre-request, Tests, Docs).
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/store/useAppStore";
 import {
@@ -19,7 +19,7 @@ import EnvPicker from "@/components/builder/EnvPicker";
 import KvEditor from "@/components/builder/KvEditor";
 import AuthEditor from "@/components/builder/AuthEditor";
 import TestsPanel from "@/components/builder/TestsPanel";
-import DocsPanel from "@/components/builder/DocsPanel";
+const DocsPanel = lazy(() => import("@/components/builder/DocsPanel"));
 import { METHODS_LIST } from "@/lib/mockData";
 import { GENERATORS } from "@/lib/generators";
 import { CODE_LANGS, generateCode } from "@/lib/codeGen";
@@ -366,10 +366,19 @@ export default function RequestPanel({
         </TabsContent>
 
         <TabsContent value="docs" className={TAB_CONTENT_CLASS}>
-          <DocsPanel
-            value={req.docs || ""}
-            onChange={(v) => onChange({ ...req, docs: v })}
-          />
+          <Suspense fallback={(
+            <div className="h-full grid place-items-center text-[12px] text-muted-foreground">
+              Loading editor…
+            </div>
+          )}
+          >
+            <DocsPanel
+              editorKey={requestTabId || req.id || "scratch"}
+              request={req}
+              value={req.docs || ""}
+              onChange={(v) => onChange({ ...req, docs: v })}
+            />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

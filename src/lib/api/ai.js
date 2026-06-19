@@ -1,4 +1,5 @@
 // Lightweight frontend wrapper for the AI backend endpoints.
+import { parseProposedActionsFromText } from "@/lib/ai/format";
 import { createApiClient, createAbortController, isCancelledError, ApiError } from "@/lib/api/http";
 import { API_URL } from "@/lib/config";
 import { getAccessToken } from "@/lib/auth/tokens";
@@ -27,6 +28,16 @@ async function readAiSseStream(res, { onDelta, onActions, signal }) {
   let full = "";
   let proposedActions = [];
 
+  const finalizeActions = () => {
+    if (!proposedActions.length && full) {
+      proposedActions = parseProposedActionsFromText(full);
+      if (proposedActions.length) {
+        onActions?.(proposedActions);
+      }
+    }
+    return { full, proposedActions };
+  };
+
   for (;;) {
     if (signal?.aborted) {
       throw new ApiError("Request cancelled.", { cancelled: true });
@@ -48,7 +59,7 @@ async function readAiSseStream(res, { onDelta, onActions, signal }) {
     for (const line of lines) {
       if (!line.startsWith("data:")) continue;
       const payload = line.slice(5).trim();
-      if (payload === "[DONE]") return { full, proposedActions };
+      if (payload === "[DONE]") return finalizeActions();
       try {
         const j = JSON.parse(payload);
         if (j.delta) {
@@ -68,7 +79,7 @@ async function readAiSseStream(res, { onDelta, onActions, signal }) {
     }
   }
 
-  return { full, proposedActions };
+  return finalizeActions();
 }
 
 export { createAbortController, isCancelledError };

@@ -1,11 +1,12 @@
 // Public read-only documentation page accessible via /p/docs/:shareId
 // (no auth required). Renders a Stripe-style API reference for a single collection.
 import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import MethodBadge from "@/components/shared/MethodBadge";
+import LazyDocsViewer from "@/components/docs/LazyDocsViewer";
 import Editor from "@monaco-editor/react";
 import { KeyRound, Copy, ExternalLink, BookOpenText } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 
 export default function PublicDocs() {
@@ -89,7 +90,9 @@ export default function PublicDocs() {
                   </div>
                   <h2 className="mt-3 text-xl font-medium tracking-tight">{activeReq.name}</h2>
                   {activeReq.docs && (
-                    <p className="mt-2 text-[13px] text-muted-foreground whitespace-pre-wrap">{activeReq.docs}</p>
+                    <div className="mt-2">
+                      <LazyDocsViewer value={activeReq.docs} />
+                    </div>
                   )}
                 </div>
 

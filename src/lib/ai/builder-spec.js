@@ -3,9 +3,14 @@ import {
   summarizeResponseForAi,
   summarizeTestResultsForAi,
 } from "@/lib/ai/snapshot";
+import { normalizeDocs } from "@/lib/docs/migrate";
 
 export function applyBuilderSpec(current, spec) {
   if (!spec || !current) return current;
+
+  const docs = spec.docs != null
+    ? normalizeDocs(typeof spec.docs === "string" ? spec.docs : String(spec.docs))
+    : (current.docs ?? "");
 
   return {
     ...current,
@@ -18,7 +23,7 @@ export function applyBuilderSpec(current, spec) {
     body: spec.body ?? current.body ?? { type: "none", content: "" },
     tests: spec.tests ?? current.tests ?? "",
     preScript: spec.preScript ?? current.preScript ?? "",
-    docs: spec.docs ?? current.docs ?? "",
+    docs,
   };
 }
 

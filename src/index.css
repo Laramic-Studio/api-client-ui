@@ -146,6 +146,46 @@
   .ring-focus {
     @apply focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--brand))];
   }
+
+  .docs-editor-h1 {
+    @apply text-2xl font-medium tracking-tight mt-3 mb-2;
+  }
+  .docs-editor-h2 {
+    @apply text-lg font-medium tracking-tight mt-3 mb-2;
+  }
+  .docs-editor-h3 {
+    @apply text-base font-medium tracking-tight mt-2 mb-1;
+  }
+  .docs-editor-p {
+    @apply mb-2;
+  }
+  .docs-editor-ul {
+    @apply mb-2 ml-5 list-disc;
+  }
+  .docs-editor-ol {
+    @apply mb-2 ml-5 list-decimal;
+  }
+  .docs-editor-li {
+    @apply mb-1;
+  }
+  .docs-editor-link {
+    @apply text-[hsl(var(--brand))] hover:underline;
+  }
+  .docs-editor-inline-code {
+    @apply rounded bg-[hsl(var(--input))] px-1 py-0.5 font-mono text-[12px];
+  }
+  .docs-editor-code-block {
+    @apply mb-2 block overflow-auto rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--input))] p-3 font-mono text-[12px];
+  }
+  .docs-editor-quote {
+    @apply mb-2 border-l-2 border-[hsl(var(--border))] pl-3 text-muted-foreground italic;
+  }
+  .docs-editor-readonly .docs-editor-surface {
+    @apply pointer-events-none select-text;
+  }
+  .docs-api-block {
+    @apply select-text;
+  }
 }
 
 @layer utilities {
