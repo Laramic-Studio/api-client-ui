@@ -1,4 +1,4 @@
-export function buildAiContextBundle({ route, user, workspace, team, pageContext }) {
+export function buildAiContextBundle({ route, user, workspace, team, pageContext, catalog }) {
   return {
     route: route || "/",
     timestamp: new Date().toISOString(),
@@ -11,6 +11,7 @@ export function buildAiContextBundle({ route, user, workspace, team, pageContext
     team: team
       ? { id: team.id, name: team.name, role: team.role }
       : null,
+    catalog: catalog || null,
     page: pageContext || null,
   };
 }
@@ -18,21 +19,22 @@ export function buildAiContextBundle({ route, user, workspace, team, pageContext
 export function pageSuggestions(route) {
   if (route.startsWith("/builder")) {
     return [
-      "Build a POST request to create a user",
+      "Summarize the response on this tab",
       "What request am I editing?",
-      "Add bearer auth from my environment",
+      "Send this request and explain the result",
+    ];
+  }
+  if (route.startsWith("/conduits")) {
+    return [
+      "Open my web conduit",
+      "Chain my GET post and comment requests into a flow",
+      "Run this conduit",
     ];
   }
   if (route.startsWith("/environments")) {
     return [
       "Create a Production environment",
       "What variables are in my active env?",
-    ];
-  }
-  if (route.startsWith("/conduits")) {
-    return [
-      "Explain how fan-out works in conduits",
-      "Add a step that extracts an ID from the response",
     ];
   }
   if (route.startsWith("/collections")) {

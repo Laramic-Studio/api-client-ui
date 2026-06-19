@@ -1,3 +1,9 @@
+import {
+  summarizeRequestForAi,
+  summarizeResponseForAi,
+  summarizeTestResultsForAi,
+} from "@/lib/ai/snapshot";
+
 export function applyBuilderSpec(current, spec) {
   if (!spec || !current) return current;
 
@@ -16,24 +22,40 @@ export function applyBuilderSpec(current, spec) {
   };
 }
 
-export function builderSnapshot({ activeTabId, activeReq, isDirty, activeEnv }) {
+export function builderSnapshot({
+  activeTabId,
+  activeReq,
+  isDirty,
+  activeEnv,
+  openTabs,
+  responses,
+  testResults,
+}) {
+  const base = {
+    openTabs: (openTabs || []).map((tab) => ({
+      id: tab.id,
+      label: tab.label,
+      collectionId: tab.collectionId,
+      isActive: tab.id === activeTabId,
+    })),
+  };
+
   if (!activeReq) {
-    return { hasOpenRequest: false };
+    return { ...base, hasOpenRequest: false };
   }
 
+  const response = activeTabId ? responses?.[activeTabId] : null;
+  const tests = activeTabId ? testResults?.[activeTabId] : null;
+
   return {
+    ...base,
     hasOpenRequest: true,
     activeTabId,
     isScratch: activeTabId?.startsWith("scratch"),
     isDirty: Boolean(isDirty),
-    name: activeReq.name,
-    method: activeReq.method,
-    url: activeReq.url,
-    bodyType: activeReq.body?.type,
-    collectionId: activeReq.collectionId,
-    authType: activeReq.auth?.type,
-    paramCount: (activeReq.params || []).filter((p) => p.key).length,
-    headerCount: (activeReq.headers || []).filter((h) => h.key).length,
     activeEnvironment: activeEnv?.name || null,
+    request: summarizeRequestForAi(activeReq),
+    lastResponse: summarizeResponseForAi(response),
+    testResults: summarizeTestResultsForAi(tests),
   };
 }

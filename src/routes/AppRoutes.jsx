@@ -57,7 +57,7 @@ export default function AppRoutes() {
         <Route path="/monitoring" element={<Monitoring />} />
         <Route path="/workspaces" element={<Workspaces />} />
         <Route path="/team" element={<Team />} />
-        <Route path="/conduits" element={<Conduits />} />
+        <Route path="/conduits/:conduitId?" element={<Conduits />} />
         <Route path="/generators" element={<Generators />} />
         <Route path="/import" element={<ImportApi />} />
         <Route path="/settings" element={<Settings />} />

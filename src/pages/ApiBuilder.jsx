@@ -131,6 +131,8 @@ export default function ApiBuilder() {
   const activeEnvRef = useRef(null);
   const setActiveReqRef = useRef(() => {});
   const onSaveRef = useRef(null);
+  const onSendRef = useRef(null);
+  const onOpenRequestRef = useRef(null);
 
   const ensureScratchDraft = useCallback((tabId) => {
     if (!drafts[tabId]) {
@@ -452,6 +454,7 @@ export default function ApiBuilder() {
   };
 
   const onSend = () => executeSend();
+  onSendRef.current = onSend;
   const onRetryViaCloud = () => executeSend({ forceCloud: true });
 
   const onSave = async () => {
@@ -497,6 +500,11 @@ export default function ApiBuilder() {
     openTab({ id: requestId, collectionId, label: found.request?.name || "Request" });
     clearBuilderActiveExample(requestId);
     navigate(`/builder/${requestId}`);
+  };
+  onOpenRequestRef.current = (requestId) => {
+    const found = findRequest(requestId);
+    if (!found.request) throw new Error(`Request "${requestId}" not found.`);
+    onOpenRequest(requestId, found.collection.id);
   };
 
   const onOpenExample = (requestId, collectionId, exampleId) => {
@@ -630,17 +638,19 @@ export default function ApiBuilder() {
     getSnapshot: () => {
       const tabId = activeTabIdRef.current;
       const req = activeReqRef.current;
-      if (!req || !tabId) return { hasOpenRequest: false };
-
       const state = useAppStore.getState();
-      const draft = state.builderSession.drafts[tabId];
-      const saved = isScratchTab(tabId) ? null : state.findRequest(tabId).request;
+      const { builderSession, openTabs } = state;
+      const draft = tabId ? builderSession.drafts[tabId] : null;
+      const saved = tabId && !isScratchTab(tabId) ? state.findRequest(tabId).request : null;
 
       return builderSnapshot({
         activeTabId: tabId,
         activeReq: req,
-        isDirty: isTabDirty(tabId, draft, saved),
+        isDirty: tabId ? isTabDirty(tabId, draft, saved) : false,
         activeEnv: activeEnvRef.current,
+        openTabs,
+        responses: builderSession.responses,
+        testResults: builderSession.testResults,
       });
     },
     actionHandlers: {
@@ -656,6 +666,11 @@ export default function ApiBuilder() {
         if (!onSaveRef.current) throw new Error("Nothing to save.");
         await onSaveRef.current();
         return { message: "Request saved to collection." };
+      },
+      "builder.send_request": async () => {
+        if (!onSendRef.current) throw new Error("No request open.");
+        await onSendRef.current();
+        return { message: "Request sent — check the response panel for results." };
       },
     },
   });

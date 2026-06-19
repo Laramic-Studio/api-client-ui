@@ -123,51 +123,32 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="ai" className="mt-6 space-y-4 max-w-xl">
-          <Card>
-            <div className="flex items-center gap-3">
-              <Bot className="h-4 w-4 text-[hsl(var(--brand))]" />
-              <div className="flex-1">
-                <div className="text-[13.5px] font-medium">Use your own API key</div>
-                <div className="text-[11.5px] text-muted-foreground">Bypass the free tier. Keys are stored locally and sent only with AI calls.</div>
-              </div>
-              <Switch
-                checked={ai.useOwnKey}
-                disabled={ai.provider === "ollama"}
-                onCheckedChange={(v) => setAi({ useOwnKey: v })}
-                data-testid="ai-use-own-key"
-              />
-            </div>
-            {ai.useOwnKey && ai.provider !== "ollama" && (
-              <div className="space-y-2">
-                <Label className="text-[11px] uppercase font-mono text-muted-foreground">API key</Label>
-                <Input
-                  type="password"
-                  value={ai.userKey}
-                  onChange={(e) => setAi({ userKey: e.target.value })}
-                  placeholder="sk-…"
-                  data-testid="ai-user-key"
-                  className="bg-muted border-border h-9 font-mono text-[13px]"
-                />
-              </div>
-            )}
-            {ai.provider === "ollama" && (
-              <div className="text-[11.5px] text-muted-foreground">
-                Uses the Ollama instance configured on the server (e.g. <span className="font-mono text-foreground/80">qwen2.5:3b</span>).
-              </div>
-            )}
+          <Card className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-[11px] uppercase font-mono text-muted-foreground">Provider</Label>
-                <Select value={ai.provider} onValueChange={(v) => setAi({
-                  provider: v,
-                  ...(v === "ollama" ? { model: "qwen2.5:3b", useOwnKey: false } : {}),
-                })}>
+                <Select
+                  value={ai.provider}
+                  onValueChange={(v) => setAi({
+                    provider: v,
+                    ...(v === "ollama"
+                      ? { model: "qwen2.5:3b", useOwnKey: false, baseUrl: "" }
+                      : {}),
+                    ...(v === "custom" && !ai.baseUrl
+                      ? { baseUrl: "https://openrouter.ai/api/v1", useOwnKey: true }
+                      : {}),
+                    ...(v === "gemini" && ai.model === "qwen2.5:3b"
+                      ? { model: "gemini-2.0-flash" }
+                      : {}),
+                  })}
+                >
                   <SelectTrigger className="bg-muted border-border h-9 mt-1 text-[13px]" data-testid="ai-provider"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover border-border">
                     <SelectItem value="ollama">Ollama · Local</SelectItem>
                     <SelectItem value="gemini">Google · Gemini</SelectItem>
                     <SelectItem value="openai">OpenAI</SelectItem>
                     <SelectItem value="anthropic">Anthropic · Claude</SelectItem>
+                    <SelectItem value="custom">Custom · OpenAI-compatible</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -176,12 +157,68 @@ export default function Settings() {
                 <Input
                   value={ai.model}
                   onChange={(e) => setAi({ model: e.target.value })}
-                  placeholder={ai.provider === "ollama" ? "qwen2.5:3b" : "gemini-3-flash-preview"}
+                  placeholder={
+                    ai.provider === "ollama" ? "qwen2.5:3b"
+                      : ai.provider === "gemini" ? "gemini-2.0-flash"
+                        : ai.provider === "openai" ? "gpt-4o-mini"
+                          : ai.provider === "anthropic" ? "claude-3-5-sonnet-20241022"
+                            : "provider/model-id"
+                  }
                   data-testid="ai-model"
                   className="bg-muted border-border h-9 mt-1 font-mono text-[13px]"
                 />
               </div>
             </div>
+
+            {ai.provider === "custom" && (
+              <div className="space-y-2">
+                <Label className="text-[11px] uppercase font-mono text-muted-foreground">Base URL</Label>
+                <Input
+                  value={ai.baseUrl || ""}
+                  onChange={(e) => setAi({ baseUrl: e.target.value })}
+                  placeholder="https://openrouter.ai/api/v1"
+                  data-testid="ai-base-url"
+                  className="bg-muted border-border h-9 font-mono text-[13px]"
+                />
+                <div className="text-[11.5px] text-muted-foreground">
+                  For OpenRouter, Groq, Together, or any OpenAI-compatible API. Use the provider&apos;s chat completions endpoint base.
+                </div>
+              </div>
+            )}
+
+            {ai.provider === "ollama" ? (
+              <div className="text-[11.5px] text-muted-foreground">
+                Uses Ollama on the server (no API key). Default model: <span className="font-mono text-foreground/80">qwen2.5:3b</span>.
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 pt-1">
+                  <Bot className="h-4 w-4 text-[hsl(var(--brand))]" />
+                  <div className="flex-1">
+                    <div className="text-[13.5px] font-medium">Use your own API key</div>
+                    <div className="text-[11.5px] text-muted-foreground">Required for cloud providers. Stored locally in your browser only.</div>
+                  </div>
+                  <Switch
+                    checked={ai.useOwnKey}
+                    onCheckedChange={(v) => setAi({ useOwnKey: v })}
+                    data-testid="ai-use-own-key"
+                  />
+                </div>
+                {ai.useOwnKey && (
+                  <div className="space-y-2">
+                    <Label className="text-[11px] uppercase font-mono text-muted-foreground">API key</Label>
+                    <Input
+                      type="password"
+                      value={ai.userKey}
+                      onChange={(e) => setAi({ userKey: e.target.value })}
+                      placeholder="Paste your API key"
+                      data-testid="ai-user-key"
+                      className="bg-muted border-border h-9 font-mono text-[13px]"
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </Card>
 
           <Card>

@@ -1,13 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { useAppStore } from "@/store/useAppStore";
 import { buildAiContextBundle } from "@/lib/ai/context";
+import { readCachedConduits } from "@/lib/ai/catalog";
 import { resolveAiPageId } from "@/lib/ai/pages";
+import { summarizeCollectionsForAi } from "@/lib/ai/snapshot";
 
 const AiContext = createContext(null);
 
 export function AiContextProvider({ children }) {
   const location = useLocation();
+  const queryClient = useQueryClient();
   const user = useAppStore((s) => s.user);
   const workspaces = useAppStore((s) => s.workspaces);
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
@@ -55,14 +59,20 @@ export function AiContextProvider({ children }) {
       }
     }
 
+    const collections = useAppStore.getState().collectionsMap[activeWorkspaceId] || [];
+
     return buildAiContextBundle({
       route: location.pathname,
       user,
       workspace,
       team: currentTeam,
       pageContext: page,
+      catalog: {
+        collections: summarizeCollectionsForAi(collections),
+        conduits: readCachedConduits(queryClient, activeWorkspaceId),
+      },
     });
-  }, [location.pathname, user, workspaces, activeWorkspaceId, currentTeam, aiPageContext]);
+  }, [location.pathname, user, workspaces, activeWorkspaceId, currentTeam, aiPageContext, queryClient]);
 
   const value = useMemo(
     () => ({ getContextBundle, registerPage, executePageAction }),

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import { useRegisterAiPage } from "@/providers/AiContextProvider";
+import { summarizeRequestForAi } from "@/lib/ai/snapshot";
 import { useNavigate } from "react-router-dom";
 import MethodBadge from "@/components/shared/MethodBadge";
 import {
@@ -52,8 +53,9 @@ export default function Collections() {
       collections: filtered.map((c) => ({
         id: c.id,
         name: c.name,
-        requestCount: (c.requests || []).length,
         archived: Boolean(c.archived),
+        requestCount: (c.requests || []).length,
+        requests: (c.requests || []).map((r) => summarizeRequestForAi(r)),
       })),
     }),
   });

@@ -1,10 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections, selectWorkspaceEnvironments } from "@/lib/store/selectors";
 import ConduitEditor from "@/components/conduits/ConduitEditor";
 import CreateConduitDialog from "@/components/conduits/CreateConduitDialog";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { useRegisterAiPage } from "@/providers/AiContextProvider";
+import { summarizeConduitStepForAi } from "@/lib/ai/snapshot";
+import { requestToConduitStep } from "@/lib/api/map-conduit";
+import { runConduit } from "@/lib/conduits/executor";
 import {
   useConduits,
   useCreateConduit,
@@ -29,6 +34,8 @@ const VISIBILITY_META = {
 export default function Conduits() {
   useCollections();
   useEnvironments();
+  const { conduitId } = useParams();
+  const navigate = useNavigate();
   const teamId = useActiveTeamId();
   const queryClient = useQueryClient();
   const { data: conduits = [], isLoading } = useConduits();
@@ -51,6 +58,20 @@ export default function Conduits() {
   );
 
   const activeConduit = conduits.find((c) => c.id === activeId);
+
+  useEffect(() => {
+    if (!conduits.length) return;
+    if (conduitId && conduits.some((c) => c.id === conduitId)) {
+      setActiveId(conduitId);
+    } else if (!conduitId) {
+      setActiveId(null);
+    }
+  }, [conduitId, conduits]);
+
+  const activeConduitRef = useRef(null);
+  const patchConduitRef = useRef(null);
+  const selectedEnvRef = useRef(null);
+  const conduitsRef = useRef(conduits);
 
   const patchConduit = (id, patch) => {
     let snapshot = null;
@@ -79,12 +100,121 @@ export default function Conduits() {
     }
   };
 
+  activeConduitRef.current = activeConduit;
+  patchConduitRef.current = patchConduit;
+  selectedEnvRef.current = selectedEnv;
+  conduitsRef.current = conduits;
+
+  useRegisterAiPage("conduits", {
+    getSnapshot: () => {
+      const conduit = activeConduitRef.current;
+      if (conduit) {
+        return {
+          view: "editor",
+          conduit: {
+            id: conduit.id,
+            name: conduit.name,
+            canEdit: conduit.canEdit !== false,
+            selectedEnvironment: selectedEnvRef.current?.name || null,
+            steps: conduit.steps.map(summarizeConduitStepForAi),
+            edges: (conduit.layout?.edges || []).map((edge) => ({
+              id: edge.id,
+              source: edge.source,
+              target: edge.target,
+            })),
+          },
+        };
+      }
+
+      return {
+        view: "list",
+        conduits: (conduitsRef.current || []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          stepCount: c.steps.length,
+          edgeCount: c.layout?.edges?.length || 0,
+        })),
+      };
+    },
+    actionHandlers: {
+      "conduit.add_step_from_request": (payload) => {
+        const conduit = activeConduitRef.current;
+        if (!conduit) throw new Error("Open a conduit in the editor first.");
+        if (conduit.canEdit === false) throw new Error("This conduit is read-only.");
+        const requestId = payload?.request_id;
+        if (!requestId) throw new Error("request_id is required.");
+
+        const found = useAppStore.getState().findRequest(requestId);
+        if (!found.request) throw new Error(`Request "${requestId}" not found.`);
+
+        const id = crypto.randomUUID();
+        const step = { ...requestToConduitStep(found.request, conduit.steps.length), id };
+        patchConduitRef.current(conduit.id, { steps: [...conduit.steps, step] });
+        return { message: `Added "${found.request.name}" as a conduit step.` };
+      },
+      "conduit.update_step": (payload) => {
+        const conduit = activeConduitRef.current;
+        if (!conduit) throw new Error("Open a conduit in the editor first.");
+        if (conduit.canEdit === false) throw new Error("This conduit is read-only.");
+        const stepId = payload?.step_id;
+        const patch = payload?.patch;
+        if (!stepId || !patch || typeof patch !== "object") {
+          throw new Error("step_id and patch object are required.");
+        }
+
+        const step = conduit.steps.find((s) => s.id === stepId);
+        if (!step) throw new Error(`Step "${stepId}" not found.`);
+
+        patchConduitRef.current(conduit.id, {
+          steps: conduit.steps.map((s) => (s.id === stepId ? { ...s, ...patch } : s)),
+        });
+        return { message: `Updated step "${step.name}".` };
+      },
+      "conduit.connect_steps": (payload) => {
+        const conduit = activeConduitRef.current;
+        if (!conduit) throw new Error("Open a conduit in the editor first.");
+        if (conduit.canEdit === false) throw new Error("This conduit is read-only.");
+        const { source_id: sourceId, target_id: targetId } = payload || {};
+        if (!sourceId || !targetId) throw new Error("source_id and target_id are required.");
+
+        const edges = conduit.layout?.edges || [];
+        if (edges.some((e) => e.source === sourceId && e.target === targetId)) {
+          return { message: "Steps are already connected." };
+        }
+
+        patchConduitRef.current(conduit.id, {
+          layout: { edges: [...edges, { id: crypto.randomUUID(), source: sourceId, target: targetId }] },
+        });
+        return { message: "Connected conduit steps." };
+      },
+      "conduit.run": async () => {
+        const conduit = activeConduitRef.current;
+        const env = selectedEnvRef.current;
+        if (!conduit) throw new Error("Open a conduit in the editor first.");
+        if (!conduit.steps.length) throw new Error("Add at least one step before running.");
+
+        const result = await runConduit({
+          steps: conduit.steps,
+          layout: conduit.layout,
+          env,
+          mode: "real",
+        });
+
+        return {
+          message: result.success
+            ? `Conduit run completed (${result.steps.length} steps).`
+            : `Conduit run stopped at step ${result.steps.length}.`,
+        };
+      },
+    },
+  });
+
   const handleCreate = (payload) => {
     createConduit.mutate(payload, {
       onSuccess: (created) => {
         toast.success("Conduit created");
         setShowCreateDialog(false);
-        setActiveId(created.id);
+        navigate(`/conduits/${created.id}`);
       },
       onError: (err) => toast.error(getErrorMessage(err, "Could not create conduit.")),
     });
@@ -104,7 +234,7 @@ export default function Conduits() {
       <ConduitEditor
         conduit={activeConduit}
         onPatch={patchConduit}
-        onBack={() => setActiveId(null)}
+        onBack={() => navigate("/conduits")}
         collections={collections}
         envs={envs}
         selectedEnv={selectedEnv}
@@ -156,7 +286,7 @@ export default function Conduits() {
             <button
               key={c.id}
               type="button"
-              onClick={() => setActiveId(c.id)}
+              onClick={() => navigate(`/conduits/${c.id}`)}
               className={cn(
                 "text-left rounded-md border border-border bg-card p-4 hover:border-[hsl(var(--brand))]/50 hover:bg-accent/20 transition-colors",
               )}

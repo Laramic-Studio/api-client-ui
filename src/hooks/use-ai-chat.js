@@ -1,15 +1,18 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppStore } from "@/store/useAppStore";
 import { useAiContext } from "@/providers/AiContextProvider";
 import { aiChat, createAbortController, isCancelledError } from "@/lib/api/ai";
+import { loadAiCatalogExtras } from "@/lib/ai/catalog";
 import { getAiAction } from "@/lib/ai/actions/registry";
 import { stripActionsBlock } from "@/lib/ai/format";
 import { nanoUid } from "@/lib/generators";
 
 export function useAiChat() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { getContextBundle, executePageAction } = useAiContext();
   const user = useAppStore((s) => s.user);
   const ai = useAppStore((s) => s.aiSettings);
@@ -42,9 +45,20 @@ export function useAiChat() {
     setStreaming(true);
 
     try {
+      const teamId = useAppStore.getState().activeWorkspaceId;
+      const catalogExtras = await loadAiCatalogExtras(queryClient, teamId);
+      const baseContext = getContextBundle();
+      const context = {
+        ...baseContext,
+        catalog: {
+          ...baseContext.catalog,
+          ...catalogExtras,
+        },
+      };
+
       const { full, proposedActions } = await aiChat({
         messages: history,
-        context: getContextBundle(),
+        context,
         userId: user?.id,
         ai,
         signal: controller.signal,

@@ -11,6 +11,7 @@ function aiPayload(extra, ai, userId) {
   if (ai?.useOwnKey && ai.userKey) base.user_key = ai.userKey;
   if (ai?.provider) base.provider = ai.provider;
   if (ai?.model) base.model = ai.model;
+  if (ai?.baseUrl) base.base_url = ai.baseUrl;
   return base;
 }
 

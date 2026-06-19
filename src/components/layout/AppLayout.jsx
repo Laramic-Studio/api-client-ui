@@ -4,9 +4,11 @@ import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import CommandPalette from "@/components/layout/CommandPalette";
 import AiSidebar from "@/components/ai/AiSidebar";
+import { useConduits } from "@/hooks/use-conduits";
 import { useAppStore } from "@/store/useAppStore";
 
 export default function AppLayout() {
+  useConduits();
   const setCommandOpen = useAppStore((s) => s.setCommandOpen);
   const collapsed = useAppStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
