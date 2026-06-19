@@ -8,10 +8,7 @@ import { setClient } from "@/lib/api/client";
 import { fetchClient } from "@/lib/api/fetch-client";
 import { AuthBootstrapGate } from "@/components/auth/guards";
 import { AiContextProvider } from "@/providers/AiContextProvider";
-import "@/lib/ai/actions/registry";
-import "@/lib/ai/actions/builder";
-import "@/lib/ai/actions/conduits";
-import "@/lib/ai/actions/environments";
+import "@/ai-tools";
 import AppRoutes from "@/routes/AppRoutes";
 
 export default function App() {

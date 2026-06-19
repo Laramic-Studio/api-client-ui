@@ -1,5 +1,5 @@
 import EnvironmentVariablesTable from "@/components/environments/EnvironmentVariablesTable";
-import { useRegisterAiPage } from "@/providers/AiContextProvider";
+import { useBindAiTool } from "@/providers/AiContextProvider";
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections, selectWorkspaceEnvironments } from "@/lib/store/selectors";
 import { useEffect, useMemo, useState } from "react";
@@ -43,7 +43,7 @@ export default function Environments() {
   const [selectedId, setSelectedId] = useState(filtered[0]?.id);
   const selected = filtered.find((e) => e.id === selectedId) || filtered[0];
 
-  useRegisterAiPage("environments", {
+  useBindAiTool("environments", {
     getSnapshot: () => ({
       scope,
       selectedEnvironmentId: selected?.id || null,

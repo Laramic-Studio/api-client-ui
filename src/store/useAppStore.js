@@ -122,6 +122,9 @@ export const useAppStore = create(
         aiSidebarOpen: true,
       }),
       clearAiChatPrefill: () => set({ aiChatPrefill: "", aiChatAutoSend: false, aiChatPrefillToken: 0 }),
+      aiConduitRunResult: null,
+      setAiConduitRunResult: (payload) => set({ aiConduitRunResult: payload }),
+      clearAiConduitRunResult: () => set({ aiConduitRunResult: null }),
       aiPageContext: null,
       setAiPageContext: (ctx) => set({ aiPageContext: ctx }),
 

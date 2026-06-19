@@ -13,7 +13,7 @@ import { buildExplainPrompt } from "@/lib/builder/explain-prompt";
 import BuilderConsolePanel from "@/components/builder/BuilderConsolePanel";
 import BuilderStatusBar from "@/components/builder/BuilderStatusBar";
 
-import { useRegisterAiPage } from "@/providers/AiContextProvider";
+import { useBindAiTool } from "@/providers/AiContextProvider";
 import { applyBuilderSpec, builderSnapshot } from "@/lib/ai/builder-spec";
 
 import { useAppStore } from "@/store/useAppStore";
@@ -634,7 +634,7 @@ export default function ApiBuilder() {
   activeEnvRef.current = activeEnv;
   setActiveReqRef.current = setActiveReq;
 
-  useRegisterAiPage("api-builder", {
+  useBindAiTool("api-builder", {
     getSnapshot: () => {
       const tabId = activeTabIdRef.current;
       const req = activeReqRef.current;
@@ -653,12 +653,11 @@ export default function ApiBuilder() {
         testResults: builderSession.testResults,
       });
     },
-    actionHandlers: {
+    bindings: {
       "builder.apply_draft": (payload) => {
         const req = activeReqRef.current;
         const tabId = activeTabIdRef.current;
         if (!req || !tabId) throw new Error("No request open.");
-        if (!payload?.spec) throw new Error("Missing spec in payload.");
         setActiveReqRef.current(applyBuilderSpec(req, payload.spec));
         return { message: "Draft updated — review the request and save when ready." };
       },

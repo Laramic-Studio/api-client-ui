@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections } from "@/lib/store/selectors";
-import { useRegisterAiPage } from "@/providers/AiContextProvider";
+import { useBindAiTool } from "@/providers/AiContextProvider";
 import { summarizeRequestForAi } from "@/lib/ai/snapshot";
 import { useNavigate } from "react-router-dom";
 import MethodBadge from "@/components/shared/MethodBadge";
@@ -47,7 +47,7 @@ export default function Collections() {
     .filter((c) => (showArchived ? c.archived : !c.archived))
     .filter((c) => c.name.toLowerCase().includes(q.toLowerCase()));
 
-  useRegisterAiPage("collections", {
+  useBindAiTool("collections", {
     getSnapshot: () => ({
       collectionCount: filtered.length,
       collections: filtered.map((c) => ({

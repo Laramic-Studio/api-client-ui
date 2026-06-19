@@ -1,6 +1,17 @@
-export function buildAiContextBundle({ route, user, workspace, team, pageContext, catalog }) {
+export function buildAiContextBundle({
+  route,
+  pageId,
+  user,
+  workspace,
+  team,
+  layout,
+  pageContext,
+  catalog,
+  availableTools,
+}) {
   return {
     route: route || "/",
+    pageId: pageId || null,
     timestamp: new Date().toISOString(),
     user: user
       ? { id: user.id, name: user.name, email: user.email }
@@ -11,8 +22,10 @@ export function buildAiContextBundle({ route, user, workspace, team, pageContext
     team: team
       ? { id: team.id, name: team.name, role: team.role }
       : null,
+    layout: layout || null,
     catalog: catalog || null,
     page: pageContext || null,
+    availableTools: availableTools || [],
   };
 }
 

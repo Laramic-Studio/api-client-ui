@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ConduitCanvas from "@/components/conduits/ConduitCanvas";
 import ConduitStepEditor from "@/components/conduits/ConduitStepEditor";
 import ConduitRunPanel from "@/components/conduits/ConduitRunPanel";
 import ImportFromCollection from "@/components/conduits/ImportFromCollection";
 import ConduitVisibilityPicker from "@/components/conduits/ConduitVisibilityPicker";
+import { useAppStore } from "@/store/useAppStore";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import {
   Select,
@@ -29,6 +30,7 @@ export default function ConduitEditor({
   selectedEnv,
   envs,
   onEnvChange,
+  editorActionsRef,
 }) {
   const [selectedStepId, setSelectedStepId] = useState(null);
   const [connectMode, setConnectMode] = useState(false);
@@ -39,6 +41,15 @@ export default function ConduitEditor({
   const canEdit = conduit.canEdit !== false;
   const { data: runs = [] } = useConduitRuns(conduit.id);
   const storeRun = useStoreConduitRun(conduit.id);
+
+  useEffect(() => {
+    const pending = useAppStore.getState().aiConduitRunResult;
+    if (pending?.conduitId === conduit.id && pending.result) {
+      setLiveResult(pending.result);
+      setSelectedRun(null);
+      useAppStore.getState().clearAiConduitRunResult();
+    }
+  }, [conduit.id]);
 
   const selectedStep = conduit.steps.find((s) => s.id === selectedStepId) || null;
 
@@ -55,12 +66,17 @@ export default function ConduitEditor({
     patch({ steps: conduit.steps.map((s) => (s.id === id ? { ...s, position } : s)) });
   };
 
-  const addStep = () => {
+  const addStep = useCallback((name) => {
     const id = crypto.randomUUID();
-    const step = { ...createEmptyStep(conduit.steps.length), id };
+    const step = {
+      ...createEmptyStep(conduit.steps.length),
+      id,
+      ...(name ? { name } : {}),
+    };
     patch({ steps: [...conduit.steps, step] });
     setSelectedStepId(id);
-  };
+    return id;
+  }, [conduit.steps, patch]);
 
   const importRequest = (request) => {
     const id = crypto.randomUUID();
@@ -89,6 +105,42 @@ export default function ConduitEditor({
   const deleteEdge = (edgeId) => {
     patch({ layout: { edges: (conduit.layout?.edges || []).filter((e) => e.id !== edgeId) } });
   };
+
+  const setEdges = useCallback((edges) => {
+    patch({ layout: { edges } });
+  }, [patch]);
+
+  const updateStepById = useCallback((stepId, stepPatch) => {
+    const step = conduit.steps.find((s) => s.id === stepId);
+    if (!step) return;
+    updateStep({ ...step, ...stepPatch });
+  }, [conduit.steps, updateStep]);
+
+  useEffect(() => {
+    if (!editorActionsRef) return undefined;
+    editorActionsRef.current = {
+      getSelectedStepId: () => selectedStepId,
+      selectStep: setSelectedStepId,
+      addEmptyStep: (name) => addStep(name),
+      deleteStep,
+      connect,
+      moveStep,
+      updateStep: updateStepById,
+      setEdges,
+    };
+    return () => {
+      if (editorActionsRef.current) editorActionsRef.current = null;
+    };
+  }, [
+    editorActionsRef,
+    selectedStepId,
+    addStep,
+    deleteStep,
+    connect,
+    moveStep,
+    updateStepById,
+    setEdges,
+  ]);
 
   const handleRun = async () => {
     if (!conduit.steps.length) {

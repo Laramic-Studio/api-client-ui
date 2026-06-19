@@ -1,19 +1,21 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { aiToolRegistry } from "@/ai-tools";
 import { useAppStore } from "@/store/useAppStore";
 import { useAiContext } from "@/providers/AiContextProvider";
 import { aiChat, createAbortController, isCancelledError } from "@/lib/api/ai";
 import { loadAiCatalogExtras } from "@/lib/ai/catalog";
-import { getAiAction } from "@/lib/ai/actions/registry";
-import { stripActionsBlock } from "@/lib/ai/format";
+import { autoRunProposedActions } from "@/lib/ai/auto-run";
+import { finalizeAssistantContent, stripActionsBlock } from "@/lib/ai/format";
 import { nanoUid } from "@/lib/generators";
 
 export function useAiChat() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
-  const { getContextBundle, executePageAction } = useAiContext();
+  const { getContextBundle, executeAction } = useAiContext();
   const user = useAppStore((s) => s.user);
   const ai = useAppStore((s) => s.aiSettings);
   const appendMessage = useAppStore((s) => s.appendAiMessage);
@@ -54,6 +56,7 @@ export function useAiChat() {
           ...baseContext.catalog,
           ...catalogExtras,
         },
+        availableTools: aiToolRegistry.getManifest(location.pathname),
       };
 
       const { full, proposedActions } = await aiChat({
@@ -63,7 +66,10 @@ export function useAiChat() {
         ai,
         signal: controller.signal,
         onDelta: (_delta, fullText) => {
-          updateMessage(assistantId, { content: stripActionsBlock(fullText), streaming: true });
+          updateMessage(assistantId, {
+            content: finalizeAssistantContent(fullText, []),
+            streaming: true,
+          });
         },
         onActions: (actions) => {
           updateMessage(assistantId, { proposedActions: actions });
@@ -75,6 +81,20 @@ export function useAiChat() {
         streaming: false,
         proposedActions: proposedActions || [],
       });
+
+      if (proposedActions?.length) {
+        const autoRan = await autoRunProposedActions(proposedActions, {
+          executeAction,
+          navigate,
+          appendMessage,
+        });
+        if (autoRan.ran > 0) {
+          updateMessage(assistantId, {
+            proposedActions: proposedActions.filter((a) => a.risk !== "low"),
+          });
+        }
+      }
+
       bumpUsage("chat");
     } catch (e) {
       if (isCancelledError(e)) {
@@ -93,21 +113,18 @@ export function useAiChat() {
   };
 
   const runAction = async (action) => {
-    const globalHandler = getAiAction(action.type);
     setRunningActionId(action.id);
 
     try {
-      if (globalHandler) {
-        globalHandler.validate?.(action.payload);
-        const result = await globalHandler.execute(action.payload, { navigate });
-        appendMessage({
-          role: "system",
-          content: result?.message || `${action.label} completed.`,
-        });
-        return;
+      if (!aiToolRegistry.isAllowed(action.type, location.pathname)) {
+        throw new Error(`Action "${action.type}" is not available on this page.`);
       }
 
-      const result = await executePageAction(action.type, action.payload, { navigate });
+      const result = await executeAction(action.type, action.payload || {}, {
+        navigate,
+        route: location.pathname,
+      });
+
       appendMessage({
         role: "system",
         content: result?.message || `${action.label} completed.`,
@@ -142,4 +159,4 @@ export function useAiChat() {
       if (msg) dismissAction(msg.id, actionId);
     },
   };
-}
+};
