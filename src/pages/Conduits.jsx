@@ -9,6 +9,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { useBindAiTool } from "@/providers/AiContextProvider";
 import { createConduitAiBindings } from "@/ai-tools/conduit-bindings";
 import { summarizeConduitStepForAi } from "@/lib/ai/snapshot";
+import { resolveBuilderOpenRequest } from "@/lib/conduits/ai-utils";
 import {
   useConduits,
   useCreateConduit,
@@ -112,6 +113,11 @@ export default function Conduits() {
       const conduit = activeConduitRef.current;
       if (conduit) {
         const selectedStepId = editorActionsRef.current?.getSelectedStepId?.() ?? null;
+        const selectedStep = selectedStepId
+          ? conduit.steps.find((s) => s.id === selectedStepId)
+          : null;
+        const builderRequest = resolveBuilderOpenRequest();
+
         return {
           view: "editor",
           conduit: {
@@ -123,14 +129,34 @@ export default function Conduits() {
             selectedEnvironmentId: selectedEnvRef.current?.id || null,
             selectedEnvironmentName: selectedEnvRef.current?.name || null,
             selectedStepId,
-            steps: conduit.steps.map(summarizeConduitStepForAi),
+            selectedStep: selectedStep
+              ? summarizeConduitStepForAi(selectedStep, { selected: true })
+              : null,
+            steps: conduit.steps.map((s) => summarizeConduitStepForAi(s, {
+              selected: s.id === selectedStepId,
+            })),
             edges: (conduit.layout?.edges || []).map((edge) => ({
               id: edge.id,
               source: edge.source,
               target: edge.target,
+              sourceName: conduit.steps.find((s) => s.id === edge.source)?.name || null,
+              targetName: conduit.steps.find((s) => s.id === edge.target)?.name || null,
             })),
           },
+          builderOpenRequest: builderRequest
+            ? {
+              id: builderRequest.id,
+              name: builderRequest.name,
+              method: builderRequest.method,
+              url: builderRequest.url,
+            }
+            : null,
           environments: envs.map((e) => ({ id: e.id, name: e.name })),
+          hints: {
+            updateStep: "When user edits a step field, use conduit.update_step with patch.set_param / patch.url on selectedStep (no step_id needed).",
+            connectSteps: "Use step names in connect_to or connect_steps — do not ask for UUIDs.",
+            addCurrentRequest: 'Use conduit.add_step_from_request with use_current_request:true and connect_to:"step name".',
+          },
         };
       }
 

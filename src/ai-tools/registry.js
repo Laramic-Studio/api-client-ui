@@ -65,6 +65,23 @@ class AiToolRegistry {
    * @param {string} route
    */
   getManifest(route) {
+    return this.#buildManifest(route, { forChat: false });
+  }
+
+  /**
+   * Chat manifest — global actions, current-page actions, and chainable cross-page actions.
+   * Omits descriptions on chainable actions from other pages to save tokens.
+   * @param {string} route
+   */
+  getManifestForChat(route) {
+    return this.#buildManifest(route, { forChat: true });
+  }
+
+  /**
+   * @param {string} route
+   * @param {{ forChat: boolean }} options
+   */
+  #buildManifest(route, { forChat }) {
     const currentPageId = resolveAiPageId(route);
     /** @type {Array<Record<string, unknown>>} */
     const manifest = [];
@@ -76,19 +93,57 @@ class AiToolRegistry {
 
         const ready = this.#isReady(registered, currentPageId);
         const chainable = registered.scope === "page" && entry.risk === "low";
-        manifest.push({
-          ...entry,
-          tool: tool.id,
-          scope: registered.scope,
-          pageId: registered.pageId || null,
+        const onCurrentPage = registered.pageId === currentPageId;
+        const isGlobal = registered.scope === "global";
+
+        if (forChat && !isGlobal && !onCurrentPage && !chainable) {
+          continue;
+        }
+
+        const compact = forChat && chainable && !onCurrentPage;
+        manifest.push(this.#manifestEntry({
+          entry,
+          registered,
+          toolId: tool.id,
           ready,
-          autoRun: entry.risk === "low" && (ready || chainable),
           chainable,
-        });
+          compact,
+        }));
       }
     }
 
     return manifest;
+  }
+
+  /**
+   * @param {object} args
+   * @param {Record<string, unknown>} args.entry
+   * @param {{ scope: string, pageId?: string }} args.registered
+   * @param {string} args.toolId
+   * @param {boolean} args.ready
+   * @param {boolean} args.chainable
+   * @param {boolean} [args.compact]
+   */
+  #manifestEntry({ entry, registered, toolId, ready, chainable, compact = false }) {
+    const base = {
+      type: entry.type,
+      label: entry.label,
+      risk: entry.risk,
+      payload: entry.payload || null,
+      tool: toolId,
+      scope: registered.scope,
+      pageId: registered.pageId || null,
+      ready,
+      autoRun: entry.risk === "low" && (ready || chainable),
+      chainable,
+    };
+
+    if (compact) return base;
+
+    return {
+      ...base,
+      description: entry.description || null,
+    };
   }
 
   /** @param {string} route */

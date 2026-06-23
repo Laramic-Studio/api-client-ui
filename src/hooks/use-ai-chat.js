@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { aiToolRegistry } from "@/ai-tools";
 import { useAppStore } from "@/store/useAppStore";
 import { useAiContext } from "@/providers/AiContextProvider";
 import { aiChat, createAbortController, isCancelledError } from "@/lib/api/ai";
 import { loadAiCatalogExtras } from "@/lib/ai/catalog";
+import { buildChatHistoryForModel } from "@/lib/ai/context";
 import { autoRunProposedActions, runApprovedAction } from "@/lib/ai/auto-run";
 import { finalizeAssistantContent, stripActionsBlock, truncatePromptForDisplay } from "@/lib/ai/format";
 import { nanoUid } from "@/lib/generators";
@@ -23,7 +23,6 @@ function clearAssistantStep(updateMessage, assistantId) {
 
 export function useAiChat() {
   const navigate = useNavigate();
-  const location = useLocation();
   const queryClient = useQueryClient();
   const { getContextBundle, executeAction } = useAiContext();
   const user = useAppStore((s) => s.user);
@@ -58,10 +57,9 @@ export function useAiChat() {
   };
 
   runTurnRef.current = async (text, { appendUser = true } = {}) => {
-    const history = [
-      ...useAppStore.getState().aiMessages.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user", content: text },
-    ];
+    const history = buildChatHistoryForModel(useAppStore.getState().aiMessages, {
+      pendingUser: text,
+    });
 
     if (appendUser) {
       appendMessage({
@@ -124,7 +122,6 @@ export function useAiChat() {
           ...baseContext.catalog,
           ...catalogExtras,
         },
-        availableTools: aiToolRegistry.getManifest(location.pathname),
       };
 
       const { full, proposedActions } = await aiChat({

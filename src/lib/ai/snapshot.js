@@ -76,6 +76,28 @@ export function summarizeResponseForAi(response) {
   };
 }
 
+/** Lightweight index for chat context — id, name, method, url only. */
+export function summarizeRequestIndexForAi(req) {
+  if (!req) return null;
+  return {
+    id: req.id,
+    name: req.name,
+    method: req.method,
+    url: req.url,
+  };
+}
+
+export function summarizeCollectionsIndexForAi(collections) {
+  return (collections || []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    archived: Boolean(c.archived),
+    requestCount: (c.requests || []).length,
+    requests: (c.requests || []).map((r) => summarizeRequestIndexForAi(r)),
+  }));
+}
+
+/** Full request detail — use in page snapshots, not the global catalog. */
 export function summarizeCollectionsForAi(collections) {
   return (collections || []).map((c) => ({
     id: c.id,
@@ -101,13 +123,23 @@ export function summarizeConduitsForAi(conduits) {
   }));
 }
 
-export function summarizeConduitStepForAi(step) {
+export function summarizeConduitStepForAi(step, { selected = false } = {}) {
   return {
     id: step.id,
     name: step.name,
     method: step.method,
     url: step.url,
     requestId: step.requestId,
+    params: (step.params || [])
+      .filter((p) => p.enabled !== false && p.key)
+      .map((p) => ({ key: p.key, value: p.value })),
+    headers: (step.headers || [])
+      .filter((h) => h.enabled !== false && h.key)
+      .slice(0, 12)
+      .map((h) => ({ key: h.key, value: h.value })),
+    body: step.body?.type && step.body.type !== "none"
+      ? { type: step.body.type, preview: String(step.body.content || "").slice(0, 400) }
+      : null,
     extractions: (step.extractions || []).map((ext) => ({
       path: ext.path,
       variable: ext.variable,
@@ -115,6 +147,7 @@ export function summarizeConduitStepForAi(step) {
     })),
     condition: step.condition,
     sortOrder: step.sortOrder,
+    selected,
   };
 }
 

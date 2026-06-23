@@ -21,12 +21,14 @@ export const conduitsTool = defineTool({
 
     "conduit.add_step_from_request": defineAction({
       label: "Add step from request",
-      description: "Import a saved collection request onto the canvas",
+      description: "Import a saved collection request onto the canvas; optionally connect to another step by name in the same action",
       risk: "low",
       requiresBinding: true,
-      payloadHint: '{"request_id":"<uuid>"}',
+      payloadHint: '{"request_id":"<uuid>","use_current_request":true,"connect_to":"comment"}',
       validate(payload) {
-        if (!payload?.request_id) throw new Error("request_id is required.");
+        if (!payload?.request_id && !payload?.use_current_request && !payload?.use_builder_request) {
+          throw new Error("request_id or use_current_request is required.");
+        }
       },
     }),
 
@@ -76,39 +78,42 @@ export const conduitsTool = defineTool({
 
     "conduit.update_step": defineAction({
       label: "Update step",
-      description: "Patch step fields: name, method, url, headers, body, auth, extractions, condition",
+      description: "Patch the selected step (or match by name). Use patch.set_param, patch.set_header, patch.url, patch.method, patch.body, extractions, condition",
       risk: "low",
       requiresBinding: true,
-      payloadHint: '{"step_id":"<uuid>","patch":{"extractions":[{"path":"id","variable":"post_id","passes":[]}]}}',
+      payloadHint: '{"patch":{"set_param":{"key":"userId","value":"10"}}} | {"step_ref":"comment","patch":{"url":"..."}}',
       validate(payload) {
-        if (!payload?.step_id || !payload?.patch || typeof payload.patch !== "object") {
-          throw new Error("step_id and patch object are required.");
+        if (!payload?.patch || typeof payload.patch !== "object") {
+          throw new Error("patch object is required.");
         }
       },
     }),
 
     "conduit.connect_steps": defineAction({
       label: "Connect steps",
-      description: "Add a canvas edge from source step to target step",
+      description: "Add a canvas edge — source/target accept step id or partial step name",
       risk: "low",
       requiresBinding: true,
-      payloadHint: '{"source_id":"<uuid>","target_id":"<uuid>"}',
+      payloadHint: '{"source":"get todos","target":"comment"}',
       validate(payload) {
-        if (!payload?.source_id || !payload?.target_id) {
-          throw new Error("source_id and target_id are required.");
+        const hasSource = payload?.source_id || payload?.source || payload?.source_name || payload?.from;
+        const hasTarget = payload?.target_id || payload?.target || payload?.target_name || payload?.to;
+        if (!hasSource || !hasTarget) {
+          throw new Error("source and target (id or step name) are required.");
         }
       },
     }),
 
     "conduit.chain_steps": defineAction({
       label: "Chain steps in order",
-      description: "Connect multiple steps sequentially (step_ids[0]→[1]→[2]…)",
+      description: "Connect multiple steps sequentially — ids or partial step names",
       risk: "low",
       requiresBinding: true,
-      payloadHint: '{"step_ids":["<uuid>","<uuid>"]}',
+      payloadHint: '{"step_refs":["get post","comment","create todo"]}',
       validate(payload) {
-        if (!Array.isArray(payload?.step_ids) || payload.step_ids.length < 2) {
-          throw new Error("step_ids must be an array with at least 2 ids.");
+        const refs = payload?.step_ids || payload?.step_refs || payload?.steps;
+        if (!Array.isArray(refs) || refs.length < 2) {
+          throw new Error("step_refs (or step_ids) must have at least 2 entries.");
         }
       },
     }),

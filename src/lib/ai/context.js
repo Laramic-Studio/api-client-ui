@@ -1,3 +1,27 @@
+const DEFAULT_MAX_HISTORY_MESSAGES = 24;
+
+/**
+ * Build LLM message history — excludes system messages and caps length.
+ * @param {Array<{ role: string, content?: string }>} messages
+ * @param {{ maxMessages?: number, pendingUser?: string }} [options]
+ */
+export function buildChatHistoryForModel(messages, { maxMessages = DEFAULT_MAX_HISTORY_MESSAGES, pendingUser } = {}) {
+  const eligible = (messages || [])
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .filter((m) => String(m.content || "").trim())
+    .map((m) => ({ role: m.role, content: m.content }));
+
+  const capped = eligible.length > maxMessages
+    ? eligible.slice(-maxMessages)
+    : eligible;
+
+  if (pendingUser?.trim()) {
+    return [...capped, { role: "user", content: pendingUser.trim() }];
+  }
+
+  return capped;
+}
+
 export function buildAiContextBundle({
   route,
   pageId,
@@ -39,8 +63,8 @@ export function pageSuggestions(route) {
   }
   if (route.startsWith("/conduits")) {
     return [
-      "Open my web conduit",
-      "Chain my GET post and comment requests into a flow",
+      "Add my open request to this conduit and connect it to comment",
+      "Update userId to 10 on the selected step",
       "Run this conduit",
     ];
   }

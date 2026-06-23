@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 import { aiToolRegistry } from "@/ai-tools";
 import { readCachedConduits } from "@/lib/ai/catalog";
 import { buildAiContextBundle } from "@/lib/ai/context";
-import { summarizeCollectionsForAi } from "@/lib/ai/snapshot";
+import { summarizeCollectionsIndexForAi } from "@/lib/ai/snapshot";
 import { useAppStore } from "@/store/useAppStore";
 
 const AiContext = createContext(null);
@@ -39,10 +39,10 @@ export function AiContextProvider({ children }) {
         ? { pageId, snapshot: aiToolRegistry.getPageSnapshot(route) }
         : null,
       catalog: {
-        collections: summarizeCollectionsForAi(collections),
+        collections: summarizeCollectionsIndexForAi(collections),
         conduits: readCachedConduits(queryClient, activeWorkspaceId),
       },
-      availableTools: aiToolRegistry.getManifest(route),
+      availableTools: aiToolRegistry.getManifestForChat(route),
     });
   }, [location.pathname, user, workspaces, activeWorkspaceId, currentTeam, queryClient]);
 

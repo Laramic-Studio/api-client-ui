@@ -108,9 +108,8 @@ export default function AiChat() {
       </div>
 
       <div className="shrink-0 border-t border-border bg-background relative">
-        <div className="absolute left-3 bottom-3 text-[10px] font-rowdies uppercase tracking-wider text-muted-foreground pointer-events-none z-10">
-          {ai.provider}/{ai.model}
-          {ai.useOwnKey ? " · your key" : ""}
+        <div className="absolute truncate left-3 bottom-3 text-[10px] font-rowdies uppercase tracking-wider text-muted-foreground pointer-events-none z-10">
+          <span className="truncate ">{ai.provider}/{ai.model}</span>
         </div>
 
         <textarea

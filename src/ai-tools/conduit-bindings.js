@@ -1,4 +1,11 @@
 import { requestToConduitStep } from "@/lib/api/map-conduit";
+import {
+  applyConduitStepPatch,
+  connectStepsOnConduit,
+  requireStepRef,
+  resolveBuilderOpenRequest,
+  resolveStepRef,
+} from "@/lib/conduits/ai-utils";
 import { createEmptyStep } from "@/lib/conduits/step-utils";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -11,10 +18,27 @@ function requireEditableConduit(getConduit) {
   return conduit;
 }
 
-function findStep(conduit, stepId) {
-  const step = conduit.steps.find((s) => s.id === stepId);
-  if (!step) throw new Error(`Step "${stepId}" not found.`);
-  return step;
+function resolveStepId(conduit, payload, getEditorActions) {
+  const selectedId = getEditorActions()?.getSelectedStepId?.() ?? null;
+  const ref = payload?.step_id || payload?.step_ref || payload?.step_name || payload?.name;
+
+  if (ref) {
+    return requireStepRef(conduit, ref).id;
+  }
+
+  if (selectedId && conduit.steps.some((s) => s.id === selectedId)) {
+    return selectedId;
+  }
+
+  throw new Error("step_id or step name is required — or select a step in the editor first.");
+}
+
+function resolveConnectRef(conduit, payload, keys) {
+  for (const key of keys) {
+    const value = payload?.[key];
+    if (value) return requireStepRef(conduit, value).id;
+  }
+  return null;
 }
 
 /**
@@ -34,8 +58,15 @@ export function createConduitAiBindings(ctx) {
   return {
     "conduit.add_step_from_request": (payload) => {
       const conduit = requireEditableConduit(getConduit);
-      const requestId = payload?.request_id;
-      if (!requestId) throw new Error("request_id is required.");
+      let requestId = payload?.request_id;
+
+      if (!requestId && (payload?.use_current_request || payload?.use_builder_request)) {
+        const open = resolveBuilderOpenRequest();
+        if (!open?.id) throw new Error("No saved request open in the API builder.");
+        requestId = open.id;
+      }
+
+      if (!requestId) throw new Error("request_id is required (or use use_current_request: true).");
 
       const found = useAppStore.getState().findRequest(requestId);
       if (!found.request) throw new Error(`Request "${requestId}" not found.`);
@@ -44,7 +75,34 @@ export function createConduitAiBindings(ctx) {
       const step = { ...requestToConduitStep(found.request, conduit.steps.length), id };
       patchConduit(conduit.id, { steps: [...conduit.steps, step] });
       getEditorActions()?.selectStep?.(id);
-      return { message: `Added "${found.request.name}" as a step.` };
+
+      let connectMsg = "";
+      const connectTo = payload?.connect_to || payload?.connect_to_step;
+      const connectFrom = payload?.connect_from || payload?.connect_from_step;
+
+      if (connectTo || connectFrom) {
+        const fresh = getConduit();
+        const sourceId = connectFrom
+          ? requireStepRef(fresh, connectFrom).id
+          : id;
+        const targetId = connectTo
+          ? requireStepRef(fresh, connectTo).id
+          : id;
+
+        const connected = connectStepsOnConduit(
+          fresh,
+          sourceId,
+          targetId,
+          getEditorActions()?.connect,
+          patchConduit,
+        );
+        connectMsg = connected ? ` Connected to "${connectTo || connectFrom}".` : " Already connected.";
+      }
+
+      return {
+        message: `Added "${found.request.name}" (step id: ${id}).${connectMsg}`,
+        stepId: id,
+      };
     },
 
     "conduit.add_empty_step": (payload) => {
@@ -67,9 +125,8 @@ export function createConduitAiBindings(ctx) {
 
     "conduit.delete_step": (payload) => {
       const conduit = requireEditableConduit(getConduit);
-      const stepId = payload?.step_id;
-      if (!stepId) throw new Error("step_id is required.");
-      const step = findStep(conduit, stepId);
+      const stepId = resolveStepId(conduit, payload, getEditorActions);
+      const step = resolveStepRef(conduit, stepId);
 
       if (getEditorActions()?.deleteStep) {
         getEditorActions().deleteStep(stepId);
@@ -83,26 +140,23 @@ export function createConduitAiBindings(ctx) {
           },
         });
       }
-      return { message: `Deleted step "${step.name}".` };
+      return { message: `Deleted step "${step?.name || stepId}".` };
     },
 
     "conduit.select_step": (payload) => {
-      requireEditableConduit(getConduit);
-      const stepId = payload?.step_id;
-      if (!stepId) throw new Error("step_id is required.");
-      findStep(getConduit(), stepId);
+      const conduit = requireEditableConduit(getConduit);
+      const stepId = resolveStepId(conduit, payload, getEditorActions);
       getEditorActions()?.selectStep?.(stepId);
-      return { message: "Step selected in editor." };
+      const step = resolveStepRef(conduit, stepId);
+      return { message: `Selected step "${step?.name || stepId}".` };
     },
 
     "conduit.move_step": (payload) => {
       const conduit = requireEditableConduit(getConduit);
-      const stepId = payload?.step_id;
-      if (!stepId) throw new Error("step_id is required.");
+      const stepId = resolveStepId(conduit, payload, getEditorActions);
       if (typeof payload?.x !== "number" || typeof payload?.y !== "number") {
         throw new Error("x and y numbers are required.");
       }
-      findStep(conduit, stepId);
 
       if (getEditorActions()?.moveStep) {
         getEditorActions().moveStep(stepId, { x: payload.x, y: payload.y });
@@ -118,18 +172,20 @@ export function createConduitAiBindings(ctx) {
 
     "conduit.update_step": (payload) => {
       const conduit = requireEditableConduit(getConduit);
-      const stepId = payload?.step_id;
+      const stepId = resolveStepId(conduit, payload, getEditorActions);
       const patch = payload?.patch;
-      if (!stepId || !patch || typeof patch !== "object") {
-        throw new Error("step_id and patch object are required.");
+      if (!patch || typeof patch !== "object") {
+        throw new Error("patch object is required.");
       }
-      const step = findStep(conduit, stepId);
+
+      const step = resolveStepRef(conduit, stepId);
+      const next = applyConduitStepPatch(step, patch);
 
       if (getEditorActions()?.updateStep) {
-        getEditorActions().updateStep(stepId, patch);
+        getEditorActions().updateStep(stepId, next);
       } else {
         patchConduit(conduit.id, {
-          steps: conduit.steps.map((s) => (s.id === stepId ? { ...s, ...patch } : s)),
+          steps: conduit.steps.map((s) => (s.id === stepId ? next : s)),
         });
       }
       return { message: `Updated step "${step.name}".` };
@@ -137,36 +193,44 @@ export function createConduitAiBindings(ctx) {
 
     "conduit.connect_steps": (payload) => {
       const conduit = requireEditableConduit(getConduit);
-      const { source_id: sourceId, target_id: targetId } = payload || {};
-      if (!sourceId || !targetId) throw new Error("source_id and target_id are required.");
-      findStep(conduit, sourceId);
-      findStep(conduit, targetId);
+      const sourceId = resolveConnectRef(conduit, payload, [
+        "source_id",
+        "source",
+        "source_name",
+        "from",
+      ]);
+      const targetId = resolveConnectRef(conduit, payload, [
+        "target_id",
+        "target",
+        "target_name",
+        "to",
+      ]);
 
-      const edges = conduit.layout?.edges || [];
-      if (edges.some((e) => e.source === sourceId && e.target === targetId)) {
-        return { message: "Steps are already connected." };
+      if (!sourceId || !targetId) {
+        throw new Error("source and target (id or step name) are required.");
       }
 
-      if (getEditorActions()?.connect) {
-        getEditorActions().connect(sourceId, targetId);
-      } else {
-        patchConduit(conduit.id, {
-          layout: { edges: [...edges, { id: crypto.randomUUID(), source: sourceId, target: targetId }] },
-        });
-      }
-      return { message: "Connected steps." };
+      const connected = connectStepsOnConduit(
+        conduit,
+        sourceId,
+        targetId,
+        getEditorActions()?.connect,
+        patchConduit,
+      );
+      return { message: connected ? "Connected steps." : "Steps are already connected." };
     },
 
     "conduit.chain_steps": (payload) => {
       const conduit = requireEditableConduit(getConduit);
-      const stepIds = payload?.step_ids;
-      if (!Array.isArray(stepIds) || stepIds.length < 2) {
-        throw new Error("step_ids array with at least 2 ids is required.");
+      const refs = payload?.step_ids || payload?.step_refs || payload?.steps;
+      if (!Array.isArray(refs) || refs.length < 2) {
+        throw new Error("step_ids or step_refs array with at least 2 entries is required.");
       }
-      stepIds.forEach((id) => findStep(conduit, id));
 
+      const stepIds = refs.map((ref) => requireStepRef(conduit, ref).id);
       let edges = [...(conduit.layout?.edges || [])];
       let added = 0;
+
       for (let i = 0; i < stepIds.length - 1; i += 1) {
         const sourceId = stepIds[i];
         const targetId = stepIds[i + 1];
@@ -174,6 +238,7 @@ export function createConduitAiBindings(ctx) {
         edges.push({ id: crypto.randomUUID(), source: sourceId, target: targetId });
         added += 1;
       }
+
       patchConduit(conduit.id, { layout: { edges } });
       return { message: added ? `Chained ${added} connection(s).` : "Steps were already chained." };
     },
@@ -181,18 +246,20 @@ export function createConduitAiBindings(ctx) {
     "conduit.disconnect_steps": (payload) => {
       const conduit = requireEditableConduit(getConduit);
       const edges = conduit.layout?.edges || [];
-      const { edge_id: edgeId, source_id: sourceId, target_id: targetId, step_id: stepId } = payload || {};
+      const { edge_id: edgeId, step_id: stepIdRef } = payload || {};
+      const sourceId = resolveConnectRef(conduit, payload, ["source_id", "source", "source_name"]);
+      const targetId = resolveConnectRef(conduit, payload, ["target_id", "target", "target_name"]);
 
       let next = edges;
       if (edgeId) {
         next = edges.filter((e) => e.id !== edgeId);
       } else if (sourceId && targetId) {
         next = edges.filter((e) => !(e.source === sourceId && e.target === targetId));
-      } else if (stepId) {
-        findStep(conduit, stepId);
+      } else if (stepIdRef) {
+        const stepId = requireStepRef(conduit, stepIdRef).id;
         next = edges.filter((e) => e.source !== stepId && e.target !== stepId);
       } else {
-        throw new Error("Provide edge_id, source_id+target_id, or step_id.");
+        throw new Error("Provide edge_id, source+target (name or id), or step_id.");
       }
 
       const removed = edges.length - next.length;
