@@ -5,8 +5,9 @@ import { useAppStore } from "@/store/useAppStore";
 import AccountTypePicker from "@/components/onboarding/AccountTypePicker";
 import CompanyDetailsForm from "@/components/onboarding/CompanyDetailsForm";
 import WorkspaceNotice from "@/components/onboarding/WorkspaceNotice";
+import { authButtonClass } from "@/components/auth/AuthField";
+import { toastAuthSuccess, toastAuthValidation } from "@/lib/auth/toast";
 import { TEAM_SIZES } from "@/components/onboarding/constants";
-import { toast } from "sonner";
 
 export default function Onboarding() {
   const currentTeam = useAppStore((s) => s.currentTeam);
@@ -19,7 +20,7 @@ export default function Onboarding() {
 
   const submit = () => {
     if (type === "company" && !companyName.trim()) {
-      toast.error("Add a company name");
+      toastAuthValidation("Add a company name");
       return;
     }
 
@@ -28,7 +29,7 @@ export default function Onboarding() {
       : null;
 
     complete({ accountType: type, company });
-    toast.success("All set — welcome to Noidr");
+    toastAuthSuccess("All set — welcome to Noidr");
   };
 
   const personalTeamName = currentTeam?.name || currentTeam?.slug;
@@ -62,7 +63,7 @@ export default function Onboarding() {
         <Button
           onClick={submit}
           data-testid="onboarding-submit"
-          className="w-full h-10 bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-white font-medium"
+          className={authButtonClass}
         >
           Finish setup
         </Button>

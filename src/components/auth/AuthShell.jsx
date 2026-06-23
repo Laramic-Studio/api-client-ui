@@ -20,10 +20,11 @@ export function AuthLink({ to, children, className, ...props }) {
 
 function AuthBrand() {
   return (
-    <Link to="/" className="inline-flex shrink-0" aria-label="Noidr home">
+    <Link to="/" className="inline-flex shrink-0  gap-2" aria-label="Noidr home">
       <div className="grid h-8 w-8 place-items-center rounded-md bg-[hsl(var(--brand))] shadow-[0_0_20px_hsl(var(--brand)/0.35)]">
-        <StackedLogo size={16} color="#fff" />
+        <StackedLogo size={16} color="#fff" /> 
       </div>
+      <span className="text-2xl font-bold">Noidr</span>
     </Link>
   );
 }

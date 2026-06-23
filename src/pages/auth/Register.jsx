@@ -3,22 +3,20 @@ import { useNavigate } from "react-router-dom";
 import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
 import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import PasswordInput from "@/components/auth/PasswordInput";
+import PasswordMeter from "@/components/auth/PasswordMeter";
 import SocialButtons from "@/components/auth/SocialButtons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ApiError } from "@/lib/api/http";
 import { authDestination } from "@/lib/auth/routes";
-import { getErrorMessage, useRegister } from "@/hooks/use-auth";
+import {
+  collectFieldErrors,
+  toastAuthError,
+  toastAuthSuccess,
+  toastAuthValidation,
+} from "@/lib/auth/toast";
+import { useRegister } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-
-function fieldError(err, field) {
-  if (!(err instanceof ApiError)) return null;
-  const messages = err.payload?.errors?.[field];
-  if (Array.isArray(messages) && messages[0]) return messages[0];
-  return null;
-}
 
 export default function Register() {
   const register = useRegister();
@@ -33,7 +31,12 @@ export default function Register() {
     setErrors({});
 
     if (!name || !email || !password) {
-      toast.error("All fields are required");
+      toastAuthValidation("All fields are required");
+      return;
+    }
+
+    if (password.length < 8) {
+      toastAuthValidation("Password must be at least 8 characters");
       return;
     }
 
@@ -41,20 +44,13 @@ export default function Register() {
       { name, email, password, password_confirmation: password },
       {
         onSuccess: (user) => {
-          toast.success("Account created — check your email for a verification code");
+          toastAuthSuccess("Account created — check your email for a verification code");
           navigate(authDestination(user), { replace: true });
         },
         onError: (err) => {
-          const next = {
-            name: fieldError(err, "name"),
-            email: fieldError(err, "email"),
-            password: fieldError(err, "password"),
-          };
-          setErrors(Object.fromEntries(Object.entries(next).filter(([, v]) => v)));
-
-          if (!next.email && !next.name && !next.password) {
-            toast.error(getErrorMessage(err, "Could not create account."));
-          }
+          const next = collectFieldErrors(err, ["name", "email", "password"]);
+          setErrors(next);
+          toastAuthError(err, "Could not create account.", next);
         },
       },
     );
@@ -104,7 +100,6 @@ export default function Register() {
           required
           htmlFor="password"
           error={errors.password}
-          hint="Must be at least 8 characters."
         >
           <PasswordInput
             id="password"
@@ -115,6 +110,7 @@ export default function Register() {
             placeholder="Create a password"
             autoComplete="new-password"
           />
+          <PasswordMeter password={password} className="mt-2" />
         </AuthField>
 
         <Button

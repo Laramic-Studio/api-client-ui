@@ -3,9 +3,13 @@ import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
 import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getErrorMessage, useForgotPassword } from "@/hooks/use-auth";
+import {
+  toastAuthError,
+  toastAuthSuccess,
+  toastAuthValidation,
+} from "@/lib/auth/toast";
+import { useForgotPassword } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
-import { toast } from "sonner";
 
 export default function ForgotPassword() {
   const forgotPassword = useForgotPassword();
@@ -14,17 +18,20 @@ export default function ForgotPassword() {
 
   const onSubmit = (e) => {
     e.preventDefault();
-    if (!email) return toast.error("Enter your email");
+    if (!email) {
+      toastAuthValidation("Enter your email");
+      return;
+    }
 
     forgotPassword.mutate(
       { email },
       {
         onSuccess: () => {
           setSent(true);
-          toast.success("If that email exists, we sent a reset link.");
+          toastAuthSuccess("If that email exists, we sent a reset link.");
         },
         onError: (err) => {
-          toast.error(getErrorMessage(err, "Could not send reset link."));
+          toastAuthError(err, "Could not send reset link.");
         },
       },
     );

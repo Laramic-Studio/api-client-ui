@@ -8,9 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authDestination } from "@/lib/auth/routes";
-import { getErrorMessage, useLogin } from "@/hooks/use-auth";
+import {
+  toastAuthError,
+  toastAuthSuccess,
+  toastAuthValidation,
+} from "@/lib/auth/toast";
+import { useLogin } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
-import { toast } from "sonner";
 
 export default function Login() {
   const login = useLogin();
@@ -23,7 +27,7 @@ export default function Login() {
   const onSubmit = (e) => {
     e.preventDefault();
     if (!email || !password) {
-      toast.error("Please enter email and password");
+      toastAuthValidation("Please enter email and password");
       return;
     }
 
@@ -31,11 +35,11 @@ export default function Login() {
       { email, password, remember },
       {
         onSuccess: (user) => {
-          toast.success("Welcome back to Noidr");
+          toastAuthSuccess("Welcome back to Noidr");
           navigate(authDestination(user, location.state?.from), { replace: true });
         },
         onError: (err) => {
-          toast.error(getErrorMessage(err, "Could not sign in. Try again."));
+          toastAuthError(err, "Could not sign in. Try again.");
           if (import.meta.env.DEV) {
             console.error("[auth/login]", err);
           }

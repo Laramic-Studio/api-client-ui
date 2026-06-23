@@ -1,12 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthShell from "@/components/auth/AuthShell";
 import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
-import { getErrorMessage, useResetPassword } from "@/hooks/use-auth";
+import {
+  toastAuthError,
+  toastAuthSuccess,
+  toastAuthValidation,
+} from "@/lib/auth/toast";
+import { useResetPassword } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
-import { toast } from "sonner";
 
 export default function ResetPassword() {
   const resetPassword = useResetPassword();
@@ -19,19 +23,28 @@ export default function ResetPassword() {
 
   const hasToken = useMemo(() => Boolean(token && email), [token, email]);
 
+  useEffect(() => {
+    if (!hasToken) {
+      toastAuthValidation("This reset link is invalid or has expired.");
+    }
+  }, [hasToken]);
+
   const onSubmit = (e) => {
     e.preventDefault();
-    if (password.length < 8) return toast.error("Use at least 8 characters");
+    if (password.length < 8) {
+      toastAuthValidation("Use at least 8 characters");
+      return;
+    }
 
     resetPassword.mutate(
       { token, email, password, password_confirmation: password },
       {
         onSuccess: () => {
-          toast.success("Password updated — sign in with your new password.");
+          toastAuthSuccess("Password updated — sign in with your new password.");
           navigate("/login", { replace: true });
         },
         onError: (err) => {
-          toast.error(getErrorMessage(err, "Could not reset password."));
+          toastAuthError(err, "Could not reset password.");
         },
       },
     );

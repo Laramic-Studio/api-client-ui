@@ -5,8 +5,12 @@ import VerifyEmailForm from "@/components/auth/VerifyEmailForm";
 import { useAppStore } from "@/store/useAppStore";
 import { getAccessToken } from "@/lib/auth/tokens";
 import { authDestination } from "@/lib/auth/routes";
-import { getErrorMessage, useLogout, useResendVerification, useVerifyEmail } from "@/hooks/use-auth";
-import { toast } from "sonner";
+import {
+  toastAuthError,
+  toastAuthSuccess,
+  toastAuthValidation,
+} from "@/lib/auth/toast";
+import { useLogout, useResendVerification, useVerifyEmail } from "@/hooks/use-auth";
 
 export default function VerifyEmail() {
   const user = useAppStore((s) => s.user);
@@ -22,36 +26,48 @@ export default function VerifyEmail() {
     });
   };
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    if (code.length !== 6) {
-      toast.error("Enter the 6-digit code from your email");
+  const submitCode = (value) => {
+    if (verifyEmail.isPending) return;
+
+    const otp = value ?? code;
+    if (otp.length !== 6) {
+      toastAuthValidation("Enter the 6-digit code from your email");
       return;
     }
 
     verifyEmail.mutate(
-      { code },
+      { code: otp },
       {
         onSuccess: () => {
-          toast.success("Email verified.");
+          toastAuthSuccess("Email verified.");
           navigate(authDestination({ ...user, emailVerified: true }), { replace: true });
         },
-        onError: (err) => toast.error(getErrorMessage(err, "Verification failed.")),
+        onError: (err) => toastAuthError(err, "Verification failed."),
       },
     );
   };
 
+  const onSubmit = (e) => {
+    e.preventDefault();
+    submitCode(code);
+  };
+
+  const onComplete = (value) => {
+    setCode(value);
+    submitCode(value);
+  };
+
   const onResend = () => {
     if (!getAccessToken()) {
-      toast.error("Session expired. Please sign in again.");
+      toastAuthValidation("Session expired. Please sign in again.");
       goToLogin();
       return;
     }
 
     resend.mutate(undefined, {
-      onSuccess: () => toast.success("A new code was sent to your email."),
+      onSuccess: () => toastAuthSuccess("A new code was sent to your email."),
       onError: (err) => {
-        toast.error(getErrorMessage(err, "Could not resend code."));
+        toastAuthError(err, "Could not resend code.");
         if (err?.status === 401) goToLogin();
       },
     });
@@ -76,6 +92,7 @@ export default function VerifyEmail() {
         code={code}
         onCodeChange={setCode}
         onSubmit={onSubmit}
+        onComplete={onComplete}
         onResend={onResend}
         isVerifying={verifyEmail.isPending}
         isResending={resend.isPending}
