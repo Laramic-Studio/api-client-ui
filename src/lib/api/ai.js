@@ -4,7 +4,7 @@ import { createApiClient, createAbortController, isCancelledError, ApiError } fr
 import { API_URL } from "@/lib/config";
 import { getAccessToken } from "@/lib/auth/tokens";
 
-const LEGACY_AI_BASE = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
+const LEGACY_AI_BASE = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
 const aiApi = createApiClient(LEGACY_AI_BASE);
 
 function aiPayload(extra, ai, userId) {

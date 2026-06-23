@@ -35,7 +35,7 @@ export default function Login() {
         },
         onError: (err) => {
           toast.error(getErrorMessage(err, "Could not sign in. Try again."));
-          if (process.env.NODE_ENV === "development") {
+          if (import.meta.env.DEV) {
             console.error("[auth/login]", err);
           }
         },
