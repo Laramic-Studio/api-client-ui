@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
-import AuthField, { authInputClass } from "@/components/auth/AuthField";
+import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialButtons from "@/components/auth/SocialButtons";
 import { Button } from "@/components/ui/button";
@@ -121,7 +121,7 @@ export default function Register() {
           type="submit"
           disabled={register.isPending}
           data-testid={AUTH.registerSubmit}
-          className="h-11 w-full rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800"
+          className={authButtonClass}
         >
           {register.isPending ? "Creating account…" : "Get started"}
         </Button>

@@ -1,13 +1,15 @@
 // OAuth buttons — disabled until social auth API exists.
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const GOOGLE = {
   id: "google",
-  label: "Sign up with Google",
+  label: "Google",
+  signUpLabel: "Sign up with Google",
   signInLabel: "Sign in with Google",
   testid: "auth-google-button",
   icon: (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
+    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden>
       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.75h3.57c2.08-1.92 3.28-4.74 3.28-8.07z" />
       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.76c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
       <path fill="#FBBC05" d="M5.84 14.09a6.6 6.6 0 0 1 0-4.18V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z" />
@@ -18,17 +20,19 @@ const GOOGLE = {
 
 const GITHUB = {
   id: "github",
-  label: "Continue with GitHub",
+  label: "GitHub",
   testid: "auth-github-button",
   icon: (
-    <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24" aria-hidden>
+    <svg className="h-4 w-4 shrink-0 fill-current" viewBox="0 0 24 24" aria-hidden>
       <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.03-.7.08-.69.08-.69 1.14.08 1.74 1.17 1.74 1.17 1.02 1.74 2.68 1.24 3.34.95.1-.74.4-1.24.72-1.53-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.17-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.93 10.93 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.73.8 1.17 1.82 1.17 3.07 0 4.4-2.69 5.36-5.25 5.65.41.35.77 1.03.77 2.08 0 1.5-.01 2.72-.01 3.09 0 .31.2.68.8.56C20.21 21.38 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z" />
     </svg>
   ),
 };
 
+const PROVIDERS = [GOOGLE, GITHUB];
+
 const buttonClass =
-  "w-full h-11 inline-flex items-center justify-center gap-2.5 rounded-lg border border-zinc-200 bg-white text-sm font-medium text-zinc-800 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50";
+  "h-11 inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card text-sm font-medium text-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50";
 
 export default function SocialButtons({ disabled = false, variant = "stacked", mode = "signup" }) {
   const isDisabled = disabled || true;
@@ -39,38 +43,44 @@ export default function SocialButtons({ disabled = false, variant = "stacked", m
 
   if (variant === "stacked") {
     return (
-      <button
-        type="button"
-        onClick={signIn}
-        disabled={isDisabled}
-        data-testid={GOOGLE.testid}
-        className={buttonClass}
-      >
-        {GOOGLE.icon}
-        {mode === "signin" ? GOOGLE.signInLabel : GOOGLE.label}
-      </button>
+      <div className="grid grid-cols-2 gap-3">
+        {PROVIDERS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={signIn}
+            disabled={isDisabled}
+            data-testid={p.testid}
+            className={cn(buttonClass, "w-full")}
+            title={p.id === "google" ? (mode === "signin" ? GOOGLE.signInLabel : GOOGLE.signUpLabel) : "Continue with GitHub"}
+          >
+            {p.icon}
+            <span className="truncate">{p.label}</span>
+          </button>
+        ))}
+      </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {[GOOGLE, GITHUB].map((p) => (
+      {PROVIDERS.map((p) => (
         <button
           key={p.id}
           type="button"
           onClick={signIn}
           disabled={isDisabled}
           data-testid={p.testid}
-          className={buttonClass}
+          className={cn(buttonClass, "w-full")}
         >
           {p.icon}
-          {p.label}
+          {p.id === "google" ? (mode === "signin" ? GOOGLE.signInLabel : GOOGLE.signUpLabel) : "Continue with GitHub"}
         </button>
       ))}
       <div className="col-span-1 flex select-none items-center sm:col-span-2">
-        <div className="h-px flex-grow bg-zinc-200" />
-        <span className="mx-3 bg-white px-2 text-[11px] uppercase tracking-wider text-zinc-400">or</span>
-        <div className="h-px flex-grow bg-zinc-200" />
+        <div className="h-px flex-grow bg-border" />
+        <span className="mx-3 bg-background px-2 text-[11px] uppercase tracking-wider text-muted-foreground">or</span>
+        <div className="h-px flex-grow bg-border" />
       </div>
     </div>
   );

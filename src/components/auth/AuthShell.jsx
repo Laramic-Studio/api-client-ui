@@ -10,7 +10,7 @@ export function AuthLink({ to, children, className, ...props }) {
   return (
     <Link
       to={to}
-      className={cn("font-semibold text-zinc-900 hover:underline", className)}
+      className={cn("font-semibold text-[hsl(var(--brand))] hover:underline", className)}
       {...props}
     >
       {children}
@@ -21,7 +21,7 @@ export function AuthLink({ to, children, className, ...props }) {
 function AuthBrand() {
   return (
     <Link to="/" className="inline-flex shrink-0" aria-label="Noidr home">
-      <div className="grid h-8 w-8 place-items-center rounded-md bg-zinc-900">
+      <div className="grid h-8 w-8 place-items-center rounded-md bg-[hsl(var(--brand))] shadow-[0_0_20px_hsl(var(--brand)/0.35)]">
         <StackedLogo size={16} color="#fff" />
       </div>
     </Link>
@@ -34,12 +34,8 @@ function HeroPanel() {
       <img
         src={HERO_IMAGE}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover grayscale"
+        className="absolute inset-0 h-full w-full object-cover grayscale contrast-110"
       />
-      <div className="absolute inset-0 bg-black/25" />
-      <div className="absolute inset-0 flex items-center justify-center">
-        <StackedLogo size={112} color="#fff" className="drop-shadow-[0_8px_32px_rgba(0,0,0,0.45)]" />
-      </div>
     </aside>
   );
 }
@@ -48,11 +44,11 @@ function LegalFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <div className="mt-auto flex items-center justify-between gap-4 pt-10 text-xs text-zinc-400">
+    <div className="mt-auto flex w-full max-w-[400px] items-center justify-between gap-4 pt-10 text-xs text-muted-foreground">
       <span>© Noidr {year}</span>
       <a
         href="mailto:support@noidr.dev"
-        className="inline-flex items-center gap-1.5 hover:text-zinc-600 transition-colors"
+        className="inline-flex items-center gap-1.5 transition-colors hover:text-[hsl(var(--brand))]"
       >
         <Mail className="h-3.5 w-3.5" />
         support@noidr.dev
@@ -70,33 +66,35 @@ export default function AuthShell({
   backLabel = "Back",
 }) {
   return (
-    <div className="grid min-h-screen w-full grid-cols-1 bg-white text-zinc-950 lg:grid-cols-2">
-      <div className="flex min-h-screen  flex-col px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12">
-        {backTo ? (
-          <AuthLink
-            to={backTo}
-            className="mb-8 inline-flex items-center gap-1.5 text-sm font-normal text-zinc-500 no-underline hover:text-zinc-800 hover:no-underline"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {backLabel}
-          </AuthLink>
-        ) : (
-          <AuthBrand />
-        )}
+    <div className="grid min-h-screen w-full grid-cols-1 bg-background text-foreground lg:grid-cols-2">
+      <div className="flex min-h-screen flex-col items-center px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12">
+        <div className="w-full max-w-[400px]">
+          {backTo ? (
+            <AuthLink
+              to={backTo}
+              className="inline-flex items-center gap-1.5 text-sm font-normal text-muted-foreground no-underline hover:text-foreground hover:no-underline"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {backLabel}
+            </AuthLink>
+          ) : (
+            <AuthBrand />
+          )}
+        </div>
 
-        <div className="flex flex-1 flex-col justify-center py-8 lg:py-12">
-          <div className="mx-auto w-full max-w-[400px] anim-fade-up lg:mx-0">
-            <header className="mb-8">
-              <h1 className="text-[2rem] font-semibold tracking-tight text-zinc-900">{title}</h1>
+        <div className="flex w-full max-w-[400px] flex-1 flex-col justify-center py-8 lg:py-12">
+          <div className="anim-fade-up">
+            <header className="mb-8 text-start">
+              <h1 className="text-[2rem] font-semibold tracking-tight text-foreground">{title}</h1>
               {subtitle && (
-                <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
               )}
             </header>
 
             <div className="space-y-6">{children}</div>
 
             {footer && (
-              <p className="mt-8 text-center text-sm text-zinc-500 lg:text-left">{footer}</p>
+              <p className="mt-8 text-center text-sm text-muted-foreground">{footer}</p>
             )}
           </div>
         </div>

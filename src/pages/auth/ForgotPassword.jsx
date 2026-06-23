@@ -1,6 +1,6 @@
 import { useState } from "react";
 import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
-import AuthField, { authInputClass } from "@/components/auth/AuthField";
+import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage, useForgotPassword } from "@/hooks/use-auth";
@@ -38,8 +38,8 @@ export default function ForgotPassword() {
       backLabel="Back to sign in"
     >
       {sent ? (
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
-          If an account exists for <span className="font-medium text-zinc-900">{email}</span>, a reset link is on its way.
+        <div className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
+          If an account exists for <span className="font-medium text-foreground">{email}</span>, a reset link is on its way.
           <div className="mt-3">
             <AuthLink to="/login">Back to sign in →</AuthLink>
           </div>
@@ -62,7 +62,7 @@ export default function ForgotPassword() {
             type="submit"
             disabled={forgotPassword.isPending}
             data-testid={AUTH.forgotSubmit}
-            className="h-11 w-full rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800"
+            className={authButtonClass}
           >
             {forgotPassword.isPending ? "Sending…" : "Send reset link"}
           </Button>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
-import AuthField, { authInputClass } from "@/components/auth/AuthField";
+import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialButtons from "@/components/auth/SocialButtons";
 import { Button } from "@/components/ui/button";
@@ -78,7 +78,7 @@ export default function Login() {
           labelExtra={
             <Link
               to="/forgot-password"
-              className="text-xs font-normal text-zinc-500 hover:text-zinc-800"
+              className="text-xs font-normal text-muted-foreground hover:text-[hsl(var(--brand))]"
               data-testid={AUTH.loginForgot}
             >
               Forgot?
@@ -101,16 +101,16 @@ export default function Login() {
             checked={remember}
             onCheckedChange={(v) => setRemember(Boolean(v))}
             data-testid={AUTH.loginRemember}
-            className="border-zinc-300 data-[state=checked]:bg-zinc-900 data-[state=checked]:border-zinc-900"
+            className="border-border data-[state=checked]:bg-[hsl(var(--brand))] data-[state=checked]:border-[hsl(var(--brand))]"
           />
-          <span className="text-sm text-zinc-600">Remember me for 30 days</span>
+          <span className="text-sm text-muted-foreground">Remember me for 30 days</span>
         </label>
 
         <Button
           type="submit"
           disabled={login.isPending}
           data-testid={AUTH.loginSubmit}
-          className="h-11 w-full rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800"
+          className={authButtonClass}
         >
           {login.isPending ? "Signing in…" : "Sign in"}
         </Button>

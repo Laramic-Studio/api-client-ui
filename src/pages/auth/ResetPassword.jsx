@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthShell from "@/components/auth/AuthShell";
-import AuthField, { authInputClass } from "@/components/auth/AuthField";
+import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage, useResetPassword } from "@/hooks/use-auth";
@@ -45,7 +45,7 @@ export default function ResetPassword() {
         backTo="/forgot-password"
         backLabel="Request a new link"
       >
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           Open the reset link from your email, or request a new one.
         </p>
       </AuthShell>
@@ -80,7 +80,7 @@ export default function ResetPassword() {
           type="submit"
           disabled={resetPassword.isPending}
           data-testid={AUTH.resetSubmit}
-          className="h-11 w-full rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800"
+          className={authButtonClass}
         >
           {resetPassword.isPending ? "Saving…" : "Reset password"}
         </Button>
