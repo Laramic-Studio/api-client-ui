@@ -1,15 +1,24 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import AuthShell from "@/components/auth/AuthShell";
+import { useNavigate } from "react-router-dom";
+import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
+import AuthField, { authInputClass } from "@/components/auth/AuthField";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialButtons from "@/components/auth/SocialButtons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ApiError } from "@/lib/api/http";
 import { authDestination } from "@/lib/auth/routes";
 import { getErrorMessage, useRegister } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+function fieldError(err, field) {
+  if (!(err instanceof ApiError)) return null;
+  const messages = err.payload?.errors?.[field];
+  if (Array.isArray(messages) && messages[0]) return messages[0];
+  return null;
+}
 
 export default function Register() {
   const register = useRegister();
@@ -17,9 +26,12 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({});
 
   const onSubmit = (e) => {
     e.preventDefault();
+    setErrors({});
+
     if (!name || !email || !password) {
       toast.error("All fields are required");
       return;
@@ -33,7 +45,16 @@ export default function Register() {
           navigate(authDestination(user), { replace: true });
         },
         onError: (err) => {
-          toast.error(getErrorMessage(err, "Could not create account."));
+          const next = {
+            name: fieldError(err, "name"),
+            email: fieldError(err, "email"),
+            password: fieldError(err, "password"),
+          };
+          setErrors(Object.fromEntries(Object.entries(next).filter(([, v]) => v)));
+
+          if (!next.email && !next.name && !next.password) {
+            toast.error(getErrorMessage(err, "Could not create account."));
+          }
         },
       },
     );
@@ -41,62 +62,72 @@ export default function Register() {
 
   return (
     <AuthShell
-      title="Create your account"
-      subtitle="Your workspace on app.noidr.dev — powered by the NoIDR API."
+      title="Sign up"
+      subtitle="Start building APIs with your team."
       footer={
         <span>
           Already have an account?{" "}
-          <Link to="/login" className="text-[hsl(var(--brand))] hover:underline" data-testid={AUTH.registerToLogin}>
-            Sign in
-          </Link>
+          <AuthLink to="/login" data-testid={AUTH.registerToLogin}>
+            Log in
+          </AuthLink>
         </span>
       }
     >
-      <SocialButtons />
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider ">Full name</Label>
+      <form onSubmit={onSubmit} className="space-y-5">
+        <AuthField label="Name" required htmlFor="name" error={errors.name}>
           <Input
+            id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             data-testid={AUTH.registerName}
-            className="bg-muted border-border h-10  text-[13px]"
-            placeholder="Ada Lovelace"
+            className={cn(authInputClass, errors.name && "border-red-500 focus-visible:ring-red-200")}
+            placeholder="Enter your name"
             autoComplete="name"
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider ">Email</Label>
+        </AuthField>
+
+        <AuthField label="Email" required htmlFor="email" error={errors.email}>
           <Input
+            id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             data-testid={AUTH.registerEmail}
-            className="bg-muted border-border h-10  text-[13px]"
-            placeholder="ada@example.com"
+            className={cn(authInputClass, errors.email && "border-red-500 focus-visible:ring-red-200")}
+            placeholder="Enter your email"
             autoComplete="email"
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider ">Password</Label>
+        </AuthField>
+
+        <AuthField
+          label="Password"
+          required
+          htmlFor="password"
+          error={errors.password}
+          hint="Must be at least 8 characters."
+        >
           <PasswordInput
+            id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             data-testid={AUTH.registerPassword}
-            className="bg-muted border-border h-10  text-[13px]"
-            placeholder="At least 8 characters"
+            className={cn(authInputClass, errors.password && "border-red-500 focus-visible:ring-red-200")}
+            placeholder="Create a password"
             autoComplete="new-password"
           />
-        </div>
+        </AuthField>
+
         <Button
           type="submit"
           disabled={register.isPending}
           data-testid={AUTH.registerSubmit}
-          className="w-full h-10 bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-white font-medium"
+          className="h-11 w-full rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800"
         >
-          {register.isPending ? "Creating account…" : "Create account"}
+          {register.isPending ? "Creating account…" : "Get started"}
         </Button>
       </form>
+
+      <SocialButtons variant="stacked" mode="signup" />
     </AuthShell>
   );
 }

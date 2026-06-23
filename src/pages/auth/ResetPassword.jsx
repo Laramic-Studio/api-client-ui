@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthShell from "@/components/auth/AuthShell";
+import AuthField, { authInputClass } from "@/components/auth/AuthField";
+import PasswordInput from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getErrorMessage, useResetPassword } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
 import { toast } from "sonner";
@@ -15,18 +15,16 @@ export default function ResetPassword() {
   const token = params.get("token") || "";
   const email = params.get("email") || "";
 
-  const [pw, setPw] = useState("");
-  const [pw2, setPw2] = useState("");
+  const [password, setPassword] = useState("");
 
   const hasToken = useMemo(() => Boolean(token && email), [token, email]);
 
   const onSubmit = (e) => {
     e.preventDefault();
-    if (pw.length < 8) return toast.error("Use at least 8 characters");
-    if (pw !== pw2) return toast.error("Passwords don't match");
+    if (password.length < 8) return toast.error("Use at least 8 characters");
 
     resetPassword.mutate(
-      { token, email, password: pw, password_confirmation: pw2 },
+      { token, email, password, password_confirmation: password },
       {
         onSuccess: () => {
           toast.success("Password updated — sign in with your new password.");
@@ -44,9 +42,10 @@ export default function ResetPassword() {
       <AuthShell
         title="Invalid reset link"
         subtitle="This link is missing a token or has expired."
-        footer={<Link to="/forgot-password" className="text-[hsl(var(--brand))] hover:underline">Request a new link</Link>}
+        backTo="/forgot-password"
+        backLabel="Request a new link"
       >
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-sm text-zinc-500">
           Open the reset link from your email, or request a new one.
         </p>
       </AuthShell>
@@ -56,39 +55,32 @@ export default function ResetPassword() {
   return (
     <AuthShell
       title="Set a new password"
-      subtitle="Choose something memorable but strong."
-      footer={<Link to="/login" className="text-[hsl(var(--brand))] hover:underline">← Back to sign in</Link>}
+      subtitle={`Resetting for ${email}`}
+      backTo="/login"
+      backLabel="Back to sign in"
     >
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div className="text-[12px] text-muted-foreground  truncate">
-          Resetting for {email}
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider ">New password</Label>
-          <Input
-            type="password"
-            value={pw}
-            onChange={(e) => setPw(e.target.value)}
+      <form onSubmit={onSubmit} className="space-y-5">
+        <AuthField
+          label="Password"
+          required
+          htmlFor="password"
+          hint="Must be at least 8 characters."
+        >
+          <PasswordInput
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             data-testid={AUTH.resetPassword}
-            className="bg-muted border-border h-10  text-[13px]"
+            className={authInputClass}
+            placeholder="Create a password"
             autoComplete="new-password"
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider ">Confirm password</Label>
-          <Input
-            type="password"
-            value={pw2}
-            onChange={(e) => setPw2(e.target.value)}
-            className="bg-muted border-border h-10  text-[13px]"
-            autoComplete="new-password"
-          />
-        </div>
+        </AuthField>
         <Button
           type="submit"
           disabled={resetPassword.isPending}
           data-testid={AUTH.resetSubmit}
-          className="w-full h-10 bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-white font-medium"
+          className="h-11 w-full rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800"
         >
           {resetPassword.isPending ? "Saving…" : "Reset password"}
         </Button>

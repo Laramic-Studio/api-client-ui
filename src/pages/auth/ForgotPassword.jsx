@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import AuthShell from "@/components/auth/AuthShell";
+import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
+import AuthField, { authInputClass } from "@/components/auth/AuthField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getErrorMessage, useForgotPassword } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
 import { toast } from "sonner";
@@ -33,35 +32,37 @@ export default function ForgotPassword() {
 
   return (
     <AuthShell
-      title="Forgot your password?"
+      title="Forgot password?"
       subtitle="We'll email you a link to reset your password."
-      footer={<Link to="/login" className="text-[hsl(var(--brand))] hover:underline">← Back to sign in</Link>}
+      backTo="/login"
+      backLabel="Back to sign in"
     >
       {sent ? (
-        <div className="rounded-md border border-border bg-card p-4 text-[13px] text-foreground/85">
-          If an account exists for <span className="text-foreground ">{email}</span>, a reset link is on its way.
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
+          If an account exists for <span className="font-medium text-zinc-900">{email}</span>, a reset link is on its way.
           <div className="mt-3">
-            <Link to="/login" className="text-[hsl(var(--brand))] hover:underline">Back to sign in →</Link>
+            <AuthLink to="/login">Back to sign in →</AuthLink>
           </div>
         </div>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-[12px] text-foreground/85 uppercase tracking-wider ">Email</Label>
+        <form onSubmit={onSubmit} className="space-y-5">
+          <AuthField label="Email" required htmlFor="email">
             <Input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               data-testid={AUTH.forgotEmail}
-              className="bg-muted border-border h-10  text-[13px]"
+              className={authInputClass}
+              placeholder="Enter your email"
               autoComplete="email"
             />
-          </div>
+          </AuthField>
           <Button
             type="submit"
             disabled={forgotPassword.isPending}
             data-testid={AUTH.forgotSubmit}
-            className="w-full h-10 bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-white font-medium"
+            className="h-11 w-full rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800"
           >
             {forgotPassword.isPending ? "Sending…" : "Send reset link"}
           </Button>
