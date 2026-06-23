@@ -39,7 +39,7 @@ export default function ForgotPassword() {
     >
       {sent ? (
         <div className="rounded-md border border-border bg-card p-4 text-[13px] text-foreground/85">
-          If an account exists for <span className="text-foreground font-mono">{email}</span>, a reset link is on its way.
+          If an account exists for <span className="text-foreground ">{email}</span>, a reset link is on its way.
           <div className="mt-3">
             <Link to="/login" className="text-[hsl(var(--brand))] hover:underline">Back to sign in →</Link>
           </div>
@@ -47,13 +47,13 @@ export default function ForgotPassword() {
       ) : (
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-[12px] text-foreground/85 uppercase tracking-wider font-mono">Email</Label>
+            <Label className="text-[12px] text-foreground/85 uppercase tracking-wider ">Email</Label>
             <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               data-testid={AUTH.forgotEmail}
-              className="bg-muted border-border h-10 font-mono text-[13px]"
+              className="bg-muted border-border h-10  text-[13px]"
               autoComplete="email"
             />
           </div>

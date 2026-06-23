@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthShell from "@/components/auth/AuthShell";
+import PasswordInput from "@/components/auth/PasswordInput";
 import SocialButtons from "@/components/auth/SocialButtons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,31 +60,30 @@ export default function Login() {
       <SocialButtons />
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-[12px] text-foreground/85 uppercase tracking-wider font-mono">Email</Label>
+          <Label htmlFor="email" className="text-[12px] text-foreground/85 uppercase tracking-wider ">Email</Label>
           <Input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             data-testid={AUTH.loginEmail}
-            className="bg-muted border-[hsl(var(--border))] h-10 font-mono text-[13px]"
+            className="bg-muted border-[hsl(var(--border))] h-10  text-[13px]"
             autoComplete="email"
           />
         </div>
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-[12px] text-foreground/85 uppercase tracking-wider font-mono">Password</Label>
+            <Label htmlFor="password" className="text-[12px] text-foreground/85 uppercase tracking-wider ">Password</Label>
             <Link to="/forgot-password" className="text-[12px] text-muted-foreground hover:text-foreground" data-testid={AUTH.loginForgot}>
               Forgot?
             </Link>
           </div>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             data-testid={AUTH.loginPassword}
-            className="bg-muted border-[hsl(var(--border))] h-10 font-mono text-[13px]"
+            className="bg-muted border-[hsl(var(--border))] h-10  text-[13px]"
             autoComplete="current-password"
           />
         </div>

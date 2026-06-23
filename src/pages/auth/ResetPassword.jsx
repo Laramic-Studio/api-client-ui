@@ -60,27 +60,27 @@ export default function ResetPassword() {
       footer={<Link to="/login" className="text-[hsl(var(--brand))] hover:underline">← Back to sign in</Link>}
     >
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="text-[12px] text-muted-foreground font-mono truncate">
+        <div className="text-[12px] text-muted-foreground  truncate">
           Resetting for {email}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider font-mono">New password</Label>
+          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider ">New password</Label>
           <Input
             type="password"
             value={pw}
             onChange={(e) => setPw(e.target.value)}
             data-testid={AUTH.resetPassword}
-            className="bg-muted border-border h-10 font-mono text-[13px]"
+            className="bg-muted border-border h-10  text-[13px]"
             autoComplete="new-password"
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider font-mono">Confirm password</Label>
+          <Label className="text-[12px] text-foreground/85 uppercase tracking-wider ">Confirm password</Label>
           <Input
             type="password"
             value={pw2}
             onChange={(e) => setPw2(e.target.value)}
-            className="bg-muted border-border h-10 font-mono text-[13px]"
+            className="bg-muted border-border h-10  text-[13px]"
             autoComplete="new-password"
           />
         </div>
