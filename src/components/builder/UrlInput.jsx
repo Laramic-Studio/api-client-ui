@@ -1,8 +1,16 @@
 // URL input with [[VAR]] autocomplete from the active environment.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { getCaretIndexFromMouse, getVariableAtIndex } from "@/lib/builder/url-variables";
+import {
+  getCaretIndexFromMouse,
+  getVariableAnchorLeft,
+  getVariableAtIndex,
+} from "@/lib/builder/url-variables";
 import { looksLikeCurl, parseCurlCommand } from "@/lib/builder/parse-curl";
+
+function clamp(n, min, max) {
+  return Math.min(Math.max(n, min), max);
+}
 
 export default function UrlInput({
   value,
@@ -20,11 +28,13 @@ export default function UrlInput({
   const inputRef = useRef(null);
   const containerRef = useRef(null);
   const popoverRef = useRef(null);
+  const editRef = useRef(null);
   const [pos, setPos] = useState(0);
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [hoverVar, setHoverVar] = useState(null);
   const [editValue, setEditValue] = useState("");
+  const [popoverPinned, setPopoverPinned] = useState(false);
 
   const suggestions = useMemo(() => {
     if (!open) return [];
@@ -54,6 +64,24 @@ export default function UrlInput({
   useEffect(() => {
     setActiveIdx((idx) => (idx >= suggestions.length ? 0 : idx));
   }, [suggestions.length]);
+
+  const resolveVarValue = useCallback((key) => {
+    const v = env?.variables?.find((x) => x.enabled !== false && x.key === key);
+    return v?.value ?? "";
+  }, [env]);
+
+  const updateHoverAnchor = useCallback((hit) => {
+    const input = inputRef.current;
+    const container = containerRef.current;
+    if (!hit || !input || !container) return null;
+
+    const anchorLeft = getVariableAnchorLeft(input, value, hit);
+    const maxLeft = container.clientWidth - 12;
+    return {
+      ...hit,
+      anchorLeft: clamp(anchorLeft, 12, maxLeft),
+    };
+  }, [value]);
 
   const insertSuggestion = (item) => {
     let before;
@@ -127,27 +155,38 @@ export default function UrlInput({
   const inputHeight = compact ? "h-8" : "h-9";
   const inputText = compact ? "text-[12px]" : "text-[13px]";
 
-  const resolveVarValue = useCallback((key) => {
-    const v = env?.variables?.find((x) => x.enabled !== false && x.key === key);
-    return v?.value ?? "";
-  }, [env]);
+  const closePopover = useCallback(() => {
+    setHoverVar(null);
+    setPopoverPinned(false);
+  }, []);
+
+  const commitVariableEdit = useCallback(() => {
+    if (!hoverVar || !onUpdateVariable) return;
+    onUpdateVariable(hoverVar.key, editValue);
+  }, [hoverVar, editValue, onUpdateVariable]);
 
   const handleMouseMove = (e) => {
+    if (popoverPinned) return;
+
     const idx = getCaretIndexFromMouse(inputRef.current, e.clientX);
     const hit = getVariableAtIndex(value, idx);
     if (!hit) {
       setHoverVar(null);
       return;
     }
-    if (hoverVar?.key !== hit.key) {
-      setHoverVar(hit);
+    if (hoverVar?.key !== hit.key || hoverVar?.start !== hit.start) {
+      const anchored = updateHoverAnchor(hit);
+      setHoverVar(anchored);
       setEditValue(resolveVarValue(hit.key));
     }
   };
 
-  const commitVariableEdit = () => {
-    if (!hoverVar || !onUpdateVariable) return;
-    onUpdateVariable(hoverVar.key, editValue);
+  const handleInputScroll = () => {
+    if (!hoverVar) return;
+    setHoverVar((current) => {
+      if (!current) return null;
+      return updateHoverAnchor(current);
+    });
   };
 
   const handlePaste = (e) => {
@@ -162,7 +201,7 @@ export default function UrlInput({
   };
 
   return (
-    <div ref={containerRef} className="relative flex-1">
+    <div ref={containerRef} className="relative flex-1 min-w-0">
       <div
         aria-hidden
         className={cn(
@@ -200,29 +239,32 @@ export default function UrlInput({
           onChange(e.target.value);
           setPos(e.target.selectionStart || 0);
           setOpen(true);
+          if (!popoverPinned) setHoverVar(null);
         }}
         onSelect={(e) => setPos(e.target.selectionStart || 0)}
         onKeyDown={handleKey}
         onPaste={handlePaste}
+        onScroll={handleInputScroll}
         onFocus={() => setOpen(true)}
         onBlur={() => {
           setTimeout(() => {
             setOpen(false);
             if (!containerRef.current?.contains(document.activeElement)) {
-              setHoverVar(null);
+              commitVariableEdit();
+              closePopover();
             }
           }, 120);
         }}
         onMouseMove={handleMouseMove}
         onMouseLeave={(e) => {
-          if (popoverRef.current?.contains(e.relatedTarget)) return;
-          setHoverVar(null);
+          if (popoverPinned || popoverRef.current?.contains(e.relatedTarget)) return;
+          closePopover();
         }}
         placeholder={placeholder}
         data-testid={testid}
         spellCheck={false}
         className={cn(
-          "relative w-full px-3 font-soro  bg-transparent focus:border-none focus:outline-none focus:ring-0 focus:ring-offset-0",
+          "relative w-full px-3 font-soro bg-transparent focus:border-none focus:outline-none focus:ring-0 focus:ring-offset-0",
           inputHeight,
           inputText,
           grouped
@@ -266,39 +308,50 @@ export default function UrlInput({
       {hoverVar && onUpdateVariable && (
         <div
           ref={popoverRef}
-          className="absolute left-0 top-full mt-1 z-50 w-72 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--popover))] shadow-xl p-3"
+          role="tooltip"
+          style={{ left: hoverVar.anchorLeft }}
+          className="absolute bottom-[calc(100%+6px)] z-50 w-max max-w-[min(16rem,calc(100%-1rem))] -translate-x-1/2 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--popover))] px-2.5 py-2 shadow-md pointer-events-auto"
           data-testid={testid ? `${testid}-var-popover` : undefined}
           onMouseDown={(e) => e.preventDefault()}
+          onMouseEnter={() => {
+            setPopoverPinned(true);
+            editRef.current?.focus();
+          }}
           onMouseLeave={(e) => {
             if (inputRef.current?.contains(e.relatedTarget)) return;
-            setHoverVar(null);
+            commitVariableEdit();
+            closePopover();
           }}
         >
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-2">
+          <div
+            className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-[hsl(var(--border))] bg-[hsl(var(--popover))]"
+            aria-hidden
+          />
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
             {env?.name || "Environment"}
           </div>
-          <label className="text-[11px] text-muted-foreground font-mono block mb-1">
+          <div className="mt-0.5 font-mono text-[11px] text-[hsl(var(--brand))]">
             [[{hoverVar.key}]]
-          </label>
+          </div>
           <input
-            autoFocus
+            ref={editRef}
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
                 commitVariableEdit();
-                setHoverVar(null);
+                closePopover();
                 inputRef.current?.focus();
               }
-              if (e.key === "Escape") setHoverVar(null);
+              if (e.key === "Escape") {
+                e.preventDefault();
+                closePopover();
+                inputRef.current?.focus();
+              }
             }}
-            onBlur={() => {
-              commitVariableEdit();
-              setHoverVar(null);
-            }}
-            className="w-full h-8 px-2 rounded-md bg-[hsl(var(--input))] border border-[hsl(var(--border))] text-[12px] font-soro"
-            placeholder="Variable value"
+            className="mt-1.5 w-full min-w-[10rem] h-7 px-2 rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[11px] font-mono ring-focus"
+            placeholder="Value"
           />
         </div>
       )}

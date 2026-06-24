@@ -35,21 +35,16 @@ function ResponseMeta({ response, isExampleView }) {
   return (
     <>
       {isExampleView && (
-        <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--brand))] font-mono border border-[hsl(var(--brand))]/30 bg-[hsl(var(--brand))]/10 px-1.5 py-0.5 rounded">
+        <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--brand))] font-soro border border-[hsl(var(--brand))]/30 bg-[hsl(var(--brand))]/10 px-1.5 py-0.5 rounded">
           Example
         </span>
       )}
-      {routeLabel && (
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono border border-[hsl(var(--border))] px-1.5 py-0.5 rounded">
-          {routeLabel}
-        </span>
-      )}
-      <StatusBadge status={response.status} />
+      <StatusBadge status={response.status} className={"border-none text-[9px] bg-transparent"} />
       <span className="text-[12px] text-foreground/90" data-testid={BUILDER.responseStatus}>{response.statusText}</span>
-      <span className="ml-auto text-[11px] text-muted-foreground font-mono" data-testid={BUILDER.responseTime}>
+      <span className="ml-auto text-[11px] text-muted-foreground font-soro" data-testid={BUILDER.responseTime}>
         {response.durationMs == null ? "—" : `${response.durationMs} ms`}
       </span>
-      <span className="text-[11px] text-muted-foreground font-mono" data-testid={BUILDER.responseSize}>{formatBytes(response.sizeBytes)}</span>
+      <span className="text-[11px] text-muted-foreground font-soro" data-testid={BUILDER.responseSize}>{formatBytes(response.sizeBytes)}</span>
     </>
   );
 }
@@ -206,13 +201,13 @@ function ResponseTabs({ response, tab, setTab, onExplain, onRetryViaCloud, testR
       </TabsContent>
 
       <TabsContent value="raw" className="flex-1 min-h-0 m-0 p-3 overflow-auto">
-        <pre className="text-[12px] font-mono text-foreground/90 whitespace-pre-wrap break-all">{response.rawText || JSON.stringify(response.body)}</pre>
+        <pre className="text-[12px] font-soro text-foreground/90 whitespace-pre-wrap break-all">{response.rawText || JSON.stringify(response.body)}</pre>
       </TabsContent>
 
       <TabsContent value="headers" className="flex-1 min-h-0 m-0 p-0 overflow-auto">
         <div className="divide-y divide-[hsl(var(--border))]">
           {Object.entries(response.headers || {}).map(([k, v]) => (
-            <div key={k} className="grid grid-cols-[180px_1fr] gap-2 px-3 py-2 text-[12px] font-mono">
+            <div key={k} className="grid grid-cols-[180px_1fr] gap-2 px-3 py-2 text-[12px] font-soro">
               <div className="text-muted-foreground">{k}</div>
               <div className="text-foreground/90 break-all">{v}</div>
             </div>
@@ -224,7 +219,7 @@ function ResponseTabs({ response, tab, setTab, onExplain, onRetryViaCloud, testR
         {response.cookies?.length ? (
           <div className="divide-y divide-[hsl(var(--border))]">
             {response.cookies.map((c, i) => (
-              <div key={i} className="px-3 py-2 text-[12px] font-mono flex items-center gap-3">
+              <div key={i} className="px-3 py-2 text-[12px] font-soro flex items-center gap-3">
                 <span className="text-muted-foreground w-28 shrink-0">{c.name}</span>
                 <span className="text-foreground/90 truncate flex-1">{c.value}</span>
                 {c.httpOnly && <span className="text-[10px] text-[hsl(var(--brand))]">HttpOnly</span>}
@@ -249,7 +244,7 @@ function TestResultsOnlyPanel({ testResults, layout, onLayoutChange, onClose, se
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--card))]">
       <div className="h-12 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))] gap-3">
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Response</div>
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-soro">Response</div>
         <span className="text-[12px] text-muted-foreground">
           {sending ? "Sending request…" : "Pre-request failed — see test results"}
         </span>
@@ -303,7 +298,7 @@ export default function ResponsePanel({
     return (
       <div className="h-full flex flex-col bg-[hsl(var(--card))]">
         <div className="h-12 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))] gap-3">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Response</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-soro">Response</div>
           <span className="text-[12px] text-muted-foreground">
             {sending ? "Sending request…" : "Send a request to see the response"}
           </span>
@@ -334,14 +329,13 @@ export default function ResponsePanel({
 
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--card))]">
-      <div className="h-12 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))] gap-3">
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Response</div>
+      <div className="h-8 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))] gap-3">
         <ResponseMeta response={response} isExampleView={isExampleView} />
         {onSaveExample && (
           <button
             onClick={onSaveExample}
             className={cn(
-              "h-7 px-2 rounded text-[11px] border border-[hsl(var(--border))] hover:bg-accent/50 inline-flex items-center gap-1",
+              "h-7 px-2  text-[11px] hover:bg-accent/50 inline-flex items-center gap-1",
               layout === "bottom" && "hidden sm:inline-flex",
             )}
             data-testid="response-save-example"
