@@ -14,6 +14,9 @@ import ForgotPassword from "@/pages/auth/ForgotPassword";
 import VerifyEmail from "@/pages/auth/VerifyEmail";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import Onboarding from "@/pages/auth/Onboarding";
+import OnboardingIndividual from "@/pages/auth/OnboardingIndividual";
+import OnboardingOrganisation from "@/pages/auth/OnboardingOrganisation";
+import OnboardingOrganisationInvite from "@/pages/auth/OnboardingOrganisationInvite";
 import PublicDocs from "@/pages/PublicDocs";
 
 import Dashboard from "@/pages/Dashboard";
@@ -41,6 +44,9 @@ export default function AppRoutes() {
       <Route path="/verify-email" element={<VerifyEmailRoute><VerifyEmail /></VerifyEmailRoute>} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
+      <Route path="/onboarding/individual" element={<OnboardingRoute><OnboardingIndividual /></OnboardingRoute>} />
+      <Route path="/onboarding/organisation" element={<OnboardingRoute><OnboardingOrganisation /></OnboardingRoute>} />
+      <Route path="/onboarding/organisation/invite" element={<OnboardingRoute><OnboardingOrganisationInvite /></OnboardingRoute>} />
       <Route path="/accept-invitation/:code" element={<ProtectedRoute><AcceptInvitation /></ProtectedRoute>} />
       <Route path="/p/docs/:shareId" element={<PublicDocs />} />
 

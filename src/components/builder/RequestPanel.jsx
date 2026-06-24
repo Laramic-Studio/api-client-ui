@@ -50,6 +50,8 @@ export default function RequestPanel({
   responseOpen = true,
   onOpenResponse,
   requestTabId = null,
+  isExampleView = false,
+  onTry,
 }) {
   const storedTab = useAppStore((s) => (
     requestTabId ? s.builderSession.requestPanelTabs?.[requestTabId] : null
@@ -64,10 +66,15 @@ export default function RequestPanel({
   const [codeLang, setCodeLang] = useState("curl");
   const urlEmpty = isRequestUrlEmpty(req?.url);
   const canSend = !urlEmpty && !sending;
+  const tryMode = isExampleView && typeof onTry === "function";
 
   const handleSend = () => {
     if (urlEmpty) {
       toast.error("Enter a request URL before sending.");
+      return;
+    }
+    if (tryMode) {
+      onTry();
       return;
     }
     onSend();
@@ -175,12 +182,12 @@ export default function RequestPanel({
         <button
           onClick={handleSend}
           disabled={!canSend}
-          data-testid={BUILDER.sendButton}
-          title={urlEmpty ? "Enter a URL to send" : undefined}
+          data-testid={tryMode ? "builder-try-button" : BUILDER.sendButton}
+          title={urlEmpty ? "Enter a URL to send" : tryMode ? "Run this request live" : undefined}
           className="h-9 px-4 rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground text-[13px] font-medium inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {sending ? <Play className="h-3.5 w-3.5 animate-pulse" /> : <Send className="h-3.5 w-3.5" />}
-          {sending ? "Sending…" : "Send"}
+          {sending ? "Sending…" : tryMode ? "Try" : "Send"}
         </button>
         {!responseOpen && onOpenResponse && (
           <button

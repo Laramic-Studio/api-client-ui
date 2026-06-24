@@ -4,7 +4,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { buildInitialState } from "@/lib/mockData";
 import { nanoUid } from "@/lib/generators";
-import { saveOnboarding } from "@/lib/auth/onboarding";
 import { EMPTY_ARRAY } from "@/lib/store/empty";
 
 const ensureSeed = (state) => {
@@ -53,13 +52,13 @@ export const useAppStore = create(
       clearAuthSession: () => set({ user: null, currentTeam: null }),
       finishAuthBootstrap: () => set({ authBootstrapped: true }),
       updateUser: (patch) => set((s) => ({ user: s.user ? { ...s.user, ...patch } : null })),
-      completeOnboarding: ({ accountType, company }) => set((s) => {
-        if (!s.user) return {};
-        saveOnboarding(s.user.id, { accountType, company });
-        return {
-          user: { ...s.user, accountType, company: company || null, onboarded: true },
-        };
-      }),
+
+      onboardingDraft: {},
+      setOnboardingDraft: (patch) => set((s) => ({
+        onboardingDraft: { ...s.onboardingDraft, ...patch },
+      })),
+      clearOnboardingDraft: () => set({ onboardingDraft: {} }),
+
       logout: () => set({ user: null, currentTeam: null }),
 
       // ===== AI settings =====
@@ -161,7 +160,7 @@ export const useAppStore = create(
         explorer: 22,
         builder: 45,
         response: 33,
-        responseLayout: "side",
+        responseLayout: "bottom",
         responseOpen: true,
         stackRequest: 58,
         stackResponse: 42,
@@ -678,7 +677,7 @@ export const useAppStore = create(
     {
       name: "noidr-web-store",
       storage: createJSONStorage(() => localStorage),
-      version: 5,
+      version: 6,
       migrate: (persisted, version) => {
         const state = persisted ?? {};
         if (version < 5 && state.builderSession) {
@@ -686,6 +685,12 @@ export const useAppStore = create(
             ...state.builderSession,
             consoleEntries: state.builderSession.consoleEntries ?? [],
             requestPanelTabs: state.builderSession.requestPanelTabs ?? {},
+          };
+        }
+        if (version < 6 && state.builderPanels) {
+          state.builderPanels = {
+            ...state.builderPanels,
+            responseLayout: "bottom",
           };
         }
         return state;

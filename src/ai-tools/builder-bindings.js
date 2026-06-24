@@ -10,6 +10,7 @@ import {
   renameExampleInList,
   setDefaultExampleInList,
   suggestExampleName,
+  buildExampleFromResponse,
 } from "@/lib/builder/examples";
 import { createEmptyScratch, isScratchTab } from "@/lib/builder/scratch";
 import { emptyTestResults } from "@/lib/builder/test-results";
@@ -542,15 +543,5 @@ export function createBuilderAiBindings(ctxRef) {
 
 /** Build example payload from the active tab's last response (for save_response_as_example). */
 export function buildExampleFromActiveResponse(activeTabId, activeReq, responses) {
-  const resp = responses[activeTabId];
-  if (!resp || resp.mode === "mock") return null;
-  return {
-    name: suggestExampleName(activeReq?.examples, resp.status, resp.statusText),
-    status: resp.status,
-    statusText: resp.statusText,
-    headers: resp.headers,
-    body: resp.body,
-    url: resp.url,
-    method: resp.method,
-  };
+  return buildExampleFromResponse(activeReq, responses[activeTabId]);
 }

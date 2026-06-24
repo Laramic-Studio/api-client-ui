@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/http";
 import { authKeys } from "@/lib/api/query-keys";
-import { clearSession, fetchSession } from "@/lib/api/session";
+import { clearSession, fetchSession, applyOnboardingComplete } from "@/lib/api/session";
 import * as authApi from "@/lib/api/auth-api";
+import { completeOnboarding } from "@/lib/api/onboarding-api";
 import { getAccessToken } from "@/lib/auth/tokens";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -114,5 +115,20 @@ export function useVerifyEmail() {
 export function useResendVerification() {
   return useMutation({
     mutationFn: () => authApi.resendVerificationEmail(),
+  });
+}
+
+export function useCompleteOnboarding() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload) => {
+      const data = await completeOnboarding(payload);
+      const user = await applyOnboardingComplete(data);
+      return { ...data, user };
+    },
+    onSuccess: (result) => {
+      queryClient.setQueryData(authKeys.session(), result.user);
+    },
   });
 }

@@ -1,71 +1,51 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AuthShell from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
-import { useAppStore } from "@/store/useAppStore";
 import AccountTypePicker from "@/components/onboarding/AccountTypePicker";
-import CompanyDetailsForm from "@/components/onboarding/CompanyDetailsForm";
 import WorkspaceNotice from "@/components/onboarding/WorkspaceNotice";
+import OnboardingSteps from "@/components/onboarding/OnboardingSteps";
 import { authButtonClass } from "@/components/auth/AuthField";
-import { toastAuthSuccess, toastAuthValidation } from "@/lib/auth/toast";
-import { TEAM_SIZES } from "@/components/onboarding/constants";
+import { useAppStore } from "@/store/useAppStore";
 
 export default function Onboarding() {
+  const navigate = useNavigate();
   const currentTeam = useAppStore((s) => s.currentTeam);
-  const complete = useAppStore((s) => s.completeOnboarding);
+  const draft = useAppStore((s) => s.onboardingDraft);
+  const setOnboardingDraft = useAppStore((s) => s.setOnboardingDraft);
 
-  const [type, setType] = useState("individual");
-  const [companyName, setCompanyName] = useState("");
-  const [size, setSize] = useState(TEAM_SIZES[1]);
-  const [logo, setLogo] = useState(null);
+  const accountType = draft.accountType || "individual";
+  const personalTeamName = currentTeam?.name || currentTeam?.slug;
 
-  const submit = () => {
-    if (type === "company" && !companyName.trim()) {
-      toastAuthValidation("Add a company name");
+  const continueNext = () => {
+    setOnboardingDraft({ accountType });
+    if (accountType === "organisation") {
+      navigate("/onboarding/organisation");
       return;
     }
-
-    const company = type === "company"
-      ? { name: companyName.trim(), size, logo }
-      : null;
-
-    complete({ accountType: type, company });
-    toastAuthSuccess("All set — welcome to Noidr");
+    navigate("/onboarding/individual");
   };
-
-  const personalTeamName = currentTeam?.name || currentTeam?.slug;
 
   return (
     <AuthShell
       title="Tell us about yourself"
       subtitle="This personalizes your workspace and branding."
     >
-      <div className="space-y-5">
-        <WorkspaceNotice
-          teamName={personalTeamName}
-          showCompanyNote={type === "company"}
+      <div className="space-y-5 w-full">
+        <OnboardingSteps current={1} total={accountType === "organisation" ? 3 : 2} />
+
+        <WorkspaceNotice teamName={personalTeamName} />
+
+        <AccountTypePicker
+          value={accountType}
+          onChange={(next) => setOnboardingDraft({ accountType: next })}
         />
 
-        <AccountTypePicker value={type} onChange={setType} />
-
-        {type === "company" && (
-          <CompanyDetailsForm
-            companyName={companyName}
-            size={size}
-            logo={logo}
-            onChange={(patch) => {
-              if ("companyName" in patch) setCompanyName(patch.companyName);
-              if ("size" in patch) setSize(patch.size);
-              if ("logo" in patch) setLogo(patch.logo);
-            }}
-          />
-        )}
-
         <Button
-          onClick={submit}
-          data-testid="onboarding-submit"
+          onClick={continueNext}
+          data-testid="onboarding-continue"
           className={authButtonClass}
         >
-          Finish setup
+          Continue
         </Button>
       </div>
     </AuthShell>

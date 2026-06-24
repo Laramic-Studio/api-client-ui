@@ -1,20 +1,9 @@
 import * as authApi from "@/lib/api/auth-api";
 import { mapApiUser, teamToWorkspace } from "@/lib/api/map-user";
-import { userIsOnboarded, userIsVerified } from "@/lib/auth/user-state";
 import { clearAccessToken } from "@/lib/auth/tokens";
 import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
 import { refreshCollectionsInStore } from "@/hooks/use-collections";
 import { useAppStore } from "@/store/useAppStore";
-
-function mergeUser(mapped, existing) {
-  if (!existing || existing.id !== mapped.id) return mapped;
-
-  return {
-    ...mapped,
-    emailVerified: userIsVerified(mapped) || userIsVerified(existing),
-    onboarded: userIsOnboarded(mapped) || userIsOnboarded(existing),
-  };
-}
 
 function ensureWorkspaceMaps(workspaces, activeWorkspaceId) {
   const state = useAppStore.getState();
@@ -40,9 +29,7 @@ export function applySession(data) {
 
   const teams = (data.teams || []).map(teamToWorkspace);
   const currentTeam = data.current_team;
-  const mapped = mapApiUser(data.user, currentTeam);
-  const existing = useAppStore.getState().user;
-  const user = mergeUser(mapped, existing);
+  const user = mapApiUser(data.user, currentTeam);
   const workspaces = teams.length ? teams : (currentTeam ? [teamToWorkspace(currentTeam)] : []);
   const activeWorkspaceId = currentTeam ? String(currentTeam.id) : teams[0]?.id || null;
   const { collectionsMap, environmentsMap } = ensureWorkspaceMaps(workspaces, activeWorkspaceId);
@@ -122,4 +109,13 @@ export async function fetchSession() {
 export function clearSession() {
   clearAccessToken();
   useAppStore.getState().clearAuthSession();
+}
+
+export async function applyOnboardingComplete(data) {
+  const teams = await authApi.listTeams().catch(() => []);
+  const payload = {
+    ...data,
+    teams: teams.length ? teams : (data.current_team ? [data.current_team] : []),
+  };
+  return applySession(payload);
 }

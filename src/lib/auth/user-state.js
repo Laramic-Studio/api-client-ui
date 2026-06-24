@@ -1,12 +1,9 @@
-import { isOnboarded } from "@/lib/auth/onboarding";
-
 export function userIsVerified(user) {
   return Boolean(user?.emailVerified);
 }
 
 export function userIsOnboarded(user) {
-  if (!user) return false;
-  return Boolean(user.onboarded || isOnboarded(user.id));
+  return Boolean(user?.onboarded);
 }
 
 export function authHomePath(user) {

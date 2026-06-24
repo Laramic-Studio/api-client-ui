@@ -1,3 +1,5 @@
+import { isRequestUrlEmpty } from "@/lib/builder/url-variables";
+
 export function mapApiExample(example) {
   if (!example) return null;
   return {
@@ -61,4 +63,40 @@ export function suggestExampleName(examples = [], status = 200, statusText = "OK
   let i = 2;
   while (existing.has(`${named} (${i})`)) i += 1;
   return `${named} (${i})`;
+}
+
+export function defaultExampleName(examples = []) {
+  const base = "Example";
+  const existing = new Set((examples || []).map((example) => example.name));
+  if (!existing.has(base)) return base;
+  let i = 2;
+  while (existing.has(`${base} (${i})`)) i += 1;
+  return `${base} (${i})`;
+}
+
+export function getEffectiveRequest(savedRequest, draft) {
+  if (!savedRequest) return draft || null;
+  if (!draft) return savedRequest;
+  return { ...savedRequest, ...draft };
+}
+
+export function canSaveExampleForRequest(savedRequest, draft, response) {
+  const req = getEffectiveRequest(savedRequest, draft);
+  if (!req || isRequestUrlEmpty(req.url)) return false;
+  return Boolean(response && response.mode !== "mock");
+}
+
+export function buildExampleFromResponse(request, response) {
+  if (!request || isRequestUrlEmpty(request.url)) return null;
+  if (!response || response.mode === "mock") return null;
+
+  return {
+    name: defaultExampleName(request.examples),
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+    body: response.body,
+    url: response.url || request.url,
+    method: response.method || request.method,
+  };
 }

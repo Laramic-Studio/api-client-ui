@@ -41,7 +41,7 @@ import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { applyOptimisticRequestPatch, useUpdateRequest } from "@/hooks/use-requests";
 import { createEmptyScratch, createScratchTabId, isScratchTab } from "@/lib/builder/scratch";
 import { buildRequestBreadcrumb } from "@/lib/builder/breadcrumb";
-import { exampleToResponse, suggestExampleName } from "@/lib/builder/examples";
+import { exampleToResponse, suggestExampleName, buildExampleFromResponse } from "@/lib/builder/examples";
 import { buildHistoryEntry } from "@/lib/builder/history";
 import { isRequestUrlEmpty } from "@/lib/builder/url-variables";
 import { isTabDirty } from "@/lib/builder/dirty";
@@ -136,6 +136,7 @@ export default function ApiBuilder() {
   const onSendRef = useRef(null);
   const executeSendRef = useRef(null);
   const onOpenRequestRef = useRef(null);
+  const pendingTrySendRef = useRef(false);
   const bindingsCtxRef = useRef({});
 
   const ensureScratchDraft = useCallback((tabId) => {
@@ -167,6 +168,12 @@ export default function ApiBuilder() {
   }, [activeTabId, drafts, findRequest, collections]);
 
   const activeExampleId = activeTabId ? activeExamples[activeTabId] ?? null : null;
+
+  useEffect(() => {
+    if (!pendingTrySendRef.current || activeExampleId) return;
+    pendingTrySendRef.current = false;
+    executeSendRef.current?.();
+  }, [activeExampleId]);
 
   const activeExample = useMemo(() => {
     if (!activeExampleId || !activeReq?.examples) return null;
@@ -587,25 +594,24 @@ export default function ApiBuilder() {
   };
 
   const onSaveCurrentResponseAsExample = () => {
-    if (isRequestUrlEmpty(activeReq?.url)) {
-      toast.error("Add a URL before saving an example.");
+    const example = buildExampleFromResponse(activeReq, responses[activeTabId]);
+    if (!example) {
+      if (isRequestUrlEmpty(activeReq?.url)) {
+        toast.error("Add a URL before saving an example.");
+      } else {
+        toast.error("Send a real request before saving an example.");
+      }
       return;
     }
-    const resp = responses[activeTabId];
-    if (!resp || resp.mode === "mock") {
-      toast.error("Send a real request before saving an example.");
-      return;
-    }
-    onAddExample({
-      name: suggestExampleName(activeReq?.examples, resp.status, resp.statusText),
-      status: resp.status,
-      statusText: resp.statusText,
-      headers: resp.headers,
-      body: resp.body,
-      url: resp.url,
-      method: resp.method,
-    });
+    onAddExample(example);
   };
+
+  const handleTryExample = useCallback(() => {
+    if (!activeTabId || !activeExampleId) return;
+    pendingTrySendRef.current = true;
+    clearBuilderActiveExample(activeTabId);
+    setPanels({ responseOpen: true });
+  }, [activeTabId, activeExampleId, clearBuilderActiveExample, setPanels]);
 
   const newScratchTab = () => {
     const id = createScratchTabId();
@@ -651,7 +657,7 @@ export default function ApiBuilder() {
 
   const explorerActiveId = activeReq && !isScratchTab(activeTabId) ? activeReq.id : null;
 
-  const responseLayout = panels.responseLayout || "side";
+  const responseLayout = panels.responseLayout || "bottom";
   const responseOpen = panels.responseOpen !== false;
   const consoleOpen = panels.consoleOpen === true;
   const consoleHeight = panels.consoleHeight || 28;
@@ -757,6 +763,8 @@ export default function ApiBuilder() {
       responseOpen={responseOpen}
       onOpenResponse={handleOpenResponse}
       requestTabId={activeTabId}
+      isExampleView={Boolean(activeExample)}
+      onTry={activeExample ? handleTryExample : undefined}
     />
   ) : (
     <div className="h-full grid place-items-center text-center p-8 text-muted-foreground">

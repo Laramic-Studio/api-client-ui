@@ -7,7 +7,6 @@ import {
   Star,
 } from "lucide-react";
 import MethodBadge from "@/components/shared/MethodBadge";
-import StatusBadge from "@/components/shared/StatusBadge";
 import { COLL } from "@/constants/testIds";
 import { cn } from "@/lib/utils";
 import {
@@ -56,6 +55,18 @@ export function CollectionRow({
   const flatFolders = flattenFolders(folders);
   const isDuplicating = pending === `duplicate-collection:${c.id}`;
   const isDeleting = pending === `delete-collection:${c.id}`;
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(c.name);
+
+  useEffect(() => {
+    if (!renaming) setName(c.name);
+  }, [c.name, renaming]);
+
+  const commitRename = () => {
+    const next = name.trim();
+    if (next) actions.renameCollection(c.id, next);
+    setRenaming(false);
+  };
 
   const onDropToRoot = (e) => {
     e.preventDefault();
@@ -82,8 +93,31 @@ export function CollectionRow({
               {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
             </button>
             <Folder className="h-3.5 w-3.5 text-[hsl(var(--brand))]" />
-            <span className="truncate font-medium">{c.name}</span>
-            <span className="ml-auto text-[10px] text-muted-foreground font-mono">{c.requests.length}</span>
+            {renaming ? (
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Escape") {
+                    setName(c.name);
+                    setRenaming(false);
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-transparent text-[12.5px] font-medium outline-none flex-1 min-w-0"
+              />
+            ) : (
+              <span
+                onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
+                className="truncate font-medium flex-1 min-w-0"
+              >
+                {c.name}
+              </span>
+            )}
+            <span className="ml-auto text-[10px] text-muted-foreground font-mono shrink-0">{c.requests.length}</span>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
@@ -92,6 +126,9 @@ export function CollectionRow({
           </ContextMenuItem>
           <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addRequest(c.id, { name: "New request" }, onOpenRequest)}>
             <FilePlus className="h-3.5 w-3.5" /> New request
+          </ContextMenuItem>
+          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
+            <Edit3 className="h-3.5 w-3.5" /> Rename
           </ContextMenuItem>
           <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" disabled={isDuplicating} onClick={() => actions.duplicateCollection(c.id)}>
             {isDuplicating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
@@ -382,7 +419,12 @@ export function RequestRow({
                 className="bg-transparent text-[12px] outline-none flex-1 min-w-0"
               />
             ) : (
-              <span className="truncate flex-1 min-w-0">{r.name}</span>
+              <span
+                onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
+                className="truncate flex-1 min-w-0"
+              >
+                {r.name}
+              </span>
             )}
             {hasExamples && (
               <span className="text-[10px] text-muted-foreground font-mono shrink-0">{examples.length}</span>
@@ -399,7 +441,11 @@ export function RequestRow({
           <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
             <Edit3 className="h-3.5 w-3.5" /> Rename
           </ContextMenuItem>
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addExample(c.id, r)}>
+          <ContextMenuItem
+            className="cursor-pointer text-xs px-2 gap-2"
+            disabled={!actions.canAddExample?.(r)}
+            onClick={() => actions.addExample(c.id, r)}
+          >
             <FileJson className="h-3.5 w-3.5" /> Add example
           </ContextMenuItem>
           <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
@@ -456,7 +502,7 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
           )}
           data-testid={COLL.example(example.id)}
         >
-          <StatusBadge status={example.status} className="text-[10px] px-1 py-0 h-4 min-w-[2rem] justify-center shrink-0" />
+          <FileJson className="h-3.5 w-3.5 text-[hsl(var(--brand))] shrink-0" />
           {example.isDefault && <Star className="h-3 w-3 text-[hsl(var(--warning))] shrink-0" fill="currentColor" />}
           {renaming ? (
             <input
@@ -475,7 +521,12 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
               className="bg-transparent text-[12px] outline-none flex-1 min-w-0"
             />
           ) : (
-            <span className="truncate flex-1 min-w-0">{example.name}</span>
+            <span
+              onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
+              className="truncate flex-1 min-w-0"
+            >
+              {example.name}
+            </span>
           )}
         </div>
       </ContextMenuTrigger>

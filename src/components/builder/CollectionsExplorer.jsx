@@ -12,6 +12,7 @@ import { getErrorMessage } from "@/hooks/use-auth";
 import {
   useCollections,
   useCreateCollection,
+  useUpdateCollection,
   useCreateFolder,
   useDeleteCollection,
   useDuplicateCollection,
@@ -29,9 +30,8 @@ import {
   useAddRequestExample,
   useDeleteRequestExample,
 } from "@/hooks/use-requests";
-import { renameExampleInList, setDefaultExampleInList } from "@/lib/builder/examples";
+import { renameExampleInList, setDefaultExampleInList, canSaveExampleForRequest, buildExampleFromResponse } from "@/lib/builder/examples";
 import { CollectionRow } from "@/components/builder/CollectionsExplorerRows";
-import AddExampleDialog from "@/components/builder/AddExampleDialog";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function CollectionsExplorer({
@@ -45,12 +45,15 @@ export default function CollectionsExplorer({
   const collections = useAppStore(selectWorkspaceCollections);
   const moveRequestLocal = useAppStore((s) => s.moveRequest);
   const reorderRequestLocal = useAppStore((s) => s.reorderRequest);
+  const drafts = useAppStore((s) => s.builderSession.drafts);
+  const responses = useAppStore((s) => s.builderSession.responses);
   const closeTab = useAppStore((s) => s.closeTab);
   const clearBuilderTabSession = useAppStore((s) => s.clearBuilderTabSession);
   const renameTab = useAppStore((s) => s.renameTab);
   const { isLoading } = useCollections();
 
   const createCollectionMut = useCreateCollection();
+  const updateCollectionMut = useUpdateCollection();
   const deleteCollectionMut = useDeleteCollection();
   const duplicateCollectionMut = useDuplicateCollection();
   const createFolderMut = useCreateFolder();
@@ -70,7 +73,6 @@ export default function CollectionsExplorer({
   const [openRequests, setOpenRequests] = useState({});
   const [dragOver, setDragOver] = useState(null);
   const [pending, setPending] = useState(null);
-  const [exampleTarget, setExampleTarget] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const filtered = useMemo(() => {
@@ -190,6 +192,15 @@ export default function CollectionsExplorer({
         { onError: (err) => toast.error(getErrorMessage(err, "Could not rename request.")) },
       );
     },
+    renameCollection: (collectionId, name) => {
+      const trimmed = (name || "").trim();
+      if (!trimmed) return;
+      useAppStore.getState().updateCollection(collectionId, { name: trimmed });
+      updateCollectionMut.mutate(
+        { id: collectionId, patch: { name: trimmed } },
+        { onError: (err) => toast.error(getErrorMessage(err, "Could not rename collection.")) },
+      );
+    },
     deleteCollection: (id, name) => {
       setDeleteConfirm({
         title: "Delete collection",
@@ -217,9 +228,30 @@ export default function CollectionsExplorer({
       );
     },
     addExample: (collectionId, request) => {
-      setOpenRequests((open) => ({ ...open, [request.id]: true }));
-      setExampleTarget({ collectionId, request });
+      const draft = drafts[request.id];
+      const response = responses[request.id];
+      const example = buildExampleFromResponse(
+        draft ? { ...request, ...draft } : request,
+        response,
+      );
+      if (!example) {
+        toast.error("Send the request first to save an example.");
+        return;
+      }
+      run(`add-example:${request.id}`, (opts) =>
+        addExampleMut.mutate(
+          { collectionId, requestId: request.id, example },
+          {
+            ...opts,
+            onSuccess: () => {
+              setOpenRequests((open) => ({ ...open, [request.id]: true }));
+              toast.success(`Added "${example.name}"`);
+            },
+          },
+        ),
+      );
     },
+    canAddExample: (request) => canSaveExampleForRequest(request, drafts[request.id], responses[request.id]),
     renameExample: (collectionId, requestId, exampleId, name) => {
       const collection = collections.find((c) => c.id === collectionId);
       const request = collection?.requests.find((r) => r.id === requestId);
@@ -337,30 +369,6 @@ export default function CollectionsExplorer({
           />
         ))}
       </div>
-      <AddExampleDialog
-        open={Boolean(exampleTarget)}
-        onOpenChange={(open) => { if (!open) setExampleTarget(null); }}
-        request={exampleTarget?.request}
-        saving={addExampleMut.isPending}
-        onSubmit={(example) => {
-          if (!exampleTarget) return;
-          addExampleMut.mutate(
-            {
-              collectionId: exampleTarget.collectionId,
-              requestId: exampleTarget.request.id,
-              example,
-            },
-            {
-              onSuccess: () => {
-                toast.success(`Added "${example.name}"`);
-                setOpenRequests((open) => ({ ...open, [exampleTarget.request.id]: true }));
-                setExampleTarget(null);
-              },
-              onError: (err) => toast.error(getErrorMessage(err, "Could not add example.")),
-            },
-          );
-        }}
-      />
       <ConfirmDialog
         open={Boolean(deleteConfirm)}
         onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}
