@@ -46,3 +46,22 @@ export function getCaretIndexFromMouse(input, clientX) {
   const font = `${style.fontSize} ${style.fontFamily}`;
   return measureCharIndex(input.value || "", relativeX, font);
 }
+
+/** Horizontal center of a variable token inside the input (px from container left). */
+export function getVariableAnchorLeft(input, value, variable) {
+  if (!input || !variable) return 0;
+
+  const style = window.getComputedStyle(input);
+  const padLeft = parseFloat(style.paddingLeft) || 0;
+  const font = `${style.fontSize} ${style.fontFamily}`;
+
+  if (!measureCanvas) measureCanvas = document.createElement("canvas");
+  const ctx = measureCanvas.getContext("2d");
+  ctx.font = font;
+
+  const text = value || "";
+  const startWidth = ctx.measureText(text.slice(0, variable.start)).width;
+  const tokenWidth = ctx.measureText(text.slice(variable.start, variable.end)).width;
+
+  return padLeft + startWidth + tokenWidth / 2 - input.scrollLeft;
+}

@@ -13,6 +13,21 @@ import {
   ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 
+function ExplorerLabel({ children, className, onDoubleClick, title }) {
+  const label = title ?? (typeof children === "string" ? children : undefined);
+  return (
+    <div className={cn("flex-1 min-w-0 overflow-hidden", className)}>
+      <span
+        className="block truncate"
+        onDoubleClick={onDoubleClick}
+        title={label}
+      >
+        {children}
+      </span>
+    </div>
+  );
+}
+
 /** Depth-first folder list — avoids recursive React components (babel dev stack overflow). */
 function flattenFolders(folders, parentId = null, depth = 0) {
   const items = [];
@@ -77,7 +92,7 @@ export function CollectionRow({
   };
 
   return (
-    <div className="select-none mb-1">
+    <div className="select-none mb-1 min-w-0">
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
@@ -85,7 +100,7 @@ export function CollectionRow({
             onDragLeave={() => setDragOver(null)}
             onDrop={onDropToRoot}
             className={cn(
-              "w-full flex items-center gap-1.5 h-7 px-2 rounded text-[12.5px] hover:bg-accent/50 text-foreground/85",
+              "w-full min-w-0 flex items-center gap-1.5 h-7 px-2 rounded text-[12.5px] hover:bg-accent/50 text-foreground/85 overflow-hidden",
               dragOver === `col-${c.id}` && "bg-[hsl(var(--brand))]/10 ring-1 ring-inset ring-[hsl(var(--brand))]/40",
             )}
           >
@@ -110,12 +125,13 @@ export function CollectionRow({
                 className="bg-transparent text-[12.5px] font-medium outline-none flex-1 min-w-0"
               />
             ) : (
-              <span
+              <ExplorerLabel
+                className="font-medium"
                 onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
-                className="truncate font-medium flex-1 min-w-0"
+                title={c.name}
               >
                 {c.name}
-              </span>
+              </ExplorerLabel>
             )}
             <span className="ml-auto text-[10px] text-muted-foreground font-mono shrink-0">{c.requests.length}</span>
           </div>
@@ -143,7 +159,7 @@ export function CollectionRow({
       </ContextMenu>
 
       {isOpen && (
-        <div className="ml-3 border-l border-[hsl(var(--border))] pl-1.5">
+        <div className="ml-3 min-w-0 border-l border-[hsl(var(--border))] pl-1.5">
           {flatFolders.map(({ folder, depth }) => {
             if (!folderAncestorsOpen(folder, folders, openFolders)) return null;
             return (
@@ -249,7 +265,7 @@ function FolderRow({
             onDragLeave={() => setDragOver(null)}
             onDrop={onDropToFolder}
             className={cn(
-              "w-full flex items-center gap-1.5 h-7 px-2 rounded text-[12px] hover:bg-accent/50 text-foreground/80",
+              "w-full min-w-0 flex items-center gap-1.5 h-7 px-2 rounded text-[12px] hover:bg-accent/50 text-foreground/80 overflow-hidden",
               dragOver === `fld-${f.id}` && "bg-[hsl(var(--brand))]/10 ring-1 ring-inset ring-[hsl(var(--brand))]/40",
             )}
             data-testid={`folder-${f.id}`}
@@ -268,7 +284,9 @@ function FolderRow({
                 className="bg-transparent text-[12px] outline-none flex-1 min-w-0"
               />
             ) : (
-              <span onDoubleClick={() => setRenaming(true)} className="truncate">{f.name}</span>
+              <ExplorerLabel onDoubleClick={() => setRenaming(true)} title={f.name}>
+                {f.name}
+              </ExplorerLabel>
             )}
             <span className="ml-auto text-[10px] text-muted-foreground font-mono">{requests.length}</span>
           </div>
@@ -295,7 +313,7 @@ function FolderRow({
         </ContextMenuContent>
       </ContextMenu>
       {isOpen && requests.map((r) => (
-        <div key={r.id} className="ml-3 border-l border-[hsl(var(--border))] pl-1.5">
+        <div key={r.id} className="ml-3 min-w-0 border-l border-[hsl(var(--border))] pl-1.5">
           <RequestRow
             request={r}
             collection={c}
@@ -372,7 +390,7 @@ export function RequestRow({
   };
 
   return (
-    <div>
+    <div className="min-w-0">
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
@@ -383,7 +401,7 @@ export function RequestRow({
             onDrop={onDrop}
             onClick={onClick}
             className={cn(
-              "w-full flex items-center gap-1.5 h-7 px-2 rounded text-[12px] hover:bg-accent/50 cursor-pointer",
+              "w-full min-w-0 flex items-center gap-1.5 h-7 px-2 rounded text-[12px] hover:bg-accent/50 cursor-pointer overflow-hidden",
               active ? "bg-accent text-foreground" : "text-muted-foreground",
               dragOver === `req-${r.id}` && "ring-1 ring-inset ring-[hsl(var(--brand))]/60",
             )}
@@ -401,7 +419,7 @@ export function RequestRow({
             ) : (
               <span className="h-5 w-5 shrink-0" />
             )}
-            <MethodBadge method={r.method} className="w-7 text-left shrink-0" />
+            <MethodBadge method={r.method} className="w-10 text-left shrink-0" />
             {renaming ? (
               <input
                 autoFocus
@@ -419,12 +437,12 @@ export function RequestRow({
                 className="bg-transparent text-[12px] outline-none flex-1 min-w-0"
               />
             ) : (
-              <span
+              <ExplorerLabel
                 onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
-                className="truncate flex-1 min-w-0"
+                title={r.name}
               >
                 {r.name}
-              </span>
+              </ExplorerLabel>
             )}
             {hasExamples && (
               <span className="text-[10px] text-muted-foreground font-mono shrink-0">{examples.length}</span>
@@ -457,7 +475,7 @@ export function RequestRow({
       </ContextMenu>
 
       {examplesExpanded && hasExamples && (
-        <div className="ml-3 border-l border-[hsl(var(--border))] pl-1.5">
+        <div className="ml-3 min-w-0 border-l border-[hsl(var(--border))] pl-1.5">
           {examples.map((example) => (
             <ExampleRow
               key={example.id}
@@ -497,7 +515,7 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
         <div
           onClick={onOpen}
           className={cn(
-            "w-full flex items-center gap-2 h-7 px-2 rounded text-[12px] hover:bg-accent/50 cursor-pointer",
+            "w-full min-w-0 flex items-center gap-2 h-7 px-2 rounded text-[12px] hover:bg-accent/50 cursor-pointer overflow-hidden",
             active ? "bg-accent text-foreground" : "text-muted-foreground",
           )}
           data-testid={COLL.example(example.id)}
@@ -521,12 +539,12 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
               className="bg-transparent text-[12px] outline-none flex-1 min-w-0"
             />
           ) : (
-            <span
+            <ExplorerLabel
               onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
-              className="truncate flex-1 min-w-0"
+              title={example.name}
             >
               {example.name}
-            </span>
+            </ExplorerLabel>
           )}
         </div>
       </ContextMenuTrigger>

@@ -344,7 +344,7 @@ export default function CollectionsExplorer({
           />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-1">
+      <div className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto p-1">
         {filtered.length === 0 && (
           <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">No collections match</div>
         )}

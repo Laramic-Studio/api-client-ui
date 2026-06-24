@@ -166,7 +166,7 @@ export default function UrlInput({
       <div
         aria-hidden
         className={cn(
-          "absolute inset-0 px-3 font-mono whitespace-pre overflow-hidden flex items-center pointer-events-none",
+          "absolute inset-0 px-3 font-soro whitespace-pre overflow-hidden flex items-center pointer-events-none",
           inputHeight,
           inputText,
           grouped ? "rounded-none" : "rounded-md",
@@ -222,12 +222,12 @@ export default function UrlInput({
         data-testid={testid}
         spellCheck={false}
         className={cn(
-          "relative w-full px-3 font-mono ring-focus bg-transparent",
+          "relative w-full px-3 font-soro  bg-transparent focus:border-none focus:outline-none focus:ring-0 focus:ring-offset-0",
           inputHeight,
           inputText,
           grouped
-            ? "border-0 rounded-none focus-visible:outline-none"
-            : "rounded-md bg-[hsl(var(--input))] border border-[hsl(var(--border))]",
+            ? "border-0 rounded-none"
+            : "rounded-md bg-[hsl(var(--input))] focus:border-none focus:ring-0 focus:ring-offset-0",
         )}
         style={{ caretColor: "currentColor" }}
       />
@@ -297,7 +297,7 @@ export default function UrlInput({
               commitVariableEdit();
               setHoverVar(null);
             }}
-            className="w-full h-8 px-2 rounded-md bg-[hsl(var(--input))] border border-[hsl(var(--border))] text-[12px] font-mono ring-focus"
+            className="w-full h-8 px-2 rounded-md bg-[hsl(var(--input))] border border-[hsl(var(--border))] text-[12px] font-soro"
             placeholder="Variable value"
           />
         </div>

@@ -7,7 +7,7 @@ import { isTabDirty } from "@/lib/builder/dirty";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-export default function RequestTabs({ onNewScratch, onTabSelect, onTabClose, drafts = {} }) {
+export default function RequestTabs({ onNewScratch, onTabSelect, onTabClose, drafts = {}, trailing = null }) {
   const tabs = useAppStore((s) => s.openTabs);
   const active = useAppStore((s) => s.activeTabId);
   const setActive = useAppStore((s) => s.setActiveTab);
@@ -27,7 +27,8 @@ export default function RequestTabs({ onNewScratch, onTabSelect, onTabClose, dra
 
   return (
     <div className="h-9 shrink-0 flex items-center border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-      <div className="flex h-full overflow-x-auto no-scrollbar">
+      <div className="flex h-full flex-1 min-w-0 items-center overflow-hidden">
+        <div className="flex h-full overflow-x-auto no-scrollbar">
         {tabs.map((t) => {
           const req = t.scratch || isScratchTab(t.id) ? null : findRequest(t.id).request;
           const method = req?.method || "GET";
@@ -63,15 +64,21 @@ export default function RequestTabs({ onNewScratch, onTabSelect, onTabClose, dra
             </div>
           );
         })}
+        </div>
+        <button
+          onClick={onNewScratch}
+          className="ml-1 mr-1 h-7 w-7 shrink-0 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+          data-testid="tab-new-scratch"
+          title="New request tab"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
       </div>
-      <button
-        onClick={onNewScratch}
-        className="ml-1 h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground"
-        data-testid="tab-new-scratch"
-        title="New request tab"
-      >
-        <Plus className="h-3.5 w-3.5" />
-      </button>
+      {trailing && (
+        <div className="shrink-0 h-full flex items-stretch">
+          {trailing}
+        </div>
+      )}
     </div>
   );
 }

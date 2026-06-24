@@ -17,7 +17,7 @@ export default function MethodBadge({ method, className }) {
   return (
     <span
       className={cn(
-        "inline-block font-mono text-[10.5px] font-semibold tracking-wider uppercase",
+        "inline-block font-urbanist text-[10.5px] font-semibold tracking-wider uppercase",
         COLORS[method] || "text-muted-foreground",
         className
       )}

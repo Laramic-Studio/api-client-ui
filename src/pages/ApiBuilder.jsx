@@ -7,6 +7,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 
 import CollectionsExplorer from "@/components/builder/CollectionsExplorer";
 import RequestTabs from "@/components/builder/RequestTabs";
+import EnvPicker from "@/components/builder/EnvPicker";
 import RequestPanel from "@/components/builder/RequestPanel";
 import ResponsePanel from "@/components/builder/ResponsePanel";
 import { buildExplainPrompt } from "@/lib/builder/explain-prompt";
@@ -756,7 +757,6 @@ export default function ApiBuilder() {
       autoSaveEnabled={autoSaveRequests}
       finalUrl={finalUrl}
       breadcrumb={requestBreadcrumb}
-      collectionId={activeReq.collectionId || activeColIdForEnv}
       activeEnv={activeEnv}
       onUpdateVariable={handleUpdateVariable}
       responseOpen={responseOpen}
@@ -870,6 +870,7 @@ export default function ApiBuilder() {
         onTabSelect={handleTabSelect}
         onTabClose={attemptCloseTab}
         drafts={drafts}
+        trailing={<EnvPicker collectionId={activeColIdForEnv} className={"border-none focus:ring-0 focus:ring-offset-0 focus:outline-none w-[13.5rem]"} />}
       />
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex-1 min-h-0">

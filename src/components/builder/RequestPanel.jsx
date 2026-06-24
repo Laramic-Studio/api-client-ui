@@ -15,7 +15,6 @@ import {
 import Editor from "@monaco-editor/react";
 import MethodBadge from "@/components/shared/MethodBadge";
 import UrlInput from "@/components/builder/UrlInput";
-import EnvPicker from "@/components/builder/EnvPicker";
 import KvEditor from "@/components/builder/KvEditor";
 import AuthEditor from "@/components/builder/AuthEditor";
 import TestsPanel from "@/components/builder/TestsPanel";
@@ -44,7 +43,6 @@ const TAB_CONTENT_CLASS = "flex-1 min-h-0 m-0 mt-0 p-0 overflow-hidden data-[sta
 export default function RequestPanel({
   req, onChange, onSend, onSave, sending, saving, autoSaveStatus = "idle", autoSaveEnabled = false,
   finalUrl, breadcrumb = [],
-  collectionId = null,
   activeEnv = null,
   onUpdateVariable,
   responseOpen = true,
@@ -151,22 +149,21 @@ export default function RequestPanel({
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             {saveLabel}
           </button>
-          <EnvPicker collectionId={collectionId} compact />
         </div>
       </div>
 
       <div className="p-3 border-b border-[hsl(var(--border))] flex items-center gap-2">
-        <div className="flex flex-1 min-w-0 items-stretch rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--input))] overflow-hidden focus-within:ring-1 focus-within:ring-[hsl(var(--brand))]/35">
+        <div className="flex flex-1 min-w-0 items-stretch rounded-md  bg-[hsl(var(--input))] overflow-hidden">
           <Select value={req.method} onValueChange={(v) => onChange({ ...req, method: v })}>
             <SelectTrigger
-              className="w-[5.5rem] h-9 shrink-0 rounded-none border-0 border-r border-[hsl(var(--border))] bg-transparent text-[12px] font-mono font-semibold shadow-none focus:ring-0"
+              className="w-[5.5rem] h-9 shrink-0 rounded-none border-0 border-r border-[hsl(var(--border))] bg-transparent text-[12px] font-semibold shadow-none focus:ring-0"
               data-testid={BUILDER.methodSelect}
             >
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
               {METHODS_LIST.map((m) => (
-                <SelectItem key={m} value={m} className="font-mono">
+                <SelectItem key={m} value={m} className="font-soro">
                   <MethodBadge method={m} />
                 </SelectItem>
               ))}
