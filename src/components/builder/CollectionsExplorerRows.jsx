@@ -419,7 +419,7 @@ export function RequestRow({
             ) : (
               <span className="h-5 w-5 shrink-0" />
             )}
-            <MethodBadge method={r.method} className="w-10 text-left shrink-0" />
+            <MethodBadge method={r.method} short className="w-10 text-left shrink-0" />
             {renaming ? (
               <input
                 autoFocus
@@ -475,7 +475,7 @@ export function RequestRow({
       </ContextMenu>
 
       {examplesExpanded && hasExamples && (
-        <div className="ml-3 min-w-0 border-l border-[hsl(var(--border))] pl-1.5">
+        <div className="min-w-0">
           {examples.map((example) => (
             <ExampleRow
               key={example.id}
@@ -515,13 +515,15 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
         <div
           onClick={onOpen}
           className={cn(
-            "w-full min-w-0 flex items-center gap-2 h-7 px-2 rounded text-[12px] hover:bg-accent/50 cursor-pointer overflow-hidden",
+            "w-full min-w-0 flex items-center gap-1.5 h-7 px-2 rounded text-[12px] hover:bg-accent/50 cursor-pointer overflow-hidden",
             active ? "bg-accent text-foreground" : "text-muted-foreground",
           )}
           data-testid={COLL.example(example.id)}
         >
-          <FileJson className="h-3.5 w-3.5 text-[hsl(var(--brand))] shrink-0" />
-          {example.isDefault && <Star className="h-3 w-3 text-[hsl(var(--warning))] shrink-0" fill="currentColor" />}
+          <span className="h-5 w-5 shrink-0" aria-hidden />
+          <span className="w-10 shrink-0 inline-flex items-center">
+            <FileJson className="h-3.5 w-3.5 text-[hsl(var(--brand))]" />
+          </span>
           {renaming ? (
             <input
               autoFocus
@@ -543,7 +545,12 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
               onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
               title={example.name}
             >
-              {example.name}
+              <span className="inline-flex items-center gap-1 min-w-0">
+                {example.isDefault && (
+                  <Star className="h-3 w-3 text-[hsl(var(--warning))] shrink-0" fill="currentColor" />
+                )}
+                <span className="truncate">{example.name}</span>
+              </span>
             </ExplorerLabel>
           )}
         </div>

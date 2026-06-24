@@ -1,5 +1,6 @@
 // URL input with [[VAR]] autocomplete from the active environment.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import {
   getCaretIndexFromMouse,
@@ -35,6 +36,7 @@ export default function UrlInput({
   const [hoverVar, setHoverVar] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [popoverPinned, setPopoverPinned] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState(null);
 
   const suggestions = useMemo(() => {
     if (!open) return [];
@@ -72,16 +74,44 @@ export default function UrlInput({
 
   const updateHoverAnchor = useCallback((hit) => {
     const input = inputRef.current;
-    const container = containerRef.current;
-    if (!hit || !input || !container) return null;
+    if (!hit || !input) return null;
 
     const anchorLeft = getVariableAnchorLeft(input, value, hit);
-    const maxLeft = container.clientWidth - 12;
+    const container = containerRef.current;
+    const maxLeft = container ? container.clientWidth - 12 : anchorLeft;
     return {
       ...hit,
       anchorLeft: clamp(anchorLeft, 12, maxLeft),
     };
   }, [value]);
+
+  const syncTooltipPos = useCallback(() => {
+    if (!hoverVar || !inputRef.current) {
+      setTooltipPos(null);
+      return;
+    }
+    const rect = inputRef.current.getBoundingClientRect();
+    setTooltipPos({
+      left: rect.left + hoverVar.anchorLeft,
+      top: rect.top,
+    });
+  }, [hoverVar]);
+
+  useLayoutEffect(() => {
+    syncTooltipPos();
+  }, [syncTooltipPos]);
+
+  useEffect(() => {
+    if (!hoverVar) return undefined;
+
+    const onScrollOrResize = () => syncTooltipPos();
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [hoverVar, syncTooltipPos]);
 
   const insertSuggestion = (item) => {
     let before;
@@ -174,11 +204,14 @@ export default function UrlInput({
       setHoverVar(null);
       return;
     }
+
+    const anchored = updateHoverAnchor(hit);
+    if (!anchored) return;
+
     if (hoverVar?.key !== hit.key || hoverVar?.start !== hit.start) {
-      const anchored = updateHoverAnchor(hit);
-      setHoverVar(anchored);
       setEditValue(resolveVarValue(hit.key));
     }
+    setHoverVar(anchored);
   };
 
   const handleInputScroll = () => {
@@ -305,15 +338,22 @@ export default function UrlInput({
         </div>
       )}
 
-      {hoverVar && onUpdateVariable && (
+      {hoverVar && tooltipPos && createPortal(
         <div
           ref={popoverRef}
           role="tooltip"
-          style={{ left: hoverVar.anchorLeft }}
-          className="absolute bottom-[calc(100%+6px)] z-50 w-max max-w-[min(16rem,calc(100%-1rem))] -translate-x-1/2 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--popover))] px-2.5 py-2 shadow-md pointer-events-auto"
+          style={{
+            position: "fixed",
+            left: tooltipPos.left,
+            top: tooltipPos.top,
+            transform: "translate(-50%, calc(-100% - 8px))",
+            zIndex: 9999,
+          }}
+          className="w-max max-w-[min(17rem,calc(100vw-2rem))] rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--popover))] px-2.5 py-2 shadow-md pointer-events-auto"
           data-testid={testid ? `${testid}-var-popover` : undefined}
           onMouseDown={(e) => e.preventDefault()}
           onMouseEnter={() => {
+            if (!onUpdateVariable) return;
             setPopoverPinned(true);
             editRef.current?.focus();
           }}
@@ -327,33 +367,37 @@ export default function UrlInput({
             className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-[hsl(var(--border))] bg-[hsl(var(--popover))]"
             aria-hidden
           />
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-inter">
             {env?.name || "Environment"}
           </div>
-          <div className="mt-0.5 font-mono text-[11px] text-[hsl(var(--brand))]">
-            [[{hoverVar.key}]]
-          </div>
-          <input
-            ref={editRef}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                commitVariableEdit();
-                closePopover();
-                inputRef.current?.focus();
-              }
-              if (e.key === "Escape") {
-                e.preventDefault();
-                closePopover();
-                inputRef.current?.focus();
-              }
-            }}
-            className="mt-1.5 w-full min-w-[10rem] h-7 px-2 rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[11px] font-mono ring-focus"
-            placeholder="Value"
-          />
-        </div>
+          {onUpdateVariable ? (
+            <input
+              ref={editRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  commitVariableEdit();
+                  closePopover();
+                  inputRef.current?.focus();
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  closePopover();
+                  inputRef.current?.focus();
+                }
+              }}
+              className="mt-1.5 w-full min-w-[10rem] h-7 px-2 rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[11px] font-mono ring-focus"
+              placeholder="Value"
+            />
+          ) : (
+            <div className="mt-1 text-[11px] font-mono text-muted-foreground truncate max-w-[14rem]">
+              {editValue || "—"}
+            </div>
+          )}
+        </div>,
+        document.body,
       )}
     </div>
   );

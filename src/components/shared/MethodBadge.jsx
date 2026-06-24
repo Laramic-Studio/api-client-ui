@@ -13,7 +13,12 @@ const COLORS = {
   GRPC: "text-[#A855F7]",
 };
 
-export default function MethodBadge({ method, className }) {
+function formatMethod(method, short) {
+  if (short && method === "DELETE") return "DEL";
+  return method;
+}
+
+export default function MethodBadge({ method, className, short = false }) {
   return (
     <span
       className={cn(
@@ -22,7 +27,7 @@ export default function MethodBadge({ method, className }) {
         className
       )}
     >
-      {method}
+      {formatMethod(method, short)}
     </span>
   );
 }
