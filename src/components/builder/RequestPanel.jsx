@@ -4,7 +4,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/store/useAppStore";
 import {
-  Save, Send, Play, Code2, Copy, Sparkles, Loader2, ChevronRight, PanelRight,
+  Save, Send, Play, Code2, Copy, Loader2, ChevronRight, PanelRight,
 } from "lucide-react";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -27,6 +27,7 @@ import { countEnabledKvRows } from "@/lib/builder/request-body";
 import { BUILDER } from "@/constants/testIds";
 import { cn } from "@/lib/utils";
 import { isRequestUrlEmpty } from "@/lib/builder/url-variables";
+import { mergeParsedHeaders } from "@/lib/builder/parse-curl";
 import { toast } from "sonner";
 
 const BODY_TYPES = [
@@ -43,7 +44,6 @@ const TAB_CONTENT_CLASS = "flex-1 min-h-0 m-0 mt-0 p-0 overflow-hidden data-[sta
 export default function RequestPanel({
   req, onChange, onSend, onSave, sending, saving, autoSaveStatus = "idle", autoSaveEnabled = false,
   finalUrl, breadcrumb = [],
-  onAskAI,
   collectionId = null,
   activeEnv = null,
   onUpdateVariable,
@@ -67,6 +67,19 @@ export default function RequestPanel({
   const urlEmpty = isRequestUrlEmpty(req?.url);
   const canSend = !urlEmpty && !sending;
   const tryMode = isExampleView && typeof onTry === "function";
+
+  const handleImportCurl = (parsed) => {
+    const patch = {
+      method: parsed.method || req.method,
+      url: parsed.url,
+      params: parsed.params?.length ? parsed.params : req.params,
+      headers: mergeParsedHeaders(req.headers, parsed.headers),
+      body: parsed.body?.type === "none" ? req.body : parsed.body,
+    };
+    if (parsed.auth) patch.auth = parsed.auth;
+    onChange({ ...req, ...patch });
+    toast.success("Imported from cURL");
+  };
 
   const handleSend = () => {
     if (urlEmpty) {
@@ -164,21 +177,13 @@ export default function RequestPanel({
             onChange={(v) => onChange({ ...req, url: v })}
             onEnter={handleSend}
             onUpdateVariable={onUpdateVariable}
+            onImportCurl={handleImportCurl}
             env={activeEnv}
-            placeholder="Enter request URL — use [[VAR]] for environment variables"
+            placeholder="Enter URL or paste a cURL command"
             testid={BUILDER.urlInput}
             grouped
           />
         </div>
-        <button
-          type="button"
-          onClick={onAskAI}
-          data-testid="builder-ask-ai"
-          title="Open AI assistant to build this request"
-          className="h-9 px-2.5 rounded-md bg-[hsl(var(--brand))]/15 text-[hsl(var(--brand))] hover:bg-[hsl(var(--brand))]/25 text-[12px] font-medium inline-flex items-center gap-1.5 border border-[hsl(var(--brand))]/30"
-        >
-          <Sparkles className="h-3.5 w-3.5" /> Ask AI
-        </button>
         <button
           onClick={handleSend}
           disabled={!canSend}

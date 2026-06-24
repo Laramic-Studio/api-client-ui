@@ -756,7 +756,6 @@ export default function ApiBuilder() {
       autoSaveEnabled={autoSaveRequests}
       finalUrl={finalUrl}
       breadcrumb={requestBreadcrumb}
-      onAskAI={() => queueAiChat({ text: "Build an API request that ", autoSend: false })}
       collectionId={activeReq.collectionId || activeColIdForEnv}
       activeEnv={activeEnv}
       onUpdateVariable={handleUpdateVariable}

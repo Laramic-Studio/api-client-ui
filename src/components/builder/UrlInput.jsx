@@ -2,12 +2,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { getCaretIndexFromMouse, getVariableAtIndex } from "@/lib/builder/url-variables";
+import { looksLikeCurl, parseCurlCommand } from "@/lib/builder/parse-curl";
 
 export default function UrlInput({
   value,
   onChange,
   onEnter,
   onUpdateVariable,
+  onImportCurl,
   placeholder,
   testid,
   grouped = false,
@@ -148,6 +150,17 @@ export default function UrlInput({
     onUpdateVariable(hoverVar.key, editValue);
   };
 
+  const handlePaste = (e) => {
+    const text = e.clipboardData?.getData("text/plain")?.trim();
+    if (!text || !onImportCurl || !looksLikeCurl(text)) return;
+
+    const parsed = parseCurlCommand(text);
+    if (!parsed?.url) return;
+
+    e.preventDefault();
+    onImportCurl(parsed);
+  };
+
   return (
     <div ref={containerRef} className="relative flex-1">
       <div
@@ -190,6 +203,7 @@ export default function UrlInput({
         }}
         onSelect={(e) => setPos(e.target.selectionStart || 0)}
         onKeyDown={handleKey}
+        onPaste={handlePaste}
         onFocus={() => setOpen(true)}
         onBlur={() => {
           setTimeout(() => {
