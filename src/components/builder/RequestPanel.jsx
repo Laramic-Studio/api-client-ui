@@ -211,14 +211,14 @@ export default function RequestPanel({
       {showCodeGen && (
         <div className="m-3 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
           <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-[hsl(var(--border))]">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Code snippet</div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Code snippet</div>
             <div className="flex gap-1">
               {CODE_LANGS.map((l) => (
                 <button
                   key={l.id}
                   onClick={() => setCodeLang(l.id)}
                   className={cn(
-                    "h-6 px-2 rounded text-[11px] font-mono",
+                    "h-6 px-2 rounded text-[11px] font-geom",
                     codeLang === l.id ? "bg-accent" : "text-muted-foreground hover:bg-accent/50"
                   )}
                   data-testid={`codegen-${l.id}`}
@@ -234,7 +234,7 @@ export default function RequestPanel({
               </button>
             </div>
           </div>
-          <pre className="text-[12px] font-mono p-3 overflow-auto max-h-44 leading-relaxed">{codeSnippet}</pre>
+          <pre className="text-[12px] font-geom p-3 overflow-auto max-h-44 leading-relaxed">{codeSnippet}</pre>
         </div>
       )}
 
@@ -246,7 +246,7 @@ export default function RequestPanel({
             ["headers", "Headers", headerCount],
             ["body", "Body", req.body?.type !== "none" ? "•" : null],
             ["scripts", "Pre-request", null],
-            ["tests", "Tests", null],
+            ["tests", "Post-request", null],
             ["docs", "Docs", req.docs ? "•" : null],
           ].map(([k, label, count]) => (
             <TabsTrigger
@@ -257,7 +257,7 @@ export default function RequestPanel({
             >
               {label}
               {count !== null && count !== undefined && (
-                <span className="ml-1.5 text-[10px] text-muted-foreground font-mono">{count}</span>
+                <span className="ml-1.5 text-[10px] text-muted-foreground font-geom">{count}</span>
               )}
             </TabsTrigger>
           ))}
@@ -287,7 +287,7 @@ export default function RequestPanel({
 
         <TabsContent value="body" className={cn(TAB_CONTENT_CLASS, readOnly && "opacity-70 pointer-events-none select-none")}>
           <div className="flex items-center gap-2 p-2 border-b border-[hsl(var(--border))]">
-            <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Type</span>
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Type</span>
             <Select value={req.body.type} onValueChange={(v) => onChange({ ...req, body: { ...req.body, type: v } })}>
               <SelectTrigger className="h-7 w-36 bg-[hsl(var(--input))] border-[hsl(var(--border))] text-[12px]" data-testid={BUILDER.bodyTypeSelect}>
                 <SelectValue />
@@ -344,12 +344,6 @@ export default function RequestPanel({
         </TabsContent>
 
         <TabsContent value="scripts" className={cn(TAB_CONTENT_CLASS, readOnly && "opacity-70 pointer-events-none select-none")}>
-          <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground">
-            Pre-request script. Use{" "}
-            <span className="font-mono text-foreground/75">nr.variables.set()</span>,{" "}
-            <span className="font-mono text-foreground/75">request.headers</span>,{" "}
-            <span className="font-mono text-foreground/75">[[ $randomEmail ]]</span> — logs go to the bottom Console.
-          </div>
           <div className="flex-1 min-h-0">
             <Editor
               height="100%"
@@ -364,12 +358,6 @@ export default function RequestPanel({
         </TabsContent>
 
         <TabsContent value="tests" className={cn(TAB_CONTENT_CLASS, readOnly && "opacity-70 pointer-events-none select-none")}>
-          <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground">
-            Post-response script. Use{" "}
-            <span className="font-mono text-foreground/75">response.json()</span>,{" "}
-            <span className="font-mono text-foreground/75">nr.test()</span>,{" "}
-            <span className="font-mono text-foreground/75">nr.variables.replaceIn(&apos;[[ $randomFirstName ]]&apos;)</span>
-          </div>
           <div className="flex-1 min-h-0">
             <TestsPanel
               tests={req.tests}

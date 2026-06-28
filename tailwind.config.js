@@ -61,6 +61,15 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         'caret-blink': 'caret-blink 1.25s ease-out infinite',
       },
+      fontFamily:{
+        'geom': ['Geom', 'sans-serif'],
+        'google-sans-flex': ['Google Sans Flex', 'sans-serif'],
+        'inter': ['Inter', 'sans-serif'],
+        'outfit': ['Outfit', 'sans-serif'],
+        'roboto': ['Roboto', 'sans-serif'],
+        'rowdies': ['Rowdies', 'sans-serif'],
+        'urbanist': ['Urbanist', 'sans-serif'],
+      },
       keyframes: {
         'accordion-down': {
           from: {

@@ -28,7 +28,7 @@ export default function AuthEditor({ auth, onChange, activeEnv = null }) {
 
   return (
     <div className="space-y-3 max-w-xl">
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Type</div>
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Type</div>
       <Select
         value={normalized.type}
         onValueChange={(v) => {
@@ -98,14 +98,14 @@ export default function AuthEditor({ auth, onChange, activeEnv = null }) {
 function Field({ label, value, onChange, type = "text", placeholder, readOnly = false }) {
   return (
     <div className="space-y-1">
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">{label}</div>
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">{label}</div>
       <input
         type={type}
         value={value}
         readOnly={readOnly}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-9 px-2.5 rounded-md bg-[hsl(var(--input))] border border-[hsl(var(--border))] text-[13px] font-mono ring-focus read-only:opacity-70"
+        className="w-full h-9 px-2.5 rounded-md bg-[hsl(var(--input))] border border-[hsl(var(--border))] text-[13px] font-geom ring-focus read-only:opacity-70"
       />
     </div>
   );

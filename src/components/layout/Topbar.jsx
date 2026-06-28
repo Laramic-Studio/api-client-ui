@@ -192,7 +192,7 @@ export default function Topbar() {
                   <div className="min-w-0">
                     <div className="text-[13px] font-medium">{n.title}</div>
                     <div className="text-[12px] text-muted-foreground">{n.desc}</div>
-                    <div className="text-[10px] text-muted-foreground mt-1 font-mono uppercase tracking-wider">
+                    <div className="text-[10px] text-muted-foreground mt-1 font-geom uppercase tracking-wider">
                       {new Date(n.timestamp).toLocaleTimeString()}
                     </div>
                   </div>

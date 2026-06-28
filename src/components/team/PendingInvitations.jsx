@@ -23,7 +23,7 @@ export default function PendingInvitations({ teamId, invitations, canCancel, can
 
   return (
     <div className="rounded-md border border-border bg-card overflow-hidden">
-      <div className="px-4 py-2 border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+      <div className="px-4 py-2 border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground font-geom">
         Pending invitations
       </div>
       <div className="divide-y divide-border">
@@ -36,7 +36,7 @@ export default function PendingInvitations({ teamId, invitations, canCancel, can
             <div key={inv.code} className="flex items-center gap-3 px-4 py-2 hover:bg-accent/50">
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-medium truncate">{inv.email}</div>
-                <div className="text-[11px] text-muted-foreground font-mono">
+                <div className="text-[11px] text-muted-foreground font-geom">
                   {inv.roleLabel || inv.role}
                 </div>
               </div>

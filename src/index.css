@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Changa:wght@200..800&family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Rowdies:wght@300;400;700&family=Unbounded:wght@200..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geom:ital,wght@0,300..900;1,300..900&family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&family=Roboto:ital,wght@0,100..900;1,100..900&family=Rowdies:wght@300;400;700&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -99,7 +99,7 @@
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
   }
-  code, pre, .font-mono {
+  code, pre, .font-geom {
     font-family: "JetBrains Mono", "Fira Code", "Source Code Pro", monospace;
   }
   ::selection {
@@ -141,7 +141,7 @@
     border-color: hsl(var(--border));
   }
   .kbd {
-    @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[10px] uppercase tracking-wider text-zinc-400;
+    @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-white/10 bg-white/5 px-1.5 font-geom text-[10px] uppercase tracking-wider text-zinc-400;
   }
   .ring-focus {
     @apply focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--brand))];
@@ -172,10 +172,10 @@
     @apply text-[hsl(var(--brand))] hover:underline;
   }
   .docs-editor-inline-code {
-    @apply rounded bg-[hsl(var(--input))] px-1 py-0.5 font-mono text-[12px];
+    @apply rounded bg-[hsl(var(--input))] px-1 py-0.5 font-geom text-[12px];
   }
   .docs-editor-code-block {
-    @apply mb-2 block overflow-auto rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--input))] p-3 font-mono text-[12px];
+    @apply mb-2 block overflow-auto rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--input))] p-3 font-geom text-[12px];
   }
   .docs-editor-quote {
     @apply mb-2 border-l-2 border-[hsl(var(--border))] pl-3 text-muted-foreground italic;

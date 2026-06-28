@@ -49,7 +49,7 @@ export default function WorkspaceCard({
             ) : (
               <div className="text-[14px] font-medium truncate">{ws.name}</div>
             )}
-            <div className="text-[11px] text-muted-foreground mt-0.5 font-mono uppercase tracking-wider inline-flex items-center gap-2">
+            <div className="text-[11px] text-muted-foreground mt-0.5 font-geom uppercase tracking-wider inline-flex items-center gap-2">
               <Users className="h-3 w-3" /> {ws.members} members
               {ws.isPersonal && (
                 <span className="text-[10px] normal-case tracking-normal">· Personal</span>
@@ -57,7 +57,7 @@ export default function WorkspaceCard({
             </div>
           </div>
           {isActive && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-[hsl(var(--brand))]/40 text-[10px] uppercase tracking-wider font-mono text-[hsl(var(--brand))]">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-[hsl(var(--brand))]/40 text-[10px] uppercase tracking-wider font-geom text-[hsl(var(--brand))]">
               <Check className="h-2.5 w-2.5" /> Active
             </span>
           )}

@@ -33,7 +33,7 @@ export default function InviteTeamForm({ invites, onChange }) {
 
   return (
     <div className="space-y-3">
-      <Label className="text-[11px] uppercase font-mono text-muted-foreground">
+      <Label className="text-[11px] uppercase font-geom text-muted-foreground">
         Invite teammates (optional)
       </Label>
 
@@ -46,7 +46,7 @@ export default function InviteTeamForm({ invites, onChange }) {
               onChange={(e) => updateRow(index, { email: e.target.value })}
               placeholder="colleague@company.com"
               data-testid={`onboarding-invite-email-${index}`}
-              className="bg-muted border-[hsl(var(--border))] h-10 font-mono text-[13px] flex-1"
+              className="bg-muted border-[hsl(var(--border))] h-10 font-geom text-[13px] flex-1"
             />
             <Select value={row.role} onValueChange={(role) => updateRow(index, { role })}>
               <SelectTrigger className="bg-muted border-[hsl(var(--border))] h-10 text-[13px] w-[130px]">

@@ -63,9 +63,44 @@ const SAMPLE_INSOMNIA = JSON.stringify({
   ],
 }, null, 2);
 
+const SAMPLE_HOPPSCOTCH = JSON.stringify({
+  name: "Sample Hoppscotch",
+  v: 9,
+  folders: [
+    {
+      name: "Users",
+      folders: [],
+      requests: ["req_list"],
+    },
+  ],
+  requests: [
+    {
+      id: "req_list",
+      name: "List users",
+      method: "GET",
+      endpoint: "<<BASE_URL>>/users",
+      headers: [{ key: "Accept", value: "application/json", active: true }],
+      params: [],
+      body: { contentType: "", body: null },
+      auth: { authType: "none" },
+    },
+    {
+      id: "req_create",
+      name: "Create user",
+      method: "POST",
+      endpoint: "<<BASE_URL>>/users",
+      headers: [{ key: "Content-Type", value: "application/json", active: true }],
+      params: [],
+      body: { contentType: "application/json", body: "{\"name\":\"Ada\"}" },
+      auth: { authType: "none" },
+    },
+  ],
+}, null, 2);
+
 const FORMAT_SAMPLES = {
   openapi: SAMPLE_OPENAPI,
   postman: SAMPLE_POSTMAN,
+  hoppscotch: SAMPLE_HOPPSCOTCH,
   insomnia: SAMPLE_INSOMNIA,
   har: "",
 };
@@ -73,6 +108,7 @@ const FORMAT_SAMPLES = {
 const FORMAT_LABELS = {
   openapi: "OpenAPI",
   postman: "Postman",
+  hoppscotch: "Hoppscotch",
   insomnia: "Insomnia",
   har: "HAR",
 };
@@ -171,10 +207,10 @@ export default function ImportApi() {
   return (
     <div className="h-full overflow-auto p-6">
       <div className="mb-5">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// onboarding</div>
+        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// onboarding</div>
         <h1 className="mt-1 text-2xl font-medium tracking-tight">Import API</h1>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          From OpenAPI, Postman, Insomnia, or HAR — creates a cloud collection you can use in the builder.
+          From OpenAPI, Postman, Hoppscotch, Insomnia, or HAR — creates a cloud collection you can use in the builder.
         </p>
       </div>
 
@@ -248,7 +284,7 @@ export default function ImportApi() {
                 onChange={(e) => setUrl(e.target.value)}
                 data-testid="import-url-input"
                 placeholder="https://petstore3.swagger.io/api/v3/openapi.json"
-                className="flex-1 h-10 px-3 rounded-md bg-muted border border-border text-[13px] font-mono"
+                className="flex-1 h-10 px-3 rounded-md bg-muted border border-border text-[13px] font-geom"
               />
               <button
                 onClick={loadFromUrl}
@@ -267,7 +303,7 @@ export default function ImportApi() {
                 setParsed(null);
               }}
               data-testid="import-paste-area"
-              className="w-full min-h-[240px] p-3 rounded-md bg-muted border border-border text-[12.5px] font-mono"
+              className="w-full min-h-[240px] p-3 rounded-md bg-muted border border-border text-[12.5px] font-geom"
             />
           )}
 
@@ -313,10 +349,10 @@ export default function ImportApi() {
                   key={`${row.method}-${row.url}-${index}`}
                   className="flex items-center gap-3 px-3 py-2 border-b border-border last:border-b-0 text-[12.5px]"
                 >
-                  <span className="font-mono font-semibold w-16 text-[hsl(var(--brand))]">{row.method}</span>
+                  <span className="font-geom font-semibold w-16 text-[hsl(var(--brand))]">{row.method}</span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate">{row.name}</div>
-                    <div className="truncate text-[11px] text-muted-foreground font-mono">{row.url}</div>
+                    <div className="truncate text-[11px] text-muted-foreground font-geom">{row.url}</div>
                     {row.folderLabel && (
                       <div className="text-[10px] text-muted-foreground mt-0.5">{row.folderLabel}</div>
                     )}

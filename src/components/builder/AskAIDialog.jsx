@@ -59,7 +59,7 @@ export default function AskAIDialog({ open, onOpenChange, envVars, onApply }) {
             onChange={(e) => setPrompt(e.target.value)}
             data-testid="ask-ai-input"
             placeholder="e.g. Create a new user named Maya with email maya@noidr.dev and role developer"
-            className="w-full min-h-[100px] p-3 rounded-md bg-muted border border-[hsl(var(--border))] text-[13px] font-mono ring-focus"
+            className="w-full min-h-[100px] p-3 rounded-md bg-muted border border-[hsl(var(--border))] text-[13px] font-geom ring-focus"
           />
           <div className="flex flex-wrap gap-1.5">
             {EXAMPLES.map((ex) => (
@@ -76,7 +76,7 @@ export default function AskAIDialog({ open, onOpenChange, envVars, onApply }) {
           {history.length > 0 && (
             <div className="rounded-md border border-[hsl(var(--border))] bg-card max-h-40 overflow-auto" data-testid="ai-history">
               <div className="flex items-center justify-between px-2 py-1.5 border-b border-[hsl(var(--border))]">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">Recent prompts</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom">Recent prompts</div>
                 <button onClick={clearPrompts} className="text-[11px] text-muted-foreground hover:text-foreground" data-testid="ai-history-clear">Clear</button>
               </div>
               <div className="divide-y divide-[hsl(var(--border))]">
@@ -89,7 +89,7 @@ export default function AskAIDialog({ open, onOpenChange, envVars, onApply }) {
                   >
                     <div className="text-[12.5px] truncate">{h.prompt}</div>
                     {h.method && (
-                      <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider truncate">
+                      <div className="text-[10px] text-muted-foreground font-geom uppercase tracking-wider truncate">
                         {h.method} {h.url}
                       </div>
                     )}
@@ -98,7 +98,7 @@ export default function AskAIDialog({ open, onOpenChange, envVars, onApply }) {
               </div>
             </div>
           )}
-          <div className="text-[11px] text-muted-foreground font-mono">
+          <div className="text-[11px] text-muted-foreground font-geom">
             Provider: <span className="text-foreground/80">{ai.provider}/{ai.model}</span>
             {ai.useOwnKey ? " · using your key" : " · free tier"}
             <span className="ml-2">Used {ai.usage.total}/{ai.usage.limit}</span>

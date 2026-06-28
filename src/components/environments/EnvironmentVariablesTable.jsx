@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export default function EnvironmentVariablesTable({ variables, onUpdate, onRemove, onAdd, readOnly = false }) {
   return (
     <div className="rounded-md border border-border bg-card overflow-hidden">
-      <div className="grid grid-cols-[24px_1fr_1fr_28px_28px] gap-1 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-mono border-b border-border">
+      <div className="grid grid-cols-[24px_1fr_1fr_28px_28px] gap-1 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-geom border-b border-border">
         <div />
         <div>Variable</div>
         <div>Value</div>
@@ -29,7 +29,7 @@ export default function EnvironmentVariablesTable({ variables, onUpdate, onRemov
             value={v.key}
             readOnly={readOnly}
             onChange={(e) => onUpdate(i, { key: e.target.value })}
-            className="h-8 px-2 rounded bg-muted border border-border text-[12.5px] font-mono"
+            className="h-8 px-2 rounded bg-muted border border-border text-[12.5px] font-geom"
           />
           <input
             type={v.secret ? "password" : "text"}
@@ -37,7 +37,7 @@ export default function EnvironmentVariablesTable({ variables, onUpdate, onRemov
             readOnly={readOnly}
             onChange={(e) => onUpdate(i, { value: e.target.value })}
             placeholder={v.secret ? "••••••••" : ""}
-            className="h-8 px-2 rounded bg-muted border border-border text-[12.5px] font-mono"
+            className="h-8 px-2 rounded bg-muted border border-border text-[12.5px] font-geom"
           />
           <button
             type="button"

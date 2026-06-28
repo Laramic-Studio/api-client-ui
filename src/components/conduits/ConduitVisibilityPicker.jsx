@@ -118,7 +118,7 @@ export default function ConduitVisibilityPicker({
 
         {visibility === "shared" && (
           <div className="border-t border-border p-2">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono px-1 mb-1.5">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom px-1 mb-1.5">
               Share with
             </div>
             <div className="max-h-[160px] overflow-y-auto space-y-0.5">

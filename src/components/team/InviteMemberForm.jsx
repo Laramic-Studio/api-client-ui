@@ -38,7 +38,7 @@ export default function InviteMemberForm({ teamId, canInvite, availableRoles }) 
 
   return (
     <div className="rounded-md border border-border bg-card p-4">
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono mb-2">Invite member</div>
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom mb-2">Invite member</div>
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />

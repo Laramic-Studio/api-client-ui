@@ -119,7 +119,7 @@ export default function Environments() {
       <div className="flex-1 min-h-0 grid grid-cols-[320px_1fr]">
       <div className="border-r border-border flex flex-col">
         <div className="h-12 shrink-0 flex items-center px-3 border-b border-border gap-2">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Environments</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Environments</div>
           <button
             onClick={createInScope}
             disabled={createEnv.isPending || isReadOnly}
@@ -291,12 +291,12 @@ export default function Environments() {
               />
 
               <div className="mt-6 rounded-md border border-border bg-card p-4">
-                <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono mb-2">Scope & hierarchy</div>
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom mb-2">Scope & hierarchy</div>
                 <p className="text-[12.5px] text-muted-foreground leading-relaxed">
                   Workspace-wide environments are available to all collections in the active workspace.
                   Collection-scoped environments override variables of the same name for requests inside that collection.
-                  Mark sensitive values as <span className="font-mono text-foreground/85">secret</span> — they are encrypted in the cloud and masked in the UI.
-                  Reference variables anywhere with <span className="font-mono text-[hsl(var(--brand))]">{"[[VAR_NAME]]"}</span> (legacy <span className="font-mono">{"{{VAR}}"}</span> is still supported).
+                  Mark sensitive values as <span className="font-geom text-foreground/85">secret</span> — they are encrypted in the cloud and masked in the UI.
+                  Reference variables anywhere with <span className="font-geom text-[hsl(var(--brand))]">{"[[VAR_NAME]]"}</span> (legacy <span className="font-geom">{"{{VAR}}"}</span> is still supported).
                 </p>
               </div>
             </div>

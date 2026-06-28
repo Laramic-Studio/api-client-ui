@@ -24,7 +24,7 @@ function phaseLabel(phase) {
 
 function LogRow({ entry }) {
   return (
-    <div className="flex items-start gap-2 px-3 py-1.5 hover:bg-accent/20 font-mono text-[12px]">
+    <div className="flex items-start gap-2 px-3 py-1.5 hover:bg-accent/20 font-geom text-[12px]">
       <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-0.5 text-transparent" />
       <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground w-24 pt-0.5">
         {phaseLabel(entry.phase)}
@@ -38,7 +38,7 @@ function LogRow({ entry }) {
 
 function NetworkRow({ entry }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent/20 font-mono text-[12px]">
+    <div className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent/20 font-geom text-[12px]">
       <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       <span className="shrink-0 font-semibold text-foreground/90 w-12">{entry.method}</span>
       <span className="flex-1 min-w-0 truncate text-foreground/85">{entry.url}</span>

@@ -19,16 +19,16 @@ export default function ConduitStepCard({ step, onExtractChange, onRemove }) {
         <MethodBadge method={step.method} />
         <span className="text-[12.5px] font-medium truncate">{step.name}</span>
       </div>
-      <div className="mt-1 text-[11px] text-muted-foreground font-mono truncate">{step.url}</div>
+      <div className="mt-1 text-[11px] text-muted-foreground font-geom truncate">{step.url}</div>
       <div className="mt-2">
-        <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom">
           Extract
         </label>
         <input
           value={step.extract || ""}
           onChange={(e) => onExtractChange?.(e.target.value)}
           placeholder="e.g. token or user.id"
-          className="mt-0.5 w-full h-7 px-2 rounded border border-border bg-background text-[11px] font-mono outline-none focus:border-[hsl(var(--brand))]/50"
+          className="mt-0.5 w-full h-7 px-2 rounded border border-border bg-background text-[11px] font-geom outline-none focus:border-[hsl(var(--brand))]/50"
         />
       </div>
     </div>
@@ -64,12 +64,12 @@ export function ConduitRunResults({ result, onClose }) {
         {result.steps.map((step, idx) => (
           <div key={step.nodeId || idx} className="px-4 py-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-muted-foreground font-mono w-5">{idx + 1}.</span>
+              <span className="text-[11px] text-muted-foreground font-geom w-5">{idx + 1}.</span>
               <MethodBadge method={step.method} />
               <span className="text-[12.5px] font-medium">{step.name}</span>
               <span
                 className={cn(
-                  "ml-auto text-[11px] font-mono px-1.5 py-0.5 rounded",
+                  "ml-auto text-[11px] font-geom px-1.5 py-0.5 rounded",
                   step.response?.ok
                     ? "text-[hsl(var(--success))] bg-[hsl(var(--success))]/10"
                     : "text-[hsl(var(--danger))] bg-[hsl(var(--danger))]/10",
@@ -77,13 +77,13 @@ export function ConduitRunResults({ result, onClose }) {
               >
                 {step.response?.status ?? "—"}
               </span>
-              <span className="text-[11px] text-muted-foreground font-mono">
+              <span className="text-[11px] text-muted-foreground font-geom">
                 {step.response?.durationMs}ms
               </span>
             </div>
-            <div className="text-[11px] text-muted-foreground font-mono truncate pl-7">{step.url}</div>
+            <div className="text-[11px] text-muted-foreground font-geom truncate pl-7">{step.url}</div>
             {step.extracted && (
-              <div className="pl-7 text-[11px] font-mono text-[hsl(var(--brand))]">
+              <div className="pl-7 text-[11px] font-geom text-[hsl(var(--brand))]">
                 extracted {step.extracted.path} → {JSON.stringify(step.extracted.value)}
               </div>
             )}
@@ -96,10 +96,10 @@ export function ConduitRunResults({ result, onClose }) {
 
       {Object.keys(result.variables || {}).length > 0 && (
         <div className="px-4 py-3 border-t border-border bg-muted/20">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1.5">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom mb-1.5">
             Flow variables
           </div>
-          <pre className="text-[11px] font-mono text-foreground/90 overflow-auto">
+          <pre className="text-[11px] font-geom text-foreground/90 overflow-auto">
             {JSON.stringify(result.variables, null, 2)}
           </pre>
         </div>

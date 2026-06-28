@@ -145,7 +145,7 @@ export default function EnvPicker({ collectionId, compact = false, tabBar = fals
 
         {workspaceEnvs.length > 0 && (
           <SelectGroup>
-            <SelectLabel className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
+            <SelectLabel className="text-[10px] uppercase tracking-wider font-geom text-muted-foreground">
               Workspace
             </SelectLabel>
             {workspaceEnvs.map((env) => (
@@ -159,7 +159,7 @@ export default function EnvPicker({ collectionId, compact = false, tabBar = fals
         {collectionEnvs.length > 0 && (
           <SelectGroup>
             {workspaceEnvs.length > 0 && <SelectSeparator className="bg-[hsl(var(--border))]" />}
-            <SelectLabel className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
+            <SelectLabel className="text-[10px] uppercase tracking-wider font-geom text-muted-foreground">
               Collection
             </SelectLabel>
             {collectionEnvs.map((env) => (

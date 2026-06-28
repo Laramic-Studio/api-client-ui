@@ -48,7 +48,7 @@ export default function ProductCard({
               <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{product.description}</p>
             )}
           </div>
-          <div className="text-[12px] font-mono font-medium shrink-0">{formatPrice(product)}</div>
+          <div className="text-[12px] font-geom font-medium shrink-0">{formatPrice(product)}</div>
         </div>
         <div className="flex items-center gap-1.5 mt-auto pt-1">
           <button

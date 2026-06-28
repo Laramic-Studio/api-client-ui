@@ -315,7 +315,7 @@ export default function UrlInput({
           className="absolute left-0 top-full mt-1 z-50 min-w-[220px] max-w-[320px] max-h-64 overflow-auto rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--popover))] shadow-xl"
           data-testid={testid ? `${testid}-suggestions` : undefined}
         >
-          <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+          <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-geom">
             {suggestions[0]?.kind === "flow"
               ? "Flow variables"
               : `Variables · ${env?.name || "no env"}`}
@@ -330,11 +330,11 @@ export default function UrlInput({
                 i === activeIdx ? "bg-[hsl(var(--brand))]/15" : "hover:bg-accent/50",
               )}
             >
-              <span className="font-mono font-semibold text-[hsl(var(--brand))]">
+              <span className="font-geom font-semibold text-[hsl(var(--brand))]">
                 {s.kind === "flow" ? `{${s.key}}` : `[[${s.key}]]`}
               </span>
               {s.kind === "env" && (
-                <span className="ml-auto truncate text-muted-foreground font-mono text-[11px] max-w-[140px]">{s.value}</span>
+                <span className="ml-auto truncate text-muted-foreground font-geom text-[11px] max-w-[140px]">{s.value}</span>
               )}
             </button>
           ))}
@@ -391,11 +391,11 @@ export default function UrlInput({
                   inputRef.current?.focus();
                 }
               }}
-              className="mt-1.5 w-full min-w-[10rem] h-7 px-2 rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[11px] font-mono ring-focus"
+              className="mt-1.5 w-full min-w-[10rem] h-7 px-2 rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[11px] font-geom ring-focus"
               placeholder="Value"
             />
           ) : (
-            <div className="mt-1 text-[11px] font-mono text-muted-foreground truncate max-w-[14rem]">
+            <div className="mt-1 text-[11px] font-geom text-muted-foreground truncate max-w-[14rem]">
               {editValue || "—"}
             </div>
           )}

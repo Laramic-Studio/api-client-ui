@@ -16,24 +16,24 @@ function teamInitials(name) {
 function InvitationSummary({ team, roleLabel }) {
   return (
     <div className="mt-6 rounded-md border border-border bg-card p-4 text-left">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom">
         Workspace
       </div>
       <div className="mt-1.5 flex items-center gap-2.5">
-        <div className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[hsl(var(--brand)/0.3)] bg-[hsl(var(--brand)/0.15)] font-mono text-[11px]">
+        <div className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[hsl(var(--brand)/0.3)] bg-[hsl(var(--brand)/0.15)] font-geom text-[11px]">
           {teamInitials(team.name)}
         </div>
         <div>
           <div className="text-sm font-medium">{team.name}</div>
           {team.slug && (
-            <div className="font-mono text-[11.5px] text-muted-foreground">{team.slug}</div>
+            <div className="font-geom text-[11.5px] text-muted-foreground">{team.slug}</div>
           )}
         </div>
       </div>
-      <div className="mt-4 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+      <div className="mt-4 text-[10px] uppercase tracking-wider text-muted-foreground font-geom">
         Your role
       </div>
-      <div className="mt-1.5 inline-flex items-center gap-1.5 rounded border border-border px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-wider">
+      <div className="mt-1.5 inline-flex items-center gap-1.5 rounded border border-border px-2 py-0.5 font-geom text-[10.5px] uppercase tracking-wider">
         <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--brand))]" />
         {roleLabel}
       </div>
@@ -83,7 +83,7 @@ export function InviteAcceptGuest({
   return (
     <AuthShell>
       <div className="text-center">
-        <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-md bg-[hsl(var(--brand))] font-mono text-sm text-white">
+        <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-md bg-[hsl(var(--brand))] font-geom text-sm text-white">
           {teamInitials(team.name)}
         </div>
         <h1 className="mt-4 text-2xl font-medium tracking-tight">Join {team.name}</h1>
@@ -98,7 +98,7 @@ export function InviteAcceptGuest({
           {email ? (
             <>
               {" "}
-              Use <span className="font-mono text-foreground">{email}</span> when signing up.
+              Use <span className="font-geom text-foreground">{email}</span> when signing up.
             </>
           ) : null}
         </p>
@@ -147,12 +147,12 @@ export function InviteAcceptWrongAccount({ invitation, userEmail, inviteCode }) 
         <h1 className="text-2xl font-medium tracking-tight">Wrong account</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           This invitation was sent to{" "}
-          <span className="font-mono text-foreground">{invitation.email}</span>.
+          <span className="font-geom text-foreground">{invitation.email}</span>.
           {userEmail ? (
             <>
               {" "}
               You are signed in as{" "}
-              <span className="font-mono text-foreground">{userEmail}</span>.
+              <span className="font-geom text-foreground">{userEmail}</span>.
             </>
           ) : (
             <> Please sign in with that email address.</>
@@ -176,7 +176,7 @@ export function InviteAcceptAuthenticated({
   return (
     <AuthShell>
       <div className="text-center">
-        <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-md bg-[hsl(var(--brand))] font-mono text-sm text-white">
+        <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-md bg-[hsl(var(--brand))] font-geom text-sm text-white">
           {teamInitials(team.name)}
         </div>
         <h1 className="mt-4 text-2xl font-medium tracking-tight">You&apos;ve been invited</h1>

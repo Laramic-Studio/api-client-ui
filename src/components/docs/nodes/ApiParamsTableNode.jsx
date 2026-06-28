@@ -69,7 +69,7 @@ function ApiParamsTableBlock({ source, rows }) {
   if (!visibleRows.length) {
     return (
       <div className="docs-api-block my-3 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))]/40 p-3">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">{title}</div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom">{title}</div>
         <p className="mt-2 text-[12.5px] text-muted-foreground">No {source === "headers" ? "headers" : "parameters"} defined on this request.</p>
       </div>
     );
@@ -77,16 +77,16 @@ function ApiParamsTableBlock({ source, rows }) {
 
   return (
     <div className="docs-api-block my-3 rounded-md border border-[hsl(var(--border))] overflow-hidden">
-      <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-mono border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]/40">
+      <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-geom border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]/40">
         {title}
       </div>
-      <div className="grid grid-cols-2 gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-mono border-b border-[hsl(var(--border))]">
+      <div className="grid grid-cols-2 gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-geom border-b border-[hsl(var(--border))]">
         <div>{source === "headers" ? "Key" : "Name"}</div>
         <div>{source === "headers" ? "Value" : "Example"}</div>
       </div>
       <div className="divide-y divide-[hsl(var(--border))]">
         {visibleRows.map((row) => (
-          <div key={row.key} className="grid grid-cols-2 gap-2 px-3 py-2 text-[12.5px] font-mono">
+          <div key={row.key} className="grid grid-cols-2 gap-2 px-3 py-2 text-[12.5px] font-geom">
             <div className="text-foreground/85">{row.key}</div>
             <div className={cn("text-muted-foreground", !row.value && "italic opacity-60")}>
               {row.value || "—"}

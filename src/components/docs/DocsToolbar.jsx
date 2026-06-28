@@ -190,7 +190,7 @@ export default function DocsToolbar() {
         <Heading3 className="h-3.5 w-3.5" />
       </ToolbarButton>
       <ToolbarButton active={active.block === "paragraph"} onClick={formatParagraph} title="Paragraph">
-        <span className="text-[10px] font-mono uppercase tracking-wide">P</span>
+        <span className="text-[10px] font-geom uppercase tracking-wide">P</span>
       </ToolbarButton>
       <Divider />
       <ToolbarButton onClick={() => editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)} title="Bullet list">
@@ -213,7 +213,7 @@ export default function DocsToolbar() {
             <Table2 className="h-3.5 w-3.5" />
           </ToolbarButton>
           <ToolbarButton onClick={() => insertParamsTable("headers")} title="Insert headers table">
-            <span className="text-[9px] font-mono uppercase tracking-wide">Hdr</span>
+            <span className="text-[9px] font-geom uppercase tracking-wide">Hdr</span>
           </ToolbarButton>
           <ToolbarButton onClick={insertExample} title="Insert example response">
             <Braces className="h-3.5 w-3.5" />

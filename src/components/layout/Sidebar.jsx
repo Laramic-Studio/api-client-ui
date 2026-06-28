@@ -112,21 +112,7 @@ export default function Sidebar({ collapsed }) {
         )}
       </div>
 
-      {/* Search — expanded only */}
-      {!collapsed && (
-        <div className="px-3 pt-3 shrink-0">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Filter navigation"
-              data-testid={NAV.search}
-              className="w-full h-8 pl-8 pr-2 rounded-md bg-muted border border-border text-[12px] text-foreground placeholder:text-muted-foreground ring-focus focus:border-[hsl(var(--brand))]"
-            />
-          </div>
-        </div>
-      )}
+      
 
       {/* Nav items */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">

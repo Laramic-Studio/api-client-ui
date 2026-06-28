@@ -32,7 +32,7 @@ export default function Monitoring() {
   return (
     <div className="h-full overflow-auto p-6 space-y-6">
       <div>
-        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// observability</div>
+        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// observability</div>
         <h1 className="mt-1 text-2xl font-medium tracking-tight">Monitoring</h1>
         <p className="mt-1 text-[13px] text-muted-foreground">Synthetic uptime, response time and error rate across your monitors.</p>
       </div>
@@ -45,7 +45,7 @@ export default function Monitoring() {
           { label: "Monitors", value: MONITORS.length, delta: "5 healthy", up: true },
         ].map((s) => (
           <div key={s.label} className="rounded-md border border-border bg-card p-4">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">{s.label}</div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">{s.label}</div>
             <div className="mt-2 text-2xl font-medium tracking-tight">{s.value}</div>
             <div className={`mt-1 inline-flex items-center gap-1 text-[11px] ${s.up ? "text-[hsl(var(--success))]" : "text-[hsl(var(--danger))]"}`}>
               {s.up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />} {s.delta}
@@ -58,7 +58,7 @@ export default function Monitoring() {
         <div className="lg:col-span-2 rounded-md border border-border bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Response time (24h)</div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Response time (24h)</div>
               <div className="text-[13px] text-foreground/85 mt-0.5">p50, p95, p99 across monitors</div>
             </div>
             <Activity className="h-4 w-4 text-muted-foreground" />
@@ -86,7 +86,7 @@ export default function Monitoring() {
         </div>
 
         <div className="rounded-md border border-border bg-card p-4">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono mb-3">Error distribution</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom mb-3">Error distribution</div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={errorDist} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
@@ -102,13 +102,13 @@ export default function Monitoring() {
       </div>
 
       <div className="rounded-md border border-border bg-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Monitors</div>
+        <div className="px-4 py-3 border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Monitors</div>
         <div className="divide-y divide-border">
           {MONITORS.map((m) => (
             <div key={m.name} className="grid grid-cols-[1fr_auto_120px_120px] gap-3 items-center px-4 py-3">
               <div>
                 <div className="text-[13px] font-medium">{m.name}</div>
-                <div className="text-[11px] text-muted-foreground font-mono">{m.url}</div>
+                <div className="text-[11px] text-muted-foreground font-geom">{m.url}</div>
               </div>
               <div className="flex gap-0.5">
                 {Array.from({ length: 30 }).map((_, i) => {
@@ -116,8 +116,8 @@ export default function Monitoring() {
                   return <span key={i} className={`h-5 w-1 rounded-sm ${ok ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--danger))]"}`} />;
                 })}
               </div>
-              <div className="text-right text-[12px] font-mono text-foreground/85">{m.uptime.toFixed(2)}%</div>
-              <div className="text-right text-[11px] text-muted-foreground font-mono uppercase tracking-wider">Synthetic 30d</div>
+              <div className="text-right text-[12px] font-geom text-foreground/85">{m.uptime.toFixed(2)}%</div>
+              <div className="text-right text-[11px] text-muted-foreground font-geom uppercase tracking-wider">Synthetic 30d</div>
             </div>
           ))}
         </div>

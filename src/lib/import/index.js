@@ -1,5 +1,6 @@
 import { countImportRequests } from "@/lib/import/shared";
 import { importHarLog } from "@/lib/import/har";
+import { importHoppscotchCollection, isHoppscotchCollection } from "@/lib/import/hoppscotch";
 import { importInsomniaExport } from "@/lib/import/insomnia";
 import { importOpenApiJson, importOpenApiYaml } from "@/lib/import/openapi";
 import { importPostmanCollection } from "@/lib/import/postman";
@@ -7,6 +8,7 @@ import { importPostmanCollection } from "@/lib/import/postman";
 export const IMPORT_FORMATS = [
   { id: "openapi", label: "OpenAPI / YAML" },
   { id: "postman", label: "Postman v2.1" },
+  { id: "hoppscotch", label: "Hoppscotch" },
   { id: "insomnia", label: "Insomnia v4" },
   { id: "har", label: "HAR (browser export)" },
 ];
@@ -21,6 +23,7 @@ export function detectImportFormat(data, rawText = "") {
   }
 
   if (data.info && Array.isArray(data.item)) return "postman";
+  if (isHoppscotchCollection(data)) return "hoppscotch";
   if (data.openapi || data.swagger) return "openapi";
   if (data._type === "export" && data.__export_format === 4) return "insomnia";
   if (data.log?.entries) return "har";
@@ -68,18 +71,31 @@ export function parseImportContent(raw, { formatHint } = {}) {
     }
   }
 
+  if (formatHint === "hoppscotch") {
+    try {
+      const data = JSON.parse(trimmed);
+      const collection = importHoppscotchCollection(data);
+      if (!collection || countImportRequests(collection) === 0) {
+        return { kind: "error", message: "No requests found in Hoppscotch collection." };
+      }
+      return { kind: "collection", format: "hoppscotch", collection };
+    } catch {
+      return { kind: "error", message: "Invalid Hoppscotch JSON." };
+    }
+  }
+
   let data;
   try {
     data = JSON.parse(trimmed);
   } catch {
-    if (formatHint === "postman" || formatHint === "insomnia") {
+    if (formatHint === "postman" || formatHint === "insomnia" || formatHint === "hoppscotch") {
       return { kind: "error", message: "Invalid JSON for this format." };
     }
     const yamlCollection = importOpenApiYaml(trimmed);
     if (yamlCollection && countImportRequests(yamlCollection) > 0) {
       return { kind: "collection", format: "openapi", collection: yamlCollection };
     }
-    return { kind: "error", message: "Invalid JSON. Supported formats: OpenAPI, Postman, Insomnia, HAR." };
+    return { kind: "error", message: "Invalid JSON. Supported formats: OpenAPI, Postman, Hoppscotch, Insomnia, HAR." };
   }
 
   const detected = formatHint || detectImportFormat(data, trimmed);
@@ -100,6 +116,14 @@ export function parseImportContent(raw, { formatHint } = {}) {
     return { kind: "collection", format: "insomnia", collection };
   }
 
+  if (detected === "hoppscotch" || formatHint === "hoppscotch") {
+    const collection = importHoppscotchCollection(data);
+    if (!collection || countImportRequests(collection) === 0) {
+      return { kind: "error", message: "No requests found in Hoppscotch collection." };
+    }
+    return { kind: "collection", format: "hoppscotch", collection };
+  }
+
   if (detected === "openapi" || formatHint === "openapi") {
     const collection = importOpenApiJson(data);
     if (!collection || countImportRequests(collection) === 0) {
@@ -118,7 +142,7 @@ export function parseImportContent(raw, { formatHint } = {}) {
 
   return {
     kind: "error",
-    message: "Unrecognized format. Try OpenAPI, Postman v2.1, Insomnia v4, or HAR.",
+    message: "Unrecognized format. Try OpenAPI, Postman v2.1, Hoppscotch, Insomnia v4, or HAR.",
   };
 }
 

@@ -56,21 +56,21 @@ function StepRow({ step, defaultOpen }) {
         <MethodBadge method={step.method || "GET"} />
         <span className="text-[12px] font-medium truncate flex-1">{step.name}</span>
         {!step.skipped && (
-          <span className={cn("text-[11px] font-mono", step.ok ? "text-[hsl(var(--success))]" : "text-[hsl(var(--danger))]")}>
+          <span className={cn("text-[11px] font-geom", step.ok ? "text-[hsl(var(--success))]" : "text-[hsl(var(--danger))]")}>
             {step.status ?? "—"}
           </span>
         )}
         {step.skipped && <span className="text-[10px] uppercase text-muted-foreground">skipped</span>}
-        <span className="text-[11px] text-muted-foreground font-mono">{step.durationMs ?? 0}ms</span>
+        <span className="text-[11px] text-muted-foreground font-geom">{step.durationMs ?? 0}ms</span>
       </button>
       {open && (
         <div className="px-3 pb-3 pl-10 space-y-2 text-[11px]">
-          {step.url && <div className="font-mono text-muted-foreground break-all">{step.url}</div>}
+          {step.url && <div className="font-geom text-muted-foreground break-all">{step.url}</div>}
           {step.error && <div className="text-[hsl(var(--danger))]">{step.error}</div>}
           {step.extracted?.length > 0 && (
             <div className="space-y-0.5">
               {step.extracted.map((ex, i) => (
-                <div key={i} className="font-mono text-[hsl(var(--brand))]">
+                <div key={i} className="font-geom text-[hsl(var(--brand))]">
                   {ex.path} → {ex.variable}: {JSON.stringify(ex.value)}
                 </div>
               ))}
@@ -84,7 +84,7 @@ function StepRow({ step, defaultOpen }) {
               </TabsList>
               <TabsContent value="body" className="mt-1">
                 {bodyText ? (
-                  <pre className="rounded-md border border-border bg-muted/30 p-2 overflow-auto max-h-[280px] font-mono text-[10px] whitespace-pre-wrap break-all">
+                  <pre className="rounded-md border border-border bg-muted/30 p-2 overflow-auto max-h-[280px] font-geom text-[10px] whitespace-pre-wrap break-all">
                     {bodyText}
                   </pre>
                 ) : (
@@ -93,7 +93,7 @@ function StepRow({ step, defaultOpen }) {
               </TabsContent>
               {headersText && (
                 <TabsContent value="headers" className="mt-1">
-                  <pre className="rounded-md border border-border bg-muted/30 p-2 overflow-auto max-h-[280px] font-mono text-[10px] whitespace-pre-wrap break-all">
+                  <pre className="rounded-md border border-border bg-muted/30 p-2 overflow-auto max-h-[280px] font-geom text-[10px] whitespace-pre-wrap break-all">
                     {headersText}
                   </pre>
                 </TabsContent>
@@ -149,8 +149,8 @@ export default function ConduitRunPanel({ result, runs = [], onSelectRun }) {
       </div>
       {active.variables && Object.keys(active.variables).length > 0 && (
         <div className="px-3 py-2 border-t border-border bg-muted/20 shrink-0">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1">Flow variables</div>
-          <pre className="text-[10px] font-mono overflow-auto max-h-[80px]">{JSON.stringify(active.variables, null, 2)}</pre>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom mb-1">Flow variables</div>
+          <pre className="text-[10px] font-geom overflow-auto max-h-[80px]">{JSON.stringify(active.variables, null, 2)}</pre>
         </div>
       )}
     </div>

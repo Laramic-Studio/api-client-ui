@@ -50,7 +50,7 @@ export default function MockServers() {
     <div className="h-full overflow-auto p-6">
       <div className="flex items-end justify-between mb-5">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// virtual backend</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// virtual backend</div>
           <h1 className="mt-1 text-2xl font-medium tracking-tight">Mock Servers</h1>
           <p className="mt-1 text-[13px] text-muted-foreground">Stand up an entire API in minutes — no backend required.</p>
         </div>
@@ -64,7 +64,7 @@ export default function MockServers() {
       </div>
 
       <div className="rounded-md border border-border bg-card overflow-hidden">
-        <div className="grid grid-cols-[1fr_70px_70px_80px_80px_60px_60px] gap-2 px-4 py-2 border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+        <div className="grid grid-cols-[1fr_70px_70px_80px_80px_60px_60px] gap-2 px-4 py-2 border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground font-geom">
           <div>Endpoint</div>
           <div>Method</div>
           <div>Status</div>
@@ -78,11 +78,11 @@ export default function MockServers() {
             <div key={m.id} className="grid grid-cols-[1fr_70px_70px_80px_80px_60px_60px] gap-2 px-4 py-2 items-center text-[12.5px] hover:bg-accent/50" data-testid={MOCK.item(m.id)}>
               <div className="flex items-center gap-2 min-w-0">
                 <Server className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="truncate font-mono">{m.path}</span>
+                <span className="truncate font-geom">{m.path}</span>
               </div>
               <MethodBadge method={m.method} />
               <StatusBadge status={m.status} />
-              <span className="font-mono text-[11px] text-muted-foreground">{m.delayMs}ms</span>
+              <span className="font-geom text-[11px] text-muted-foreground">{m.delayMs}ms</span>
               <div className="text-right">
                 <Switch checked={m.enabled} onCheckedChange={(v) => update(m.id, { enabled: v })} />
               </div>
@@ -106,7 +106,7 @@ export default function MockServers() {
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <Label className="text-[11px] uppercase font-mono text-muted-foreground">Method</Label>
+                  <Label className="text-[11px] uppercase font-geom text-muted-foreground">Method</Label>
                   <Select value={editing.method} onValueChange={(v) => setEditing({ ...editing, method: v })}>
                     <SelectTrigger className="bg-muted border-border h-9"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-card border-border text-foreground">
@@ -115,26 +115,26 @@ export default function MockServers() {
                   </Select>
                 </div>
                 <div className="col-span-2">
-                  <Label className="text-[11px] uppercase font-mono text-muted-foreground">Path</Label>
-                  <Input value={editing.path} onChange={(e) => setEditing({ ...editing, path: e.target.value })} className="bg-muted border-border h-9 font-mono" />
+                  <Label className="text-[11px] uppercase font-geom text-muted-foreground">Path</Label>
+                  <Input value={editing.path} onChange={(e) => setEditing({ ...editing, path: e.target.value })} className="bg-muted border-border h-9 font-geom" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <Label className="text-[11px] uppercase font-mono text-muted-foreground">Status code</Label>
-                  <Input type="number" value={editing.status} onChange={(e) => setEditing({ ...editing, status: Number(e.target.value) || 200 })} className="bg-muted border-border h-9 font-mono" />
+                  <Label className="text-[11px] uppercase font-geom text-muted-foreground">Status code</Label>
+                  <Input type="number" value={editing.status} onChange={(e) => setEditing({ ...editing, status: Number(e.target.value) || 200 })} className="bg-muted border-border h-9 font-geom" />
                 </div>
                 <div>
-                  <Label className="text-[11px] uppercase font-mono text-muted-foreground">Delay (ms)</Label>
-                  <Input type="number" value={editing.delayMs} onChange={(e) => setEditing({ ...editing, delayMs: Number(e.target.value) || 0 })} className="bg-muted border-border h-9 font-mono" />
+                  <Label className="text-[11px] uppercase font-geom text-muted-foreground">Delay (ms)</Label>
+                  <Input type="number" value={editing.delayMs} onChange={(e) => setEditing({ ...editing, delayMs: Number(e.target.value) || 0 })} className="bg-muted border-border h-9 font-geom" />
                 </div>
                 <div>
-                  <Label className="text-[11px] uppercase font-mono text-muted-foreground">Enabled</Label>
+                  <Label className="text-[11px] uppercase font-geom text-muted-foreground">Enabled</Label>
                   <div className="h-9 flex items-center"><Switch checked={editing.enabled} onCheckedChange={(v) => setEditing({ ...editing, enabled: v })} /></div>
                 </div>
               </div>
               <div>
-                <Label className="text-[11px] uppercase font-mono text-muted-foreground">Response body</Label>
+                <Label className="text-[11px] uppercase font-geom text-muted-foreground">Response body</Label>
                 <div className="mt-1 h-48 rounded-md overflow-hidden border border-border">
                   <Editor
                     height="100%"

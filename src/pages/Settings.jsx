@@ -123,7 +123,7 @@ export default function Settings() {
   return (
     <div className="h-full overflow-auto p-6">
       <div className="mb-5">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">
           // preferences
         </div>
         <h1 className="mt-1 text-2xl font-medium tracking-tight">Settings</h1>
@@ -353,7 +353,7 @@ export default function Settings() {
                             : "provider/model-id"
                   }
                   data-testid="ai-model"
-                  className="bg-muted border-border h-9 mt-1 font-mono text-[13px]"
+                  className="bg-muted border-border h-9 mt-1 font-geom text-[13px]"
                 />
               </Field>
             </div>
@@ -365,7 +365,7 @@ export default function Settings() {
                   onChange={(e) => setAi({ baseUrl: e.target.value })}
                   placeholder="https://openrouter.ai/api/v1"
                   data-testid="ai-base-url"
-                  className="bg-muted border-border h-9 font-mono text-[13px]"
+                  className="bg-muted border-border h-9 font-geom text-[13px]"
                 />
                 <p className="mt-1.5 text-[11.5px] text-muted-foreground">
                   OpenRouter, Groq, Together, or any OpenAI-compatible chat completions API.
@@ -376,7 +376,7 @@ export default function Settings() {
             {ai.provider === "ollama" ? (
               <p className="mt-4 text-[12.5px] text-muted-foreground">
                 Uses Ollama on the server — no API key required. Default model:{" "}
-                <span className="font-mono text-foreground/85">qwen2.5:3b</span>.
+                <span className="font-geom text-foreground/85">qwen2.5:3b</span>.
               </p>
             ) : (
               <div className="mt-4 space-y-3">
@@ -402,7 +402,7 @@ export default function Settings() {
                       onChange={(e) => setAi({ userKey: e.target.value })}
                       placeholder="Paste your API key"
                       data-testid="ai-user-key"
-                      className="bg-muted border-border h-9 font-mono text-[13px]"
+                      className="bg-muted border-border h-9 font-geom text-[13px]"
                       autoComplete="off"
                     />
                   </Field>
@@ -420,11 +420,11 @@ export default function Settings() {
                     style={{ width: `${Math.min(100, (ai.usage.total / ai.usage.limit) * 100)}%` }}
                   />
                 </div>
-                <p className="mt-1.5 text-[11px] text-muted-foreground font-mono uppercase tracking-wider" data-testid="ai-usage-meter">
+                <p className="mt-1.5 text-[11px] text-muted-foreground font-geom uppercase tracking-wider" data-testid="ai-usage-meter">
                   {ai.usage.total} / {ai.usage.limit} requests this month
                 </p>
               </div>
-              <div className="text-right text-[12px] font-mono shrink-0">
+              <div className="text-right text-[12px] font-geom shrink-0">
                 <div><span className="text-muted-foreground">build</span> · {ai.usage.build || 0}</div>
                 <div><span className="text-muted-foreground">explain</span> · {ai.usage.explain || 0}</div>
               </div>
@@ -475,7 +475,7 @@ function SettingsCard({ title, description, children, className }) {
 function Field({ label, children, className }) {
   return (
     <div className={className}>
-      <Label className="text-[11px] uppercase font-mono text-muted-foreground tracking-wider">
+      <Label className="text-[11px] uppercase font-geom text-muted-foreground tracking-wider">
         {label}
       </Label>
       <div className="mt-1">{children}</div>

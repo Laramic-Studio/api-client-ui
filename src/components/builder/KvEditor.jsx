@@ -12,7 +12,7 @@ export default function KvEditor({ rows, onChange, addLabel = "Add row", testIdA
 
   return (
     <div>
-      <div className="grid grid-cols-[32px_1fr_1fr_32px] gap-1.5 px-0.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+      <div className="grid grid-cols-[32px_1fr_1fr_32px] gap-1.5 px-0.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-geom">
         <div />
         <div>Key</div>
         <div>Value</div>
@@ -34,13 +34,13 @@ export default function KvEditor({ rows, onChange, addLabel = "Add row", testIdA
               value={r.key}
               onChange={(e) => setRow(i, { key: e.target.value })}
               placeholder="key"
-              className="h-8 text-[12px] font-mono"
+              className="h-8 text-[12px] font-geom"
             />
             <Input
               value={r.value}
               onChange={(e) => setRow(i, { value: e.target.value })}
               placeholder="value"
-              className="h-8 text-[12px] font-mono"
+              className="h-8 text-[12px] font-geom"
             />
             <Button
               type="button"

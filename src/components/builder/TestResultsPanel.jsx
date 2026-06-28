@@ -11,8 +11,8 @@ function PhaseHeader({ title, status }) {
 
   return (
     <div className="px-3 py-2 border-b border-[hsl(var(--border))] flex items-center gap-2">
-      <div className="text-[11px] uppercase tracking-wider font-mono text-foreground/90">{title}</div>
-      <span className={`text-[11px] font-mono ${tone}`}>{label}</span>
+      <div className="text-[11px] uppercase tracking-wider font-geom text-foreground/90">{title}</div>
+      <span className={`text-[11px] font-geom ${tone}`}>{label}</span>
     </div>
   );
 }
@@ -27,7 +27,7 @@ function ResultRows({ results, emptyMessage }) {
   return (
     <div className="divide-y divide-[hsl(var(--border))]">
       {results.map((r) => (
-        <div key={r.id} className="flex items-start gap-2 px-3 py-2 text-[12px] font-mono">
+        <div key={r.id} className="flex items-start gap-2 px-3 py-2 text-[12px] font-geom">
           {r.passed
             ? <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--success))] shrink-0 mt-0.5" />
             : <XCircle className="h-3.5 w-3.5 text-[hsl(var(--danger))] shrink-0 mt-0.5" />}

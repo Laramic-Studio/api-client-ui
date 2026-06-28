@@ -15,7 +15,7 @@ export default function Generators() {
   return (
     <div className="h-full overflow-auto p-6">
       <div className="mb-5">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// utilities</div>
+        <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// utilities</div>
         <h1 className="mt-1 text-2xl font-medium tracking-tight">Dynamic Generators</h1>
         <p className="mt-1 text-[13px] text-muted-foreground">Pre-built helpers for tokens, timestamps, IDs, and more. Use anywhere in requests.</p>
       </div>
@@ -28,7 +28,7 @@ export default function Generators() {
               <div className="text-[13.5px] font-medium">{g.name}</div>
             </div>
             <div className="text-[11.5px] text-muted-foreground mt-0.5">{g.description}</div>
-            <div className="mt-3 px-2.5 py-2 rounded bg-card border border-border font-mono text-[12px] break-all min-h-[42px] text-foreground/90">
+            <div className="mt-3 px-2.5 py-2 rounded bg-card border border-border font-geom text-[12px] break-all min-h-[42px] text-foreground/90">
               {vals[g.id]}
             </div>
             <div className="mt-2 flex items-center gap-1">

@@ -6,7 +6,7 @@ import { AUTH } from "@/constants/testIds";
 import { cn } from "@/lib/utils";
 
 const OTP_SLOT_CLASS =
-  "h-12 min-w-0 flex-1 rounded-lg border border-border bg-input text-base font-mono text-foreground shadow-none first:rounded-lg last:rounded-lg";
+  "h-12 min-w-0 flex-1 rounded-lg border border-border bg-input text-base font-geom text-foreground shadow-none first:rounded-lg last:rounded-lg";
 
 export default function VerifyEmailForm({
   code,

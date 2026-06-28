@@ -14,7 +14,7 @@ export default function StatusBadge({ status, className }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-mono font-semibold",
+        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-geom font-semibold",
         color,
         className
       )}

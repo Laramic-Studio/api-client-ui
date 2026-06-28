@@ -102,7 +102,7 @@ export default function ImportFromCollection({ collections, onImport }) {
 
   return (
     <div className="space-y-3">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom">
         Import from collection
       </div>
 

@@ -238,7 +238,7 @@ export default function Conduits() {
       <ReadOnlyWorkspaceBanner className="mb-5" />
       <div className="flex items-end justify-between gap-4 flex-wrap mb-6">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// chaining</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// chaining</div>
           <h1 className="mt-1 text-2xl font-medium tracking-tight">Request Conduits</h1>
           <p className="mt-1 text-[13px] text-muted-foreground max-w-xl">
             Build visual API workflows on a canvas — edit each step, extract data, and pass it to the next request.

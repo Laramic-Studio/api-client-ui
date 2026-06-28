@@ -23,7 +23,7 @@ function AccessIndicator({ allowed, label }) {
       >
         {allowed ? <Check className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
       </span>
-      <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-mono">
+      <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-geom">
         {label}
       </span>
     </div>
@@ -56,7 +56,7 @@ export default function TeamPrivileges({ privilegeMatrix }) {
       <div className="rounded-md border border-border bg-card p-4">
         <div className="flex items-center gap-2">
           <div className="text-[13px] font-medium">Role permissions reference</div>
-          <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+          <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-geom uppercase tracking-wider text-muted-foreground">
             System defaults
           </span>
         </div>
@@ -71,13 +71,13 @@ export default function TeamPrivileges({ privilegeMatrix }) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="min-w-[220px] text-[10px] uppercase tracking-wider font-mono">
+              <TableHead className="min-w-[220px] text-[10px] uppercase tracking-wider font-geom">
                 Module
               </TableHead>
               {roles.map((role) => (
                 <TableHead
                   key={role.value}
-                  className="text-center text-[10px] uppercase tracking-wider font-mono"
+                  className="text-center text-[10px] uppercase tracking-wider font-geom"
                 >
                   {role.label}
                 </TableHead>
@@ -113,10 +113,10 @@ export default function TeamPrivileges({ privilegeMatrix }) {
       </div>
 
       <p className={cn("text-[11.5px] text-muted-foreground")}>
-        <span className="font-mono text-foreground/85">Owner</span> — full control.{" "}
-        <span className="font-mono text-foreground/85">Admin</span> — manage workspace & members.{" "}
-        <span className="font-mono text-foreground/85">Developer</span> — read/write collections.{" "}
-        <span className="font-mono text-foreground/85">Viewer</span> — read-only.
+        <span className="font-geom text-foreground/85">Owner</span> — full control.{" "}
+        <span className="font-geom text-foreground/85">Admin</span> — manage workspace & members.{" "}
+        <span className="font-geom text-foreground/85">Developer</span> — read/write collections.{" "}
+        <span className="font-geom text-foreground/85">Viewer</span> — read-only.
       </p>
     </div>
   );

@@ -52,14 +52,14 @@ function PassEditor({ passes, onChange }) {
               value={pass.key || ""}
               onChange={(e) => update(idx, { key: e.target.value })}
               placeholder="Key"
-              className="h-8 text-[11px] font-mono"
+              className="h-8 text-[11px] font-geom"
             />
           )}
           <Input
             value={pass.template || "{{value}}"}
             onChange={(e) => update(idx, { template: e.target.value })}
             placeholder="Template e.g. Bearer {{value}}"
-            className="h-8 text-[11px] font-mono"
+            className="h-8 text-[11px] font-geom"
           />
         </div>
       ))}
@@ -93,7 +93,7 @@ function ExtractionEditor({ extractions, onChange }) {
                 variable: ext.variable || e.target.value.replace(/\./g, "_"),
               })}
               placeholder="JSON path e.g. id or user.email"
-              className="flex-1 h-8 text-[11px] font-mono"
+              className="flex-1 h-8 text-[11px] font-geom"
             />
             <Button
               type="button"
@@ -109,7 +109,7 @@ function ExtractionEditor({ extractions, onChange }) {
             value={ext.variable || ""}
             onChange={(e) => update(idx, { variable: e.target.value })}
             placeholder="Variable name for {var} in later steps"
-            className="h-8 text-[11px] font-mono"
+            className="h-8 text-[11px] font-geom"
           />
           <PassEditor passes={ext.passes || []} onChange={(passes) => update(idx, { passes })} />
         </div>
@@ -152,7 +152,7 @@ function ConditionEditor({ condition, onChange }) {
           type="number"
           value={c.value ?? 200}
           onChange={(e) => set({ value: e.target.value === "" ? "" : Number(e.target.value) })}
-          className="h-8 text-[12px] font-mono"
+          className="h-8 text-[12px] font-geom"
           placeholder="Status code"
         />
       )}
@@ -160,7 +160,7 @@ function ConditionEditor({ condition, onChange }) {
         <Input
           value={c.path || ""}
           onChange={(e) => set({ path: e.target.value })}
-          className="h-8 text-[12px] font-mono"
+          className="h-8 text-[12px] font-geom"
           placeholder="Body path e.g. success"
         />
       )}
@@ -168,7 +168,7 @@ function ConditionEditor({ condition, onChange }) {
         <Input
           value={c.value ?? ""}
           onChange={(e) => set({ value: e.target.value })}
-          className="h-8 text-[12px] font-mono"
+          className="h-8 text-[12px] font-geom"
           placeholder="Expected value"
         />
       )}
@@ -177,13 +177,13 @@ function ConditionEditor({ condition, onChange }) {
           <Input
             value={c.variable || ""}
             onChange={(e) => set({ variable: e.target.value })}
-            className="h-8 text-[12px] font-mono"
+            className="h-8 text-[12px] font-geom"
             placeholder="Variable name"
           />
           <Input
             value={c.value ?? ""}
             onChange={(e) => set({ value: e.target.value })}
-            className="h-8 text-[12px] font-mono"
+            className="h-8 text-[12px] font-geom"
             placeholder="Expected value"
           />
         </>
@@ -253,12 +253,12 @@ export default function ConduitStepEditor({
             />
             <div className="flex gap-0 rounded-md border border-border overflow-hidden">
               <Select value={step.method} onValueChange={(method) => patch({ method })}>
-                <SelectTrigger className="h-8 w-[88px] shrink-0 rounded-none border-0 border-r border-border text-[12px] font-mono shadow-none">
+                <SelectTrigger className="h-8 w-[88px] shrink-0 rounded-none border-0 border-r border-border text-[12px] font-geom shadow-none">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {METHODS.map((m) => (
-                    <SelectItem key={m} value={m} className="text-[12px] font-mono">{m}</SelectItem>
+                    <SelectItem key={m} value={m} className="text-[12px] font-geom">{m}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -273,15 +273,15 @@ export default function ConduitStepEditor({
               />
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1">Params</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom mb-1">Params</div>
               <KvEditor rows={step.params || []} onChange={(params) => patch({ params })} addLabel="Add param" />
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1">Headers</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom mb-1">Headers</div>
               <KvEditor rows={step.headers || []} onChange={(headers) => patch({ headers })} addLabel="Add header" />
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1">Body</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom mb-1">Body</div>
               <Select
                 value={step.body?.type || "none"}
                 onValueChange={(type) => patch({ body: { ...step.body, type } })}
@@ -300,13 +300,13 @@ export default function ConduitStepEditor({
                   value={step.body?.content || ""}
                   onChange={(e) => patch({ body: { ...step.body, content: e.target.value } })}
                   rows={6}
-                  className="text-[11px] font-mono resize-y"
+                  className="text-[11px] font-geom resize-y"
                   placeholder='{"key": "{variable}"}'
                 />
               )}
             </div>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1">Auth</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-geom mb-1">Auth</div>
               <AuthEditor auth={step.auth || { type: "none" }} onChange={(auth) => patch({ auth })} />
             </div>
           </TabsContent>

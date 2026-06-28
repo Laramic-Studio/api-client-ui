@@ -135,7 +135,7 @@ export function CollectionRow({
                 {c.name}
               </ExplorerLabel>
             )}
-            <span className="ml-auto text-[10px] text-muted-foreground font-mono shrink-0">{c.requests.length}</span>
+            <span className="ml-auto text-[10px] text-muted-foreground font-geom shrink-0">{c.requests.length}</span>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
@@ -298,7 +298,7 @@ function FolderRow({
                 {f.name}
               </ExplorerLabel>
             )}
-            <span className="ml-auto text-[10px] text-muted-foreground font-mono">{requests.length}</span>
+            <span className="ml-auto text-[10px] text-muted-foreground font-geom">{requests.length}</span>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent data-side="right" className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
@@ -465,7 +465,7 @@ export function RequestRow({
               </ExplorerLabel>
             )}
             {hasExamples && (
-              <span className="text-[10px] text-muted-foreground font-mono shrink-0">{examples.length}</span>
+              <span className="text-[10px] text-muted-foreground font-geom shrink-0">{examples.length}</span>
             )}
           </div>
         </ContextMenuTrigger>

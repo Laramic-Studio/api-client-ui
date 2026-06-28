@@ -204,9 +204,9 @@ export default function ConduitCanvas({
                   <MethodBadge method={step.method} />
                   <span className="text-[12px] font-medium truncate flex-1">{step.name}</span>
                 </div>
-                <div className="mt-1 text-[10px] text-muted-foreground font-mono truncate">{step.url || "No URL"}</div>
+                <div className="mt-1 text-[10px] text-muted-foreground font-geom truncate">{step.url || "No URL"}</div>
                 {step.extractions?.length > 0 && (
-                  <div className="mt-1 text-[9px] uppercase tracking-wider text-[hsl(var(--brand))] font-mono">
+                  <div className="mt-1 text-[9px] uppercase tracking-wider text-[hsl(var(--brand))] font-geom">
                     {step.extractions.length} extract{step.extractions.length > 1 ? "s" : ""}
                   </div>
                 )}
@@ -241,7 +241,7 @@ export default function ConduitCanvas({
           <Plus className="h-3.5 w-3.5" /> Add step
         </button>
         {edges.length > 0 && (
-          <div className="text-[11px] text-muted-foreground font-mono">{edges.length} connection{edges.length > 1 ? "s" : ""}</div>
+          <div className="text-[11px] text-muted-foreground font-geom">{edges.length} connection{edges.length > 1 ? "s" : ""}</div>
         )}
       </div>
 
@@ -257,7 +257,7 @@ export default function ConduitCanvas({
         >
           <Minus className="h-3.5 w-3.5" />
         </Button>
-        <span className="min-w-[40px] text-center text-[11px] font-mono text-muted-foreground select-none">
+        <span className="min-w-[40px] text-center text-[11px] font-geom text-muted-foreground select-none">
           {Math.round(zoom * 100)}%
         </span>
         <Button
@@ -277,7 +277,7 @@ export default function ConduitCanvas({
         <div className="absolute top-3 right-3 z-20 max-w-[200px] space-y-1 pointer-events-auto">
           {edges.map((edge) => (
             <div key={edge.id} className="flex items-center gap-1 text-[10px] bg-card border border-border rounded px-2 py-1">
-              <span className="truncate font-mono text-muted-foreground">{edge.source.slice(0, 6)}→{edge.target.slice(0, 6)}</span>
+              <span className="truncate font-geom text-muted-foreground">{edge.source.slice(0, 6)}→{edge.target.slice(0, 6)}</span>
               <button type="button" onClick={() => onDeleteEdge(edge.id)} className="text-muted-foreground hover:text-[hsl(var(--danger))]">
                 <Trash2 className="h-3 w-3" />
               </button>

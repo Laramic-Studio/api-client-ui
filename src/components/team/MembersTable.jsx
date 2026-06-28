@@ -26,7 +26,7 @@ export default function MembersTable({
 
   return (
     <div className="rounded-md border border-border bg-card overflow-hidden">
-      <div className="grid grid-cols-[1fr_120px_120px_120px_40px] gap-2 px-4 py-2 border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+      <div className="grid grid-cols-[1fr_120px_120px_120px_40px] gap-2 px-4 py-2 border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground font-geom">
         <div>Member</div>
         <div>Role</div>
         <div>Status</div>
@@ -51,7 +51,7 @@ export default function MembersTable({
                 </div>
                 <div className="min-w-0">
                   <div className="text-[13px] font-medium truncate">{m.name}</div>
-                  <div className="text-[11px] text-muted-foreground truncate font-mono">{m.email}</div>
+                  <div className="text-[11px] text-muted-foreground truncate font-geom">{m.email}</div>
                 </div>
               </div>
               {roleEditable ? (
@@ -77,9 +77,9 @@ export default function MembersTable({
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="text-[12px] font-mono">{m.roleLabel || m.role}</div>
+                <div className="text-[12px] font-geom">{m.roleLabel || m.role}</div>
               )}
-              <div className="text-[11px] font-mono uppercase tracking-wider inline-flex items-center gap-1.5">
+              <div className="text-[11px] font-geom uppercase tracking-wider inline-flex items-center gap-1.5">
                 <span
                   className={cn(
                     "h-1.5 w-1.5 rounded-full",
@@ -88,7 +88,7 @@ export default function MembersTable({
                 />
                 {m.online ? "Online" : "Offline"}
               </div>
-              <div className="text-[11px] text-muted-foreground font-mono">
+              <div className="text-[11px] text-muted-foreground font-geom">
                 {formatLastActive(m.lastActive)}
               </div>
               {canRemoveMember && !isOwner ? (

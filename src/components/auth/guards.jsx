@@ -12,7 +12,7 @@ export function AuthBootstrapGate({ children }) {
 
   if (!bootstrapped) {
     return (
-      <div className="h-screen w-screen grid place-items-center bg-background text-muted-foreground text-[13px] font-mono">
+      <div className="h-screen w-screen grid place-items-center bg-background text-muted-foreground text-[13px] font-geom">
         Loading…
       </div>
     );

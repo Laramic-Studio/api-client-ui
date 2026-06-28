@@ -18,7 +18,7 @@ function StatCard({ label, value, delta, icon: Icon, testid }) {
       data-testid={testid}
     >
       <div className="flex items-center justify-between">
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">{label}</div>
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">{label}</div>
         <Icon className="h-3.5 w-3.5 text-muted-foreground" />
       </div>
       <div className="mt-2 text-2xl font-medium tracking-tight">{value}</div>
@@ -91,7 +91,7 @@ export default function Dashboard() {
     <div className="h-full overflow-auto p-6 space-y-6 grid-bg">
       <div className="flex items-end justify-between">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// overview</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// overview</div>
           <h1 className="mt-1 text-2xl font-medium tracking-tight">Welcome back.</h1>
           <p className="mt-1 text-[13px] text-muted-foreground">A snapshot of your workspace activity.</p>
         </div>
@@ -118,7 +118,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2 rounded-md border border-border bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">API Calls Trend</div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">API Calls Trend</div>
               <div className="text-[13px] text-foreground/85 mt-0.5">Last 14 days</div>
             </div>
             <Activity className="h-4 w-4 text-muted-foreground" />
@@ -149,7 +149,7 @@ export default function Dashboard() {
         <div className="rounded-md border border-border bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Success Rate</div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Success Rate</div>
               <div className="text-[13px] text-foreground/85 mt-0.5">By status bucket</div>
             </div>
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
@@ -182,7 +182,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <div className="rounded-md border border-border bg-card p-4">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Collection Activity</div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Collection Activity</div>
             <FolderTree className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="h-56">
@@ -200,7 +200,7 @@ export default function Dashboard() {
 
         <div className="lg:col-span-2 rounded-md border border-border bg-card">
           <div className="flex items-center justify-between p-4 border-b border-border">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Recent Activity</div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Recent Activity</div>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="divide-y divide-border max-h-72 overflow-y-auto">
@@ -208,8 +208,8 @@ export default function Dashboard() {
               <div key={h.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-accent/50 cursor-pointer" onClick={() => navigate("/history")}>
                 <MethodBadge method={h.method} className="w-14" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12.5px] truncate font-mono">{h.url}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5 font-mono uppercase tracking-wider">
+                  <div className="text-[12.5px] truncate font-geom">{h.url}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5 font-geom uppercase tracking-wider">
                     {new Date(h.timestamp).toLocaleString()} • {h.durationMs}ms
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export default function Dashboard() {
 
       <div className="rounded-md border border-border bg-card">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Pinned Collections</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Pinned Collections</div>
           <Star className="h-4 w-4 text-muted-foreground" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-accent/50">
@@ -234,7 +234,7 @@ export default function Dashboard() {
               data-testid={`pinned-${c.id}`}
             >
               <div className="text-[13px] font-medium">{c.name}</div>
-              <div className="text-[11px] text-muted-foreground mt-1 font-mono uppercase tracking-wider">{c.requests.length} requests</div>
+              <div className="text-[11px] text-muted-foreground mt-1 font-geom uppercase tracking-wider">{c.requests.length} requests</div>
               <div className="flex items-center gap-2 mt-3 flex-wrap">
                 {c.requests.slice(0, 4).map((r) => (
                   <MethodBadge key={r.id} method={r.method} />

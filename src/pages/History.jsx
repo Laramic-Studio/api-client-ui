@@ -106,7 +106,7 @@ export default function History() {
         <ReadOnlyWorkspaceBanner compact />
         <div className="flex items-center gap-2 flex-wrap">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// timeline</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// timeline</div>
           <h1 className="text-2xl font-medium tracking-tight">History</h1>
           <p className="text-[12px] text-muted-foreground mt-1">
             Workspace request log — synced per team, attributed to each member.
@@ -125,19 +125,19 @@ export default function History() {
           />
         </div>
         <Select value={filters.method} onValueChange={setMethod}>
-          <SelectTrigger className="h-7 w-[132px] text-[11px] font-mono uppercase tracking-wider border-border bg-transparent">
+          <SelectTrigger className="h-7 w-[132px] text-[11px] font-geom uppercase tracking-wider border-border bg-transparent">
             <SelectValue placeholder="Method" />
           </SelectTrigger>
           <SelectContent>
             {METHODS.map((opt) => (
-              <SelectItem key={opt.id} value={opt.id} className="text-[12px] font-mono">
+              <SelectItem key={opt.id} value={opt.id} className="text-[12px] font-geom">
                 {opt.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={filters.status} onValueChange={setStatus}>
-          <SelectTrigger className="h-7 w-[148px] text-[11px] font-mono uppercase tracking-wider border-border bg-transparent">
+          <SelectTrigger className="h-7 w-[148px] text-[11px] font-geom uppercase tracking-wider border-border bg-transparent">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -208,16 +208,16 @@ export default function History() {
               >
                 <MethodBadge method={h.method} className="w-14" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12.5px] font-mono truncate flex items-center gap-1.5">
+                  <div className="text-[12.5px] font-geom truncate flex items-center gap-1.5">
                     {h.favorite && (
                       <Star className="h-3 w-3 shrink-0 fill-[hsl(var(--warning))] text-[hsl(var(--warning))]" />
                     )}
                     <span className="truncate">{h.requestName || h.url}</span>
                   </div>
                   {h.requestName && (
-                    <div className="text-[11px] text-muted-foreground font-mono truncate">{h.url}</div>
+                    <div className="text-[11px] text-muted-foreground font-geom truncate">{h.url}</div>
                   )}
-                  <div className="text-[10px] text-muted-foreground mt-0.5 font-mono uppercase tracking-wider">
+                  <div className="text-[10px] text-muted-foreground mt-0.5 font-geom uppercase tracking-wider">
                     {h.collectionName} • {h.userName || "Unknown"} • {new Date(h.timestamp).toLocaleString()} • {h.durationMs}ms • {(h.sizeBytes / 1024).toFixed(1)} KB
                   </div>
                 </div>
@@ -253,7 +253,7 @@ export default function History() {
           </div>
         )}
         {(isFetching || searchPending) && history.length > 0 && (
-          <div className="sticky bottom-0 border-t border-border bg-background/95 px-4 py-2 text-[11px] text-muted-foreground font-mono inline-flex items-center gap-2">
+          <div className="sticky bottom-0 border-t border-border bg-background/95 px-4 py-2 text-[11px] text-muted-foreground font-geom inline-flex items-center gap-2">
             <Loader2 className="h-3 w-3 animate-spin" /> Syncing…
           </div>
         )}

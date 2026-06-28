@@ -40,7 +40,7 @@ export default function Workspaces() {
     <div className="h-full overflow-auto p-6">
       <div className="flex items-end justify-between mb-5">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// workspaces</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// workspaces</div>
           <h1 className="mt-1 text-2xl font-medium tracking-tight">Workspaces</h1>
           <p className="mt-1 text-[13px] text-muted-foreground">Isolated environments, collections, and team members.</p>
         </div>

@@ -168,7 +168,7 @@ export default function Collections() {
       <ReadOnlyWorkspaceBanner className="mb-5" />
       <div className="flex items-end justify-between gap-3 mb-5">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// library</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// library</div>
           <h1 className="mt-1 text-2xl font-medium tracking-tight">Collections</h1>
           <p className="mt-1 text-[13px] text-muted-foreground">Organize your API requests by service, feature, or team.</p>
         </div>
@@ -233,7 +233,7 @@ export default function Collections() {
                         />
                         {c.pinned && <Star className="h-3.5 w-3.5 text-[hsl(var(--warning))] fill-[hsl(var(--warning))]" />}
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5 font-mono uppercase tracking-wider">
+                      <div className="text-[11px] text-muted-foreground mt-0.5 font-geom uppercase tracking-wider">
                         {c.requests.length} requests
                       </div>
                     </div>
@@ -255,7 +255,7 @@ export default function Collections() {
                         >
                           <MethodBadge method={r.method} className="w-12 text-left" />
                           <span className="truncate">{r.name}</span>
-                          <span className="ml-auto text-muted-foreground font-mono text-[11px] truncate max-w-[180px]">{r.url}</span>
+                          <span className="ml-auto text-muted-foreground font-geom text-[11px] truncate max-w-[180px]">{r.url}</span>
                         </button>
                       ))}
                       <button

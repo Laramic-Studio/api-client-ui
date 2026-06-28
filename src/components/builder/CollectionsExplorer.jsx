@@ -351,7 +351,7 @@ export default function CollectionsExplorer({
         </div>
       )}
       <div className="h-12 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))]">
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Collections</div>
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">Collections</div>
         <button
           className="ml-auto h-7 w-7 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
           disabled={createCollectionMut.isPending || isReadOnly}

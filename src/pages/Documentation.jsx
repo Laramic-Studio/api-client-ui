@@ -67,7 +67,7 @@ export default function Documentation() {
             <div key={c.id} className="mb-2">
               <button
                 onClick={() => setActiveColId(c.id)}
-                className="w-full text-left px-2 py-1.5 text-[11px] uppercase tracking-wider font-mono text-muted-foreground hover:text-foreground"
+                className="w-full text-left px-2 py-1.5 text-[11px] uppercase tracking-wider font-geom text-muted-foreground hover:text-foreground"
               >
                 {c.name}
               </button>
@@ -88,7 +88,7 @@ export default function Documentation() {
 
       <div className="overflow-auto">
         <div className="max-w-4xl mx-auto p-8">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// documentation</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-geom">// documentation</div>
           <div className="mt-1 flex items-center gap-3">
             <h1 className="text-3xl font-medium tracking-tight">{activeWs?.name} API</h1>
             <div className="ml-auto flex items-center gap-2">
@@ -126,11 +126,11 @@ export default function Documentation() {
           </p>
 
           <div className="mt-6 rounded-md border border-border bg-card p-5">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono flex items-center gap-2">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom flex items-center gap-2">
               <KeyRound className="h-3.5 w-3.5" /> Authentication
             </div>
             <p className="mt-2 text-[13px] text-foreground/85">
-              All endpoints require a bearer token. Pass the <span className="font-mono text-[hsl(var(--brand))]">Authorization: Bearer {"{{TOKEN}}"}</span> header. Tokens never expire; rotate them in <a href="/settings" className="text-[hsl(var(--brand))] hover:underline">Settings → Integrations</a>.
+              All endpoints require a bearer token. Pass the <span className="font-geom text-[hsl(var(--brand))]">Authorization: Bearer {"{{TOKEN}}"}</span> header. Tokens never expire; rotate them in <a href="/settings" className="text-[hsl(var(--brand))] hover:underline">Settings → Integrations</a>.
             </p>
           </div>
 
@@ -139,7 +139,7 @@ export default function Documentation() {
               <div>
                 <div className="flex items-center gap-3">
                   <MethodBadge method={activeReq.method} className="text-base" />
-                  <code className="font-mono text-[14px] text-foreground">{activeReq.url}</code>
+                  <code className="font-geom text-[14px] text-foreground">{activeReq.url}</code>
                   <button
                     onClick={() => { navigator.clipboard?.writeText(activeReq.url); toast.success("URL copied"); }}
                     className="ml-auto h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground"
@@ -197,7 +197,7 @@ export default function Documentation() {
 function Section({ title, children }) {
   return (
     <div className="rounded-md border border-border bg-card p-5">
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">{title}</div>
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-geom">{title}</div>
       <div className="mt-3">{children}</div>
     </div>
   );
@@ -207,12 +207,12 @@ function Table({ rows, cols, keys }) {
   if (!rows?.length) return <div className="text-[12.5px] text-muted-foreground">None.</div>;
   return (
     <div className="rounded-md border border-border overflow-hidden">
-      <div className="grid grid-cols-2 gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-mono border-b border-border">
+      <div className="grid grid-cols-2 gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-geom border-b border-border">
         {cols.map((c) => <div key={c}>{c}</div>)}
       </div>
       <div className="divide-y divide-border">
         {rows.map((r, i) => (
-          <div key={i} className="grid grid-cols-2 gap-2 px-3 py-2 text-[12.5px] font-mono">
+          <div key={i} className="grid grid-cols-2 gap-2 px-3 py-2 text-[12.5px] font-geom">
             <div className="text-foreground/85">{r[keys[0]]}</div>
             <div className="text-muted-foreground">{r[keys[1]]}</div>
           </div>
