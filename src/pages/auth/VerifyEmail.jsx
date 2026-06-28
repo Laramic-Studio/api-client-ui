@@ -74,10 +74,27 @@ export default function VerifyEmail() {
   };
 
   return (
-    <AuthShell
-      title="Verify your email"
-      subtitle={`Enter the 6-digit code we sent to ${user?.email || "your email"}.`}
-      footer={
+    <AuthShell>
+      <div>
+        <h1 className="text-2xl font-medium tracking-tight">Verify your email</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Enter the 6-digit code we sent to {user?.email || "your email"}.
+        </p>
+      </div>
+
+      <div className="mt-8">
+        <VerifyEmailForm
+          code={code}
+          onCodeChange={setCode}
+          onSubmit={onSubmit}
+          onComplete={onComplete}
+          onResend={onResend}
+          isVerifying={verifyEmail.isPending}
+          isResending={resend.isPending}
+        />
+      </div>
+
+      <p className="mt-6 text-center text-[13px] text-muted-foreground">
         <button
           type="button"
           onClick={goToLogin}
@@ -86,17 +103,7 @@ export default function VerifyEmail() {
         >
           {logout.isPending ? "Signing out…" : "← Sign in with a different account"}
         </button>
-      }
-    >
-      <VerifyEmailForm
-        code={code}
-        onCodeChange={setCode}
-        onSubmit={onSubmit}
-        onComplete={onComplete}
-        onResend={onResend}
-        isVerifying={verifyEmail.isPending}
-        isResending={resend.isPending}
-      />
+      </p>
     </AuthShell>
   );
 }

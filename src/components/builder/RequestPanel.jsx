@@ -50,6 +50,7 @@ export default function RequestPanel({
   requestTabId = null,
   isExampleView = false,
   onTry,
+  readOnly = false,
 }) {
   const storedTab = useAppStore((s) => (
     requestTabId ? s.builderSession.requestPanelTabs?.[requestTabId] : null
@@ -80,6 +81,7 @@ export default function RequestPanel({
   };
 
   const handleSend = () => {
+    if (readOnly) return;
     if (urlEmpty) {
       toast.error("Enter a request URL before sending.");
       return;
@@ -141,9 +143,10 @@ export default function RequestPanel({
             <Code2 className="h-3.5 w-3.5" />
           </button>
           <button
-            onClick={onSave}
-            disabled={saving}
+            onClick={readOnly ? undefined : onSave}
+            disabled={readOnly || saving}
             data-testid={BUILDER.saveButton}
+            title={readOnly ? "Read-only access" : undefined}
             className="h-7 px-2.5 rounded-md text-[12px] font-medium border border-[hsl(var(--border))] hover:bg-accent/50 inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -154,7 +157,7 @@ export default function RequestPanel({
 
       <div className="p-3 border-b border-[hsl(var(--border))] flex items-center gap-2">
         <div className="flex flex-1 min-w-0 items-stretch rounded-md  bg-[hsl(var(--input))] overflow-hidden">
-          <Select value={req.method} onValueChange={(v) => onChange({ ...req, method: v })}>
+          <Select value={req.method} onValueChange={(v) => onChange({ ...req, method: v })} disabled={readOnly}>
             <SelectTrigger
               className="w-[5.5rem] h-9 shrink-0 rounded-none border-0 border-r border-[hsl(var(--border))] bg-transparent text-[12px] font-semibold shadow-none focus:ring-0"
               data-testid={BUILDER.methodSelect}
@@ -174,18 +177,19 @@ export default function RequestPanel({
             onChange={(v) => onChange({ ...req, url: v })}
             onEnter={handleSend}
             onUpdateVariable={onUpdateVariable}
-            onImportCurl={handleImportCurl}
+            onImportCurl={readOnly ? undefined : handleImportCurl}
             env={activeEnv}
-            placeholder="Enter URL or paste a cURL command"
+            placeholder={readOnly ? "Read-only — you cannot edit or send requests" : "Enter URL or paste a cURL command"}
             testid={BUILDER.urlInput}
             grouped
+            readOnly={readOnly}
           />
         </div>
         <button
           onClick={handleSend}
-          disabled={!canSend}
+          disabled={readOnly || !canSend}
           data-testid={tryMode ? "builder-try-button" : BUILDER.sendButton}
-          title={urlEmpty ? "Enter a URL to send" : tryMode ? "Run this request live" : undefined}
+          title={readOnly ? "Read-only access — sending is disabled for your role" : urlEmpty ? "Enter a URL to send" : tryMode ? "Run this request live" : undefined}
           className="h-9 px-4 rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground text-[13px] font-medium inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {sending ? <Play className="h-3.5 w-3.5 animate-pulse" /> : <Send className="h-3.5 w-3.5" />}
@@ -259,7 +263,7 @@ export default function RequestPanel({
           ))}
         </TabsList>
 
-        <TabsContent value="params" className={cn(TAB_CONTENT_CLASS, "overflow-auto")}>
+        <TabsContent value="params" className={cn(TAB_CONTENT_CLASS, "overflow-auto", readOnly && "opacity-70 pointer-events-none select-none")}>
           <KvEditor
             rows={req.params || []}
             onChange={(rows) => onChange({ ...req, params: rows })}
@@ -268,11 +272,11 @@ export default function RequestPanel({
           />
         </TabsContent>
 
-        <TabsContent value="authorization" className={cn(TAB_CONTENT_CLASS, "overflow-auto p-3")}>
+        <TabsContent value="authorization" className={cn(TAB_CONTENT_CLASS, "overflow-auto p-3", readOnly && "opacity-70 pointer-events-none select-none")}>
           <AuthEditor auth={req.auth || { type: "none" }} onChange={(auth) => onChange({ ...req, auth })} activeEnv={activeEnv} />
         </TabsContent>
 
-        <TabsContent value="headers" className={cn(TAB_CONTENT_CLASS, "overflow-auto")}>
+        <TabsContent value="headers" className={cn(TAB_CONTENT_CLASS, "overflow-auto", readOnly && "opacity-70 pointer-events-none select-none")}>
           <KvEditor
             rows={req.headers || []}
             onChange={(rows) => onChange({ ...req, headers: rows })}
@@ -281,7 +285,7 @@ export default function RequestPanel({
           />
         </TabsContent>
 
-        <TabsContent value="body" className={TAB_CONTENT_CLASS}>
+        <TabsContent value="body" className={cn(TAB_CONTENT_CLASS, readOnly && "opacity-70 pointer-events-none select-none")}>
           <div className="flex items-center gap-2 p-2 border-b border-[hsl(var(--border))]">
             <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Type</span>
             <Select value={req.body.type} onValueChange={(v) => onChange({ ...req, body: { ...req.body, type: v } })}>
@@ -339,7 +343,7 @@ export default function RequestPanel({
           )}
         </TabsContent>
 
-        <TabsContent value="scripts" className={TAB_CONTENT_CLASS}>
+        <TabsContent value="scripts" className={cn(TAB_CONTENT_CLASS, readOnly && "opacity-70 pointer-events-none select-none")}>
           <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground">
             Pre-request script. Use{" "}
             <span className="font-mono text-foreground/75">nr.variables.set()</span>,{" "}
@@ -359,7 +363,7 @@ export default function RequestPanel({
           </div>
         </TabsContent>
 
-        <TabsContent value="tests" className={TAB_CONTENT_CLASS}>
+        <TabsContent value="tests" className={cn(TAB_CONTENT_CLASS, readOnly && "opacity-70 pointer-events-none select-none")}>
           <div className="shrink-0 px-3 py-2 border-b border-[hsl(var(--border))] text-[11.5px] text-muted-foreground">
             Post-response script. Use{" "}
             <span className="font-mono text-foreground/75">response.json()</span>,{" "}
@@ -374,7 +378,7 @@ export default function RequestPanel({
           </div>
         </TabsContent>
 
-        <TabsContent value="docs" className={TAB_CONTENT_CLASS}>
+        <TabsContent value="docs" className={cn(TAB_CONTENT_CLASS, readOnly && "opacity-70 pointer-events-none select-none")}>
           <Suspense fallback={(
             <div className="h-full grid place-items-center text-[12px] text-muted-foreground">
               Loading editor…

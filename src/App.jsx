@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { applyTheme, getStoredTheme } from "@/lib/theme";
 import { useAppStore } from "@/store/useAppStore";
 import { setClient } from "@/lib/api/client";
 import { fetchClient } from "@/lib/api/fetch-client";
@@ -15,9 +16,7 @@ export default function App() {
   const hydrateMock = useAppStore((s) => s.hydrateMock);
 
   useEffect(() => {
-    const stored = localStorage.getItem("noidr-theme");
-    const theme = stored || "dark";
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    applyTheme(getStoredTheme());
 
     setClient(fetchClient);
     hydrateMock();
@@ -34,7 +33,6 @@ export default function App() {
         <Toaster
           position="bottom-right"
           theme="system"
-          richColors
           toastOptions={{
             className: "border border-border bg-popover text-foreground",
           }}

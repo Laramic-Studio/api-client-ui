@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import CommandPalette from "@/components/layout/CommandPalette";
 import AiSidebar from "@/components/ai/AiSidebar";
+import TeamPermissionsBootstrap from "@/components/shared/TeamPermissionsBootstrap";
 import { useConduits } from "@/hooks/use-conduits";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -86,6 +87,7 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex bg-background text-foreground">
+      <TeamPermissionsBootstrap />
       <aside
         style={{ width: effectiveWidth }}
         className="shrink-0 border-r border-border bg-background transition-[width] duration-200 relative"

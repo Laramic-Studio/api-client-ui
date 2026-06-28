@@ -1,7 +1,7 @@
 import { apiRequest } from "@/lib/api/http";
 
-export function listHistory(teamId) {
-  return apiRequest(`/teams/${teamId}/history`);
+export function listHistory(teamId, params = {}) {
+  return apiRequest(`/teams/${teamId}/history`, { params });
 }
 
 export function createHistoryEntry(teamId, payload) {

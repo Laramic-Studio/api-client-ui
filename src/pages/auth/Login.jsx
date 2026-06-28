@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
 import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import PasswordInput from "@/components/auth/PasswordInput";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authDestination } from "@/lib/auth/routes";
+import { inviteAcceptPath, storePendingInviteCode } from "@/lib/invite-flow";
 import {
   toastAuthError,
   toastAuthSuccess,
@@ -20,9 +21,15 @@ export default function Login() {
   const login = useLogin();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const inviteCode = searchParams.get("invite_code");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
+
+  useEffect(() => {
+    if (inviteCode) storePendingInviteCode(inviteCode);
+  }, [inviteCode]);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -36,7 +43,10 @@ export default function Login() {
       {
         onSuccess: (user) => {
           toastAuthSuccess("Welcome back to Noidr");
-          navigate(authDestination(user, location.state?.from), { replace: true });
+          navigate(
+            authDestination(user, location.state?.from ?? inviteAcceptPath(inviteCode)),
+            { replace: true },
+          );
         },
         onError: (err) => {
           toastAuthError(err, "Could not sign in. Try again.");
@@ -49,19 +59,13 @@ export default function Login() {
   };
 
   return (
-    <AuthShell
-      title="Sign in"
-      subtitle="Welcome back."
-      footer={
-        <span>
-          Don&apos;t have an account?{" "}
-          <AuthLink to="/register" data-testid={AUTH.loginToRegister}>
-            Sign up
-          </AuthLink>
-        </span>
-      }
-    >
-      <form onSubmit={onSubmit} className="space-y-5">
+    <AuthShell>
+      <div>
+        <h1 className="text-2xl font-medium tracking-tight">Sign in</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">Welcome back.</p>
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-8 space-y-5">
         <AuthField label="Email" required htmlFor="email">
           <Input
             id="email"
@@ -120,7 +124,16 @@ export default function Login() {
         </Button>
       </form>
 
-      <SocialButtons variant="stacked" mode="signin" />
+      <div className="mt-6">
+        <SocialButtons variant="stacked" mode="signin" />
+      </div>
+
+      <p className="mt-6 text-center text-[13px] text-muted-foreground">
+        Don&apos;t have an account?{" "}
+        <AuthLink to="/register" data-testid={AUTH.loginToRegister}>
+          Sign up
+        </AuthLink>
+      </p>
     </AuthShell>
   );
 }

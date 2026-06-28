@@ -1,8 +1,9 @@
-import { ShieldCheck } from "lucide-react";
 import InviteMemberForm from "@/components/team/InviteMemberForm";
 import MembersTable from "@/components/team/MembersTable";
 import PendingInvitations from "@/components/team/PendingInvitations";
 import TeamPageSkeleton from "@/components/team/TeamPageSkeleton";
+import TeamPrivileges from "@/components/team/TeamPrivileges";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActiveTeamId, useTeamDetail } from "@/hooks/use-teams";
 
 export default function Team() {
@@ -29,7 +30,8 @@ export default function Team() {
     );
   }
 
-  const { members, invitations, permissions, availableRoles } = data;
+  const { members, invitations, permissions, availableRoles, privilegeMatrix } = data;
+  const pendingCount = invitations?.length || 0;
 
   return (
     <div className="h-full overflow-auto p-6">
@@ -49,32 +51,56 @@ export default function Team() {
         availableRoles={availableRoles || []}
       />
 
-      <MembersTable
-        teamId={teamId}
-        members={members || []}
-        availableRoles={availableRoles || []}
-        canUpdateMember={permissions?.canUpdateMember}
-        canRemoveMember={permissions?.canRemoveMember}
-      />
+      <Tabs defaultValue="members" className="w-full">
+        <TabsList className="mt-5 flex h-9 w-full justify-start gap-1 rounded-none border-b border-border bg-transparent px-0">
+          <TabsTrigger
+            value="members"
+            className="rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-[hsl(var(--brand))] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            All team
+          </TabsTrigger>
+          <TabsTrigger
+            value="invitations"
+            className="rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-[hsl(var(--brand))] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            Pending invitations
+            {pendingCount > 0 && (
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                {pendingCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
+            value="privileges"
+            className="rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-[hsl(var(--brand))] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            Team privileges
+          </TabsTrigger>
+        </TabsList>
 
-      <PendingInvitations
-        teamId={teamId}
-        invitations={invitations || []}
-        canCancel={permissions?.canCancelInvitation}
-      />
+        <TabsContent value="members" className="mt-5 space-y-5">
+          <MembersTable
+            teamId={teamId}
+            members={members || []}
+            availableRoles={availableRoles || []}
+            canUpdateMember={permissions?.canUpdateMember}
+            canRemoveMember={permissions?.canRemoveMember}
+          />
+        </TabsContent>
 
-      <div className="mt-5 rounded-md border border-border bg-card p-4 flex items-start gap-3">
-        <ShieldCheck className="h-4 w-4 text-[hsl(var(--brand))] mt-0.5" />
-        <div className="text-[12.5px] text-foreground/85">
-          <div className="font-medium">Role permissions</div>
-          <div className="text-muted-foreground mt-1">
-            <span className="font-mono text-foreground/85">Owner</span> — full control.{" "}
-            <span className="font-mono text-foreground/85">Admin</span> — manage workspace & members.{" "}
-            <span className="font-mono text-foreground/85">Developer</span> — read/write collections.{" "}
-            <span className="font-mono text-foreground/85">Viewer</span> — read-only.
-          </div>
-        </div>
-      </div>
+        <TabsContent value="invitations" className="mt-5">
+          <PendingInvitations
+            teamId={teamId}
+            invitations={invitations || []}
+            canCancel={permissions?.canCancelInvitation}
+            canResend={permissions?.canCreateInvitation}
+          />
+        </TabsContent>
+
+        <TabsContent value="privileges" className="mt-5">
+          <TeamPrivileges privilegeMatrix={privilegeMatrix} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

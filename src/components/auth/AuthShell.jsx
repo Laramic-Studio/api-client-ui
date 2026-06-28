@@ -18,11 +18,27 @@ export function AuthLink({ to, children, className, ...props }) {
   );
 }
 
+export function AuthBackLink({ to, children, className, ...props }) {
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground",
+        className,
+      )}
+      {...props}
+    >
+      <ArrowLeft className="h-4 w-4" />
+      {children}
+    </Link>
+  );
+}
+
 function AuthBrand() {
   return (
-    <Link to="/" className="inline-flex shrink-0  gap-2" aria-label="Noidr home">
+    <Link to="/" className="inline-flex shrink-0 gap-2" aria-label="Noidr home">
       <div className="grid h-8 w-8 place-items-center rounded-md bg-[hsl(var(--brand))] shadow-[0_0_20px_hsl(var(--brand)/0.35)]">
-        <StackedLogo size={16} color="#fff" /> 
+        <StackedLogo size={16} color="#fff" />
       </div>
       <span className="text-2xl font-bold">Noidr</span>
     </Link>
@@ -31,7 +47,7 @@ function AuthBrand() {
 
 function HeroPanel() {
   return (
-    <aside className="relative hidden overflow-hidden lg:block">
+    <aside className="relative hidden overflow-hidden border-l border-border lg:block">
       <img
         src={HERO_IMAGE}
         alt=""
@@ -45,7 +61,7 @@ function LegalFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <div className="mt-auto flex w-full max-w-[400px] items-center justify-between gap-4 pt-10 text-xs text-muted-foreground">
+    <div className="flex w-full items-center justify-between gap-4 text-xs text-muted-foreground">
       <span>© Noidr {year}</span>
       <a
         href="mailto:support@noidr.dev"
@@ -58,49 +74,21 @@ function LegalFooter() {
   );
 }
 
-export default function AuthShell({
-  title,
-  subtitle,
-  children,
-  footer,
-  backTo,
-  backLabel = "Back",
-}) {
+export default function AuthShell({ children }) {
   return (
     <div className="grid min-h-screen w-full grid-cols-1 bg-background text-foreground lg:grid-cols-2">
-      <div className="flex min-h-screen flex-col items-center px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12">
-        <div className="w-full max-w-[400px]">
-          {backTo ? (
-            <AuthLink
-              to={backTo}
-              className="inline-flex items-center gap-1.5 text-sm font-normal text-muted-foreground no-underline hover:text-foreground hover:no-underline"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              {backLabel}
-            </AuthLink>
-          ) : (
-            <AuthBrand />
-          )}
+      <div className="flex min-h-screen flex-col px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12">
+        <div className="shrink-0">
+          <AuthBrand />
         </div>
 
-        <div className="flex w-full max-w-[400px] flex-1 flex-col justify-center py-8 lg:py-12">
-          <div className="anim-fade-up">
-            <header className="mb-8 text-start">
-              <h1 className="text-[2rem] font-semibold tracking-tight text-foreground">{title}</h1>
-              {subtitle && (
-                <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
-              )}
-            </header>
-
-            <div className="space-y-6">{children}</div>
-
-            {footer && (
-              <p className="mt-8 text-center text-sm text-muted-foreground">{footer}</p>
-            )}
-          </div>
+        <div className="flex flex-1 items-center py-8 lg:py-12">
+          <div className="anim-fade-up mx-auto w-full max-w-sm">{children}</div>
         </div>
 
-        <LegalFooter />
+        <div className="shrink-0">
+          <LegalFooter />
+        </div>
       </div>
 
       <HeroPanel />

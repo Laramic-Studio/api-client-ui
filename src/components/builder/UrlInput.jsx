@@ -25,6 +25,7 @@ export default function UrlInput({
   compact = false,
   env = null,
   conduitVarKeys = [],
+  readOnly = false,
 }) {
   const inputRef = useRef(null);
   const containerRef = useRef(null);
@@ -268,7 +269,9 @@ export default function UrlInput({
       <input
         ref={inputRef}
         value={value}
+        readOnly={readOnly}
         onChange={(e) => {
+          if (readOnly) return;
           onChange(e.target.value);
           setPos(e.target.selectionStart || 0);
           setOpen(true);

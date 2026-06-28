@@ -1,19 +1,16 @@
 import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getClient } from "@/lib/api/client";
-import { ApiError } from "@/lib/api/http";
+import { getErrorMessage } from "@/lib/api/errors";
 import { authKeys } from "@/lib/api/query-keys";
 import { clearSession, fetchSession, applyOnboardingComplete } from "@/lib/api/session";
 import * as authApi from "@/lib/api/auth-api";
 import { completeOnboarding } from "@/lib/api/onboarding-api";
+import { mapApiUser } from "@/lib/api/map-user";
 import { getAccessToken } from "@/lib/auth/tokens";
 import { useAppStore } from "@/store/useAppStore";
 
-export function getErrorMessage(err, fallback = "Something went wrong.") {
-  if (err instanceof ApiError) return err.message;
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
+export { getErrorMessage } from "@/lib/api/errors";
 
 /** Restore session on app load (runs inside AuthGate). */
 export function useAuthBootstrap() {
@@ -130,5 +127,25 @@ export function useCompleteOnboarding() {
     onSuccess: (result) => {
       queryClient.setQueryData(authKeys.session(), result.user);
     },
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  const currentTeam = useAppStore((s) => s.currentTeam);
+
+  return useMutation({
+    mutationFn: (payload) => authApi.updateProfile(payload),
+    onSuccess: (data) => {
+      const user = mapApiUser(data.user, currentTeam);
+      useAppStore.getState().updateUser(user);
+      queryClient.setQueryData(authKeys.session(), user);
+    },
+  });
+}
+
+export function useUpdatePassword() {
+  return useMutation({
+    mutationFn: (payload) => authApi.updatePassword(payload),
   });
 }

@@ -25,6 +25,8 @@ import {
   ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import ReadOnlyWorkspaceBanner from "@/components/shared/ReadOnlyWorkspaceBanner";
+import { useWorkspaceWriteAccess } from "@/hooks/use-team-permissions";
 
 export default function Collections() {
   const collections = useAppStore(selectWorkspaceCollections);
@@ -42,6 +44,7 @@ export default function Collections() {
   const [open, setOpen] = useState({});
   const [pendingAction, setPendingAction] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const { isReadOnly, notifyReadOnly } = useWorkspaceWriteAccess();
 
   const filtered = collections
     .filter((c) => (showArchived ? c.archived : !c.archived))
@@ -61,11 +64,19 @@ export default function Collections() {
   });
 
   const patchCollection = (id, patch) => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     updateLocal(id, patch);
     savePatch(id, patch);
   };
 
   const handleCreate = () => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     createCollection.mutate(
       { name: "New Collection" },
       {
@@ -76,6 +87,10 @@ export default function Collections() {
   };
 
   const handleToggle = (collection, field) => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     const next = !collection[field];
     const key = `${collection.id}:${field}`;
     setPendingAction(key);
@@ -93,6 +108,10 @@ export default function Collections() {
   };
 
   const handleDuplicate = (id) => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     setPendingAction(`${id}:duplicate`);
     duplicateCollection.mutate(id, {
       onSuccess: (data) => toast.success(`Duplicated as ${data.collection.name}`),
@@ -120,6 +139,10 @@ export default function Collections() {
   };
 
   const handleAddRequest = (collectionId) => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     setPendingAction(`${collectionId}:request`);
     createRequest.mutate(
       { collectionId, payload: { name: "New request" } },
@@ -142,6 +165,7 @@ export default function Collections() {
 
   return (
     <div className="h-full overflow-auto p-6">
+      <ReadOnlyWorkspaceBanner className="mb-5" />
       <div className="flex items-end justify-between gap-3 mb-5">
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// library</div>
@@ -166,7 +190,7 @@ export default function Collections() {
           </button>
           <button
             onClick={handleCreate}
-            disabled={createCollection.isPending}
+            disabled={createCollection.isPending || isReadOnly}
             data-testid={COLL.newCollection}
             className="h-9 px-3 rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground text-[13px] font-medium inline-flex items-center gap-2 disabled:opacity-50"
           >

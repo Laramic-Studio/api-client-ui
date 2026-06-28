@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
-  LayoutGrid,
-  FolderTree,
+  // LayoutGrid,
+  // FolderTree,
   Send,
   Boxes,
   ServerCog,
@@ -28,13 +28,12 @@ import { StackedLogo } from "./stack-logo";
 import { DOCS_URL } from "@/lib/config";
 
 const NAV_ITEMS = [
-  { to: "/dashboard", icon: LayoutGrid, label: "Dashboard", key: "dashboard" },
-  { to: "/collections", icon: FolderTree, label: "Collections", key: "collections", enabled: true },
+  // { to: "/dashboard", icon: LayoutGrid, label: "Dashboard", key: "dashboard" },
+  // { to: "/collections", icon: FolderTree, label: "Collections", key: "collections", enabled: true },
   { to: "/builder", icon: Send, label: "APIs", key: "apis", enabled: true },
   { to: "/environments", icon: Boxes, label: "Environments", key: "environments", enabled: true },
   { to: "/mock-servers", icon: ServerCog, label: "Mock Servers", key: "mock-servers" },
-  { href: DOCS_URL, icon: BookOpenText, label: "Documentation", key: "documentation", enabled: true, external: true },
-  { to: "/history", icon: HistoryIcon, label: "History", key: "history" },
+  { to: "/history", icon: HistoryIcon, label: "History", key: "history", enabled: true },
   { to: "/monitoring", icon: Activity, label: "Monitoring", key: "monitoring" },
   { to: "/workspaces", icon: Briefcase, label: "Workspaces", key: "workspaces", enabled: true },
 ];
@@ -44,7 +43,7 @@ const SECONDARY_TOP = [
   { to: "/team", icon: Users, label: "Team", key: "team", enabled: true },
   { to: "/conduits", icon: Workflow, label: "Conduits", key: "conduits", enabled: true },
   { to: "/generators", icon: Sparkles, label: "Generators", key: "generators" },
-  { to: "/import", icon: Upload, label: "Import API", key: "import" },
+  { to: "/import", icon: Upload, label: "Import API", key: "import", enabled: true },
 ];
 
 const SETTINGS_ITEM = { to: "/settings", icon: SettingsIcon, label: "Settings", key: "settings", enabled: true };
@@ -155,12 +154,12 @@ export default function Sidebar({ collapsed }) {
 
         {!filtered && (
           <>
-            <div className={cn("border-t border-border", collapsed ? "my-2 mx-1" : "my-3 mx-0")} />
-            {!collapsed && (
+            <div className={cn("my-3 mx-0")} />
+            {/* {!collapsed && (
               <div className="mb-1 px-2 text-[10px] uppercase tracking-wider text-muted-foreground">
                 Tools
               </div>
-            )}
+            )} */}
             {/* In collapsed mode, settings is pinned to bottom — skip it here */}
             {(collapsed ? SECONDARY_TOP : SECONDARY).map((it) => (
               <NavRow key={it.key} item={it} collapsed={collapsed} />
@@ -206,7 +205,7 @@ function NavRow({ item, collapsed }) {
 
   if (enabled) {
     const className = cn(
-      "group flex items-center transition-colors rounded-md",
+      "group flex items-center transition-colors rounded-sm",
       collapsed
         ? "h-9 w-9 justify-center mx-auto text-muted-foreground hover:text-foreground hover:bg-accent/40"
         : "h-9 px-2.5 gap-2.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-accent/50 border-l-2 border-transparent pl-[calc(0.625rem-2px)]",
@@ -229,7 +228,7 @@ function NavRow({ item, collapsed }) {
         data-testid={NAV.item(item.key)}
         className={({ isActive }) =>
           cn(
-            "group flex items-center transition-colors rounded-md",
+            "group flex items-center transition-colors rounded-sm",
             collapsed
               ? cn(
                   "h-9 w-9 justify-center mx-auto",

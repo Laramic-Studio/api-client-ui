@@ -1,24 +1,36 @@
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Mail, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import { getErrorMessage, useCancelInvitation } from "@/hooks/use-teams";
+import { getErrorMessage, useCancelInvitation, useResendInvitation } from "@/hooks/use-teams";
 
-export default function PendingInvitations({ teamId, invitations, canCancel }) {
+export default function PendingInvitations({ teamId, invitations, canCancel, canResend }) {
   const cancel = useCancelInvitation(teamId);
+  const resend = useResendInvitation(teamId);
   const [cancelTarget, setCancelTarget] = useState(null);
 
-  if (!invitations.length) return null;
+  if (!invitations.length) {
+    return (
+      <div className="rounded-md border border-border bg-card p-8 text-center">
+        <Mail className="mx-auto h-8 w-8 text-muted-foreground/60" />
+        <div className="mt-3 text-[13px] font-medium">No pending invitations</div>
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          Invitations you send will appear here until they are accepted or cancelled.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-5 rounded-md border border-border bg-card overflow-hidden">
+    <div className="rounded-md border border-border bg-card overflow-hidden">
       <div className="px-4 py-2 border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
         Pending invitations
       </div>
       <div className="divide-y divide-border">
         {invitations.map((inv) => {
           const isCancelling = cancel.isPending && cancel.variables === inv.code;
+          const isResending = resend.isPending && resend.variables === inv.code;
+          const isBusy = isCancelling || isResending;
 
           return (
             <div key={inv.code} className="flex items-center gap-3 px-4 py-2 hover:bg-accent/50">
@@ -28,20 +40,45 @@ export default function PendingInvitations({ teamId, invitations, canCancel }) {
                   {inv.roleLabel || inv.role}
                 </div>
               </div>
-              {canCancel && (
-                <button
-                  onClick={() => setCancelTarget(inv)}
-                  disabled={isCancelling}
-                  className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))] disabled:opacity-50"
-                  aria-label={isCancelling ? "Cancelling invitation" : "Cancel invitation"}
-                >
-                  {isCancelling ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              )}
+              <div className="flex items-center gap-1">
+                {canResend && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resend.mutate(inv.code, {
+                        onSuccess: () => toast.success(`Invitation resent to ${inv.email}`),
+                        onError: (err) => toast.error(getErrorMessage(err, "Could not resend invitation.")),
+                      });
+                    }}
+                    disabled={isBusy}
+                    className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                    aria-label={isResending ? "Resending invitation" : "Resend invitation"}
+                    title="Resend invitation"
+                  >
+                    {isResending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                )}
+                {canCancel && (
+                  <button
+                    type="button"
+                    onClick={() => setCancelTarget(inv)}
+                    disabled={isBusy}
+                    className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))] disabled:opacity-50"
+                    aria-label={isCancelling ? "Cancelling invitation" : "Cancel invitation"}
+                    title="Cancel invitation"
+                  >
+                    {isCancelling ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}

@@ -31,6 +31,7 @@ export default function ConduitEditor({
   envs,
   onEnvChange,
   editorActionsRef,
+  workspaceReadOnly = false,
 }) {
   const [selectedStepId, setSelectedStepId] = useState(null);
   const [connectMode, setConnectMode] = useState(false);
@@ -38,7 +39,7 @@ export default function ConduitEditor({
   const [running, setRunning] = useState(false);
   const [selectedRun, setSelectedRun] = useState(null);
 
-  const canEdit = conduit.canEdit !== false;
+  const canEdit = conduit.canEdit !== false && !workspaceReadOnly;
   const { data: runs = [] } = useConduitRuns(conduit.id);
   const storeRun = useStoreConduitRun(conduit.id);
 

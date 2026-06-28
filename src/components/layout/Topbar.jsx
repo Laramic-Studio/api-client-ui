@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   Bell,
   Sun,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useLogout } from "@/hooks/use-auth";
+import { useTheme } from "@/hooks/use-theme";
 import { getErrorMessage, useSwitchTeam } from "@/hooks/use-teams";
 import { NAV, AUTH, AI } from "@/constants/testIds";
 import { useNavigate } from "react-router-dom";
@@ -46,21 +46,7 @@ export default function Topbar() {
   const setActive = useSwitchTeam();
   const navigate = useNavigate();
   const logout = useLogout();
-
-  const [dark, setDark] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const stored = localStorage.getItem("noidr-theme");
-    return stored ? stored === "dark" : true;
-  });
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
-  const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("noidr-theme", next ? "dark" : "light");
-  };
+  const { isDark, toggleTheme } = useTheme();
 
   const unread = notifications.filter((n) => !n.read).length;
   const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
@@ -159,7 +145,7 @@ export default function Topbar() {
           className="h-9 w-9 grid place-items-center rounded-md hover:bg-accent/50 text-foreground/85"
           aria-label="Toggle theme"
         >
-          {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
 
         <Popover>

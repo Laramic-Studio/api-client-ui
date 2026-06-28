@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
 import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import PasswordInput from "@/components/auth/PasswordInput";
@@ -8,6 +8,8 @@ import SocialButtons from "@/components/auth/SocialButtons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authDestination } from "@/lib/auth/routes";
+import { inviteAcceptPath, storePendingInviteCode } from "@/lib/invite-flow";
+import { useInvitation } from "@/hooks/use-teams";
 import {
   collectFieldErrors,
   toastAuthError,
@@ -21,10 +23,24 @@ import { cn } from "@/lib/utils";
 export default function Register() {
   const register = useRegister();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteCode = searchParams.get("invite_code");
+  const inviteQuery = useInvitation(inviteCode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (inviteCode) storePendingInviteCode(inviteCode);
+  }, [inviteCode]);
+
+  useEffect(() => {
+    const invitedEmail = inviteQuery.data?.invitation?.email;
+    if (invitedEmail && !email) {
+      setEmail(invitedEmail);
+    }
+  }, [inviteQuery.data?.invitation?.email, email]);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -45,7 +61,7 @@ export default function Register() {
       {
         onSuccess: (user) => {
           toastAuthSuccess("Account created — check your email for a verification code");
-          navigate(authDestination(user), { replace: true });
+          navigate(authDestination(user, inviteAcceptPath(inviteCode)), { replace: true });
         },
         onError: (err) => {
           const next = collectFieldErrors(err, ["name", "email", "password"]);
@@ -57,19 +73,13 @@ export default function Register() {
   };
 
   return (
-    <AuthShell
-      title="Sign up"
-      subtitle="Start building APIs with your team."
-      footer={
-        <span>
-          Already have an account?{" "}
-          <AuthLink to="/login" data-testid={AUTH.registerToLogin}>
-            Log in
-          </AuthLink>
-        </span>
-      }
-    >
-      <form onSubmit={onSubmit} className="space-y-5">
+    <AuthShell>
+      <div>
+        <h1 className="text-2xl font-medium tracking-tight">Sign up</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">Start building APIs with your team.</p>
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-8 space-y-5">
         <AuthField label="Name" required htmlFor="name" error={errors.name}>
           <Input
             id="name"
@@ -123,7 +133,16 @@ export default function Register() {
         </Button>
       </form>
 
-      <SocialButtons variant="stacked" mode="signup" />
+      <div className="mt-6">
+        <SocialButtons variant="stacked" mode="signup" />
+      </div>
+
+      <p className="mt-6 text-center text-[13px] text-muted-foreground">
+        Already have an account?{" "}
+        <AuthLink to="/login" data-testid={AUTH.registerToLogin}>
+          Log in
+        </AuthLink>
+      </p>
     </AuthShell>
   );
 }

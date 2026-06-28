@@ -15,6 +15,18 @@ export class ApiError extends Error {
 
 let refreshPromise = null;
 
+const PUBLIC_AUTH_PATHS = new Set([
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+]);
+
+function isPublicAuthRequest(config) {
+  const path = String(config?.url || "").replace(/\?.*$/, "");
+  return PUBLIC_AUTH_PATHS.has(path);
+}
+
 export function createAbortController() {
   return new AbortController();
 }
@@ -78,6 +90,10 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  if (isPublicAuthRequest(config)) {
+    return config;
+  }
+
   const token = getAccessToken();
   if (token && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -94,6 +110,10 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && !config._retry) {
+      if (isPublicAuthRequest(config)) {
+        return Promise.reject(toApiError(error));
+      }
+
       config._retry = true;
 
       if (!refreshPromise) {

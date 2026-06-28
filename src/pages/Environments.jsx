@@ -20,6 +20,8 @@ import {
   useDuplicateEnvironment,
   useEnvironments,
 } from "@/hooks/use-environments";
+import ReadOnlyWorkspaceBanner from "@/components/shared/ReadOnlyWorkspaceBanner";
+import { useWorkspaceWriteAccess } from "@/hooks/use-team-permissions";
 
 export default function Environments() {
   const envs = useAppStore(selectWorkspaceEnvironments);
@@ -31,6 +33,7 @@ export default function Environments() {
   const duplicateEnv = useDuplicateEnvironment();
   const activateEnv = useActivateEnvironment();
   const savePatch = useDebouncedEnvironmentUpdate(700);
+  const { isReadOnly, notifyReadOnly } = useWorkspaceWriteAccess();
 
   const [scope, setScope] = useState("all");
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -64,6 +67,10 @@ export default function Environments() {
   }, [filtered, selectedId]);
 
   const patchEnvironment = (id, patch) => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     updateLocal(id, patch);
     savePatch(id, patch);
   };
@@ -75,6 +82,10 @@ export default function Environments() {
   };
 
   const createInScope = () => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     const collectionId = scope !== "all" && scope !== "workspace" ? scope : null;
     createEnv.mutate(
       {
@@ -101,16 +112,20 @@ export default function Environments() {
   }
 
   return (
-    <div className="h-full overflow-hidden grid grid-cols-[320px_1fr]">
+    <div className="h-full overflow-hidden flex flex-col">
+      <div className="shrink-0 p-4 border-b border-border">
+        <ReadOnlyWorkspaceBanner />
+      </div>
+      <div className="flex-1 min-h-0 grid grid-cols-[320px_1fr]">
       <div className="border-r border-border flex flex-col">
         <div className="h-12 shrink-0 flex items-center px-3 border-b border-border gap-2">
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Environments</div>
           <button
             onClick={createInScope}
-            disabled={createEnv.isPending}
+            disabled={createEnv.isPending || isReadOnly}
             data-testid={ENV.newEnv}
             className="ml-auto h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
-            title="New environment"
+            title={isReadOnly ? "Read-only access" : "New environment"}
           >
             {createEnv.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
           </button>
@@ -187,11 +202,13 @@ export default function Environments() {
               <Box className={cn("h-4 w-4", selected.active ? "text-[hsl(var(--brand))]" : "text-muted-foreground")} />
               <input
                 value={selected.name}
+                readOnly={isReadOnly}
                 onChange={(e) => patchEnvironment(selected.id, { name: e.target.value })}
                 className="bg-transparent text-[15px] font-medium outline-none"
               />
               <Select
                 value={selected.collectionId || "__ws__"}
+                disabled={isReadOnly}
                 onValueChange={(v) => patchEnvironment(selected.id, { collectionId: v === "__ws__" ? null : v })}
               >
                 <SelectTrigger className="h-8 w-56 bg-muted border-border text-[12px] ml-3">
@@ -208,12 +225,16 @@ export default function Environments() {
                 {!selected.active && (
                   <button
                     onClick={() => {
+                      if (isReadOnly) {
+                        notifyReadOnly();
+                        return;
+                      }
                       activateEnv.mutate(selected.id, {
                         onSuccess: () => toast.success(`Activated ${selected.name}`),
                         onError: (err) => toast.error(getErrorMessage(err, "Could not activate environment.")),
                       });
                     }}
-                    disabled={activateEnv.isPending}
+                    disabled={activateEnv.isPending || isReadOnly}
                     className="h-8 px-2.5 rounded-md border border-border text-[12.5px] hover:bg-accent/50 inline-flex items-center gap-1.5 disabled:opacity-60"
                   >
                     {activateEnv.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
@@ -222,6 +243,10 @@ export default function Environments() {
                 )}
                 <button
                   onClick={() => {
+                    if (isReadOnly) {
+                      notifyReadOnly();
+                      return;
+                    }
                     duplicateEnv.mutate(selected.id, {
                       onSuccess: (data) => {
                         setSelectedId(data.environment.id);
@@ -230,17 +255,21 @@ export default function Environments() {
                       onError: (err) => toast.error(getErrorMessage(err, "Could not duplicate environment.")),
                     });
                   }}
-                  disabled={duplicateEnv.isPending}
+                  disabled={duplicateEnv.isPending || isReadOnly}
                   className="h-8 w-8 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
                 >
                   {duplicateEnv.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
                 </button>
                 <button
                   onClick={() => {
+                    if (isReadOnly) {
+                      notifyReadOnly();
+                      return;
+                    }
                     if (envs.length <= 1) return;
                     setDeleteTarget(selected);
                   }}
-                  disabled={deleteEnv.isPending || envs.length <= 1}
+                  disabled={deleteEnv.isPending || envs.length <= 1 || isReadOnly}
                   className="h-8 w-8 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-[hsl(var(--danger))] disabled:opacity-50"
                 >
                   {deleteEnv.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -258,6 +287,7 @@ export default function Environments() {
                 onAdd={() => patchEnvironment(selected.id, {
                   variables: [...selected.variables, { key: "", value: "", enabled: true, secret: false }],
                 })}
+                readOnly={isReadOnly}
               />
 
               <div className="mt-6 rounded-md border border-border bg-card p-4">
@@ -276,6 +306,7 @@ export default function Environments() {
             Select an environment or create a new one in this scope.
           </div>
         )}
+      </div>
       </div>
       <ConfirmDialog
         open={Boolean(deleteTarget)}

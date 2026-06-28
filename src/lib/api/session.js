@@ -3,6 +3,7 @@ import { mapApiUser, teamToWorkspace } from "@/lib/api/map-user";
 import { clearAccessToken } from "@/lib/auth/tokens";
 import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
 import { refreshCollectionsInStore } from "@/hooks/use-collections";
+import { refreshHistoryInStore } from "@/hooks/use-history";
 import { useAppStore } from "@/store/useAppStore";
 
 function ensureWorkspaceMaps(workspaces, activeWorkspaceId) {
@@ -85,6 +86,7 @@ export function applyTeamSwitch(currentTeam) {
     activeWorkspaceId,
     openTabs: [],
     activeTabId: null,
+    history: [],
     collectionsMap,
     environmentsMap,
   });
@@ -100,6 +102,7 @@ export async function fetchSession() {
     await Promise.all([
       refreshEnvironmentsInStore(teamId).catch(() => []),
       refreshCollectionsInStore(teamId).catch(() => []),
+      refreshHistoryInStore(teamId).catch(() => []),
     ]);
   }
 

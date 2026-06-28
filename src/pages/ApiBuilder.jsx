@@ -37,6 +37,7 @@ import {
   scriptLogsToConsoleEntries,
 } from "@/lib/builder/builder-console";
 import { getErrorMessage } from "@/hooks/use-auth";
+import { useWorkspaceWriteAccess } from "@/hooks/use-team-permissions";
 import { useCollections } from "@/hooks/use-collections";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { applyOptimisticRequestPatch, useUpdateRequest } from "@/hooks/use-requests";
@@ -90,6 +91,7 @@ export default function ApiBuilder() {
   const navigate = useNavigate();
   const client = getClient();
   useCollections();
+  const { isReadOnly, notifyReadOnly } = useWorkspaceWriteAccess();
 
   const collections = useAppStore(selectWorkspaceCollections);
   const findRequest = useAppStore((s) => s.findRequest);
@@ -187,6 +189,7 @@ export default function ApiBuilder() {
   }, [activeExample, activeTabId, responses]);
 
   const setActiveReq = (next) => {
+    if (isReadOnly) return;
     if (!activeTabId) return;
     setBuilderDraft(activeTabId, next);
     scheduleAutoSave(activeTabId, next);
@@ -225,10 +228,11 @@ export default function ApiBuilder() {
   }, 700);
 
   const scheduleAutoSave = useCallback((tabId, req) => {
+    if (isReadOnly) return;
     if (!autoSaveRequests) return;
     if (!req?.id || !req?.collectionId || isScratchTab(tabId)) return;
     debouncedAutoSave(tabId, req);
-  }, [autoSaveRequests, debouncedAutoSave]);
+  }, [autoSaveRequests, debouncedAutoSave, isReadOnly]);
 
   const finishCloseTab = useCallback((tabId) => {
     clearBuilderTabSession(tabId);
@@ -374,6 +378,10 @@ export default function ApiBuilder() {
   }, [activeReq, activeEnv]);
 
   const executeSend = async ({ forceCloud = false } = {}) => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     if (!activeReq || !activeTabId) return;
     if (isRequestUrlEmpty(activeReq.url)) {
       toast.error("Enter a request URL before sending.");
@@ -509,6 +517,10 @@ export default function ApiBuilder() {
   const onRetryViaCloud = () => executeSend({ forceCloud: true });
 
   const onSave = async () => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     if (!activeReq || !activeTabId) return;
     setSaving(true);
     try {
@@ -764,6 +776,7 @@ export default function ApiBuilder() {
       requestTabId={activeTabId}
       isExampleView={Boolean(activeExample)}
       onTry={activeExample ? handleTryExample : undefined}
+      readOnly={isReadOnly}
     />
   ) : (
     <div className="h-full grid place-items-center text-center p-8 text-muted-foreground">

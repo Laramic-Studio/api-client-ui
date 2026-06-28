@@ -1,7 +1,9 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAppStore } from "@/store/useAppStore";
 import { getAccessToken } from "@/lib/auth/tokens";
+import { authDestination } from "@/lib/auth/routes";
 import { authHomePath, userIsOnboarded, userIsVerified } from "@/lib/auth/user-state";
+import { inviteAcceptPath, readPendingInviteCode } from "@/lib/invite-flow";
 import { useAuthBootstrap } from "@/hooks/use-auth";
 
 export function AuthBootstrapGate({ children }) {
@@ -25,6 +27,12 @@ export function ProtectedRoute({ children }) {
 
   if (!user) return <Navigate to="/login" state={{ from: loc.pathname }} replace />;
   if (!userIsVerified(user)) return <Navigate to="/verify-email" replace />;
+
+  const pendingInvite = readPendingInviteCode();
+  if (pendingInvite) {
+    return <Navigate to={inviteAcceptPath(pendingInvite)} replace />;
+  }
+
   if (!userIsOnboarded(user)) return <Navigate to="/onboarding" replace />;
 
   return children;
@@ -34,9 +42,8 @@ export function PublicOnlyRoute({ children }) {
   const user = useAppStore((s) => s.user);
 
   if (!user) return children;
-  if (userIsVerified(user) && userIsOnboarded(user)) return <Navigate to="/dashboard" replace />;
-  if (userIsVerified(user)) return <Navigate to="/onboarding" replace />;
-  return <Navigate to="/verify-email" replace />;
+
+  return <Navigate to={authDestination(user)} replace />;
 }
 
 export function VerifyEmailRoute({ children }) {
@@ -44,7 +51,7 @@ export function VerifyEmailRoute({ children }) {
   const hasToken = Boolean(getAccessToken());
 
   if (!user || !hasToken) return <Navigate to="/login" replace />;
-  if (userIsVerified(user)) return <Navigate to={authHomePath(user)} replace />;
+  if (userIsVerified(user)) return <Navigate to={authDestination(user)} replace />;
 
   return children;
 }
@@ -55,7 +62,13 @@ export function OnboardingRoute({ children }) {
 
   if (!user || !hasToken) return <Navigate to="/login" replace />;
   if (!userIsVerified(user)) return <Navigate to="/verify-email" replace />;
-  if (userIsOnboarded(user)) return <Navigate to="/dashboard" replace />;
+
+  const pendingInvite = readPendingInviteCode();
+  if (pendingInvite) {
+    return <Navigate to={inviteAcceptPath(pendingInvite)} replace />;
+  }
+
+  if (userIsOnboarded(user)) return <Navigate to="/builder" replace />;
 
   return children;
 }

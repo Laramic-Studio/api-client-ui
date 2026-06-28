@@ -1,4 +1,4 @@
-import { mapApiHistoryEntry, mapHistoryEntryToApi } from "@/lib/api/map-history";
+import { mapApiHistoryEntry, mapHistoryEntryToApi, toHistoryApiParams } from "@/lib/api/map-history";
 import * as historyApi from "@/lib/api/history-api";
 import { historyKeys } from "@/lib/api/query-keys";
 import { useAppStore } from "@/store/useAppStore";
@@ -20,20 +20,33 @@ export function useActiveTeamId() {
   return useAppStore((s) => s.activeWorkspaceId);
 }
 
-export function useHistory() {
+export function useHistory(filters = null) {
   const teamId = useActiveTeamId();
+  const hasFilters = filters != null;
 
   return useQuery({
-    queryKey: historyKeys.list(teamId),
-    queryFn: () => refreshHistoryInStore(teamId),
+    queryKey: historyKeys.list(teamId, hasFilters ? filters : null),
+    queryFn: async () => {
+      const data = await historyApi.listHistory(
+        teamId,
+        hasFilters ? toHistoryApiParams(filters) : undefined,
+      );
+      const entries = (data.history || []).map(mapApiHistoryEntry).filter(Boolean);
+      if (!hasFilters) {
+        applyHistoryToStore(entries);
+      }
+      return entries;
+    },
     enabled: Boolean(teamId),
     staleTime: 15 * 1000,
+    placeholderData: (previousData) => previousData,
   });
 }
 
 function invalidateHistory(queryClient, teamId) {
+  queryClient.invalidateQueries({ queryKey: historyKeys.lists() });
   if (teamId) {
-    queryClient.invalidateQueries({ queryKey: historyKeys.list(teamId) });
+    refreshHistoryInStore(teamId).catch(() => {});
   }
 }
 

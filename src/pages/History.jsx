@@ -1,59 +1,110 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppStore } from "@/store/useAppStore";
 import MethodBadge from "@/components/shared/MethodBadge";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Search, Star, Trash2, Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/hooks/use-auth";
+import { useCollections } from "@/hooks/use-collections";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import { replayHistoryEntry } from "@/lib/builder/history";
+import { hasActiveHistoryFilters } from "@/lib/api/map-history";
 import {
   useClearHistory,
   useDeleteHistoryEntry,
   useHistory,
   useToggleHistoryFavorite,
+  useActiveTeamId,
 } from "@/hooks/use-history";
+import ReadOnlyWorkspaceBanner from "@/components/shared/ReadOnlyWorkspaceBanner";
+import { useWorkspaceWriteAccess } from "@/hooks/use-team-permissions";
 
-const METHODS = ["ALL", "GET", "POST", "PUT", "PATCH", "DELETE"];
+const METHODS = [
+  { id: "ALL", label: "All methods" },
+  { id: "GET", label: "GET" },
+  { id: "POST", label: "POST" },
+  { id: "PUT", label: "PUT" },
+  { id: "PATCH", label: "PATCH" },
+  { id: "DELETE", label: "DELETE" },
+];
 const STATUSES = [
-  { id: "ALL", label: "All" },
-  { id: "2xx", label: "2xx" },
-  { id: "4xx", label: "4xx" },
-  { id: "5xx", label: "5xx" },
+  { id: "ALL", label: "All statuses" },
+  { id: "2xx", label: "2xx Success" },
+  { id: "4xx", label: "4xx Client error" },
+  { id: "5xx", label: "5xx Server error" },
 ];
 
 export default function History() {
+  const navigate = useNavigate();
   const user = useAppStore((s) => s.user);
-  const history = useAppStore((s) => s.history);
-  const { isLoading } = useHistory();
-  const toggleFavorite = useToggleHistoryFavorite();
-  const deleteEntry = useDeleteHistoryEntry();
-  const clearHistory = useClearHistory();
-  const [q, setQ] = useState("");
-  const [m, setM] = useState("ALL");
-  const [s, setS] = useState("ALL");
-  const [favOnly, setFavOnly] = useState(false);
+  const teamId = useActiveTeamId();
+  useCollections();
+
+  const [searchInput, setSearchInput] = useState("");
+  const [filters, setFilters] = useState({
+    q: "",
+    method: "ALL",
+    status: "ALL",
+    favorite: false,
+  });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
-  const filtered = history.filter((h) => {
-    if (favOnly && !h.favorite) return false;
-    if (m !== "ALL" && h.method !== m) return false;
-    if (s !== "ALL") {
-      if (s === "2xx" && !(h.status >= 200 && h.status < 300)) return false;
-      if (s === "4xx" && !(h.status >= 400 && h.status < 500)) return false;
-      if (s === "5xx" && !(h.status >= 500)) return false;
-    }
-    const haystack = `${h.method} ${h.url} ${h.requestName || ""} ${h.userName || ""}`.toLowerCase();
-    if (q && !haystack.includes(q.toLowerCase())) return false;
-    return true;
-  });
+  const debouncedSearch = useDebouncedCallback((value) => {
+    setFilters((current) => ({ ...current, q: value }));
+  }, 400);
 
-  const canModify = (entry) => !user?.id || entry.userId === user.id;
+  const { data: history = [], isLoading, isError, refetch, isFetching } = useHistory(filters);
+  const toggleFavorite = useToggleHistoryFavorite();
+  const deleteEntry = useDeleteHistoryEntry();
+  const clearHistory = useClearHistory();
+  const { isReadOnly, notifyReadOnly } = useWorkspaceWriteAccess();
+
+  const filtersActive = useMemo(() => hasActiveHistoryFilters(filters), [filters]);
+  const searchPending = searchInput.trim() !== filters.q.trim();
+
+  const setMethod = useCallback((method) => {
+    setFilters((current) => ({ ...current, method }));
+  }, []);
+
+  const setStatus = useCallback((status) => {
+    setFilters((current) => ({ ...current, status }));
+  }, []);
+
+  const toggleFavoritesOnly = useCallback(() => {
+    setFilters((current) => ({ ...current, favorite: !current.favorite }));
+  }, []);
+
+  const canModify = (entry) => !isReadOnly && (!user?.id || String(entry.userId) === String(user.id));
+
+  const handleReplay = (entry) => {
+    const { path } = replayHistoryEntry(entry);
+    navigate(path);
+  };
+
+  if (!teamId) {
+    return (
+      <div className="h-full grid place-items-center text-[13px] text-muted-foreground">
+        Select a workspace to view request history.
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-hidden flex flex-col">
-      <div className="border-b border-border p-4 flex items-center gap-2 flex-wrap">
+      <div className="border-b border-border p-4 space-y-3">
+        <ReadOnlyWorkspaceBanner compact />
+        <div className="flex items-center gap-2 flex-wrap">
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// timeline</div>
           <h1 className="text-2xl font-medium tracking-tight">History</h1>
@@ -64,56 +115,105 @@ export default function History() {
         <div className="ml-auto relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+              debouncedSearch(e.target.value);
+            }}
             placeholder="Search history…"
             className="h-9 w-72 pl-8 pr-2 rounded-md bg-muted border border-border text-[13px]"
           />
         </div>
-        <div className="flex items-center gap-1">
-          {METHODS.map((opt) => (
-            <button
-              key={opt}
-              onClick={() => setM(opt)}
-              className={cn("h-7 px-2 rounded text-[11px] font-mono uppercase tracking-wider border", m === opt ? "border-[hsl(var(--brand))] bg-[hsl(var(--brand))]/15 text-foreground" : "border-border text-muted-foreground hover:bg-accent/50")}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1">
-          {STATUSES.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => setS(opt.id)}
-              className={cn("h-7 px-2 rounded text-[11px] font-mono uppercase tracking-wider border", s === opt.id ? "border-[hsl(var(--brand))] bg-[hsl(var(--brand))]/15 text-foreground" : "border-border text-muted-foreground hover:bg-accent/50")}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setFavOnly((v) => !v)} className={cn("h-7 px-2 rounded text-[11px] border inline-flex items-center gap-1", favOnly ? "border-[hsl(var(--warning))] text-[hsl(var(--warning))]" : "border-border text-muted-foreground hover:bg-accent/50")}>
+        <Select value={filters.method} onValueChange={setMethod}>
+          <SelectTrigger className="h-7 w-[132px] text-[11px] font-mono uppercase tracking-wider border-border bg-transparent">
+            <SelectValue placeholder="Method" />
+          </SelectTrigger>
+          <SelectContent>
+            {METHODS.map((opt) => (
+              <SelectItem key={opt.id} value={opt.id} className="text-[12px] font-mono">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filters.status} onValueChange={setStatus}>
+          <SelectTrigger className="h-7 w-[148px] text-[11px] font-mono uppercase tracking-wider border-border bg-transparent">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUSES.map((opt) => (
+              <SelectItem key={opt.id} value={opt.id} className="text-[12px]">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <button
+          onClick={toggleFavoritesOnly}
+          className={cn(
+            "h-7 px-2 rounded text-[11px] border inline-flex items-center gap-1",
+            filters.favorite
+              ? "border-[hsl(var(--warning))] text-[hsl(var(--warning))]"
+              : "border-border text-muted-foreground hover:bg-accent/50",
+          )}
+        >
           <Star className="h-3 w-3" /> Favorites
         </button>
-        <button onClick={() => setConfirmClear(true)} className="h-7 px-2 rounded text-[11px] border border-border text-muted-foreground hover:bg-accent/50">
+        <button
+          onClick={() => {
+            if (isReadOnly) {
+              notifyReadOnly();
+              return;
+            }
+            setConfirmClear(true);
+          }}
+          disabled={isReadOnly}
+          className="h-7 px-2 rounded text-[11px] border border-border text-muted-foreground hover:bg-accent/50 disabled:opacity-50"
+        >
           Clear mine
         </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto">
-        {isLoading && history.length === 0 ? (
+        {(isLoading || searchPending) && history.length === 0 ? (
           <div className="grid place-items-center h-full text-[13px] text-muted-foreground gap-2">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading history…
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="grid place-items-center h-full text-[13px] text-muted-foreground">No history matches your filters</div>
+        ) : isError ? (
+          <div className="grid place-items-center h-full text-[13px] text-muted-foreground gap-3">
+            <p>Could not load history.</p>
+            <button
+              onClick={() => refetch()}
+              className="h-8 px-3 rounded text-[12px] border border-border hover:bg-accent/50"
+            >
+              Retry
+            </button>
+          </div>
+        ) : history.length === 0 ? (
+          <div className="grid place-items-center h-full text-[13px] text-muted-foreground">
+            {filtersActive
+              ? "No history matches your filters"
+              : "No requests logged yet — send a request from the API Builder to get started."}
+          </div>
         ) : (
           <div className="divide-y divide-border">
-            {filtered.map((h) => (
-              <div key={h.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-accent/50">
+            {history.map((h) => (
+              <div
+                key={h.id}
+                className={cn(
+                  "px-4 py-2.5 flex items-center gap-3 hover:bg-accent/50",
+                  h.favorite && "bg-[hsl(var(--warning))]/5",
+                )}
+              >
                 <MethodBadge method={h.method} className="w-14" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12.5px] font-mono truncate">{h.requestName || h.url}</div>
+                  <div className="text-[12.5px] font-mono truncate flex items-center gap-1.5">
+                    {h.favorite && (
+                      <Star className="h-3 w-3 shrink-0 fill-[hsl(var(--warning))] text-[hsl(var(--warning))]" />
+                    )}
+                    <span className="truncate">{h.requestName || h.url}</span>
+                  </div>
                   {h.requestName && (
                     <div className="text-[11px] text-muted-foreground font-mono truncate">{h.url}</div>
                   )}
@@ -128,11 +228,16 @@ export default function History() {
                       onError: (err) => toast.error(getErrorMessage(err, "Could not update favorite.")),
                     })}
                     className={cn("h-7 w-7 grid place-items-center rounded hover:bg-accent/50", h.favorite ? "text-[hsl(var(--warning))]" : "text-muted-foreground")}
+                    title={h.favorite ? "Remove from favorites" : "Star entry"}
                   >
                     <Star className={cn("h-3.5 w-3.5", h.favorite && "fill-[hsl(var(--warning))]")} />
                   </button>
                 )}
-                <button className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground" title="Re-run (coming soon)">
+                <button
+                  onClick={() => handleReplay(h)}
+                  className="h-7 w-7 grid place-items-center rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+                  title="Re-run in API Builder"
+                >
                   <Play className="h-3.5 w-3.5" />
                 </button>
                 {canModify(h) && (
@@ -145,6 +250,11 @@ export default function History() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+        {(isFetching || searchPending) && history.length > 0 && (
+          <div className="sticky bottom-0 border-t border-border bg-background/95 px-4 py-2 text-[11px] text-muted-foreground font-mono inline-flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin" /> Syncing…
           </div>
         )}
       </div>

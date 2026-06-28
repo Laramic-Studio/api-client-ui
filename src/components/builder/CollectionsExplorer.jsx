@@ -33,6 +33,8 @@ import {
 import { renameExampleInList, setDefaultExampleInList, canSaveExampleForRequest, buildExampleFromResponse } from "@/lib/builder/examples";
 import { CollectionRow } from "@/components/builder/CollectionsExplorerRows";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import ReadOnlyWorkspaceBanner from "@/components/shared/ReadOnlyWorkspaceBanner";
+import { useWorkspaceWriteAccess } from "@/hooks/use-team-permissions";
 
 export default function CollectionsExplorer({
   activeRequestId,
@@ -51,6 +53,7 @@ export default function CollectionsExplorer({
   const clearBuilderTabSession = useAppStore((s) => s.clearBuilderTabSession);
   const renameTab = useAppStore((s) => s.renameTab);
   const { isLoading } = useCollections();
+  const { isReadOnly, notifyReadOnly } = useWorkspaceWriteAccess();
 
   const createCollectionMut = useCreateCollection();
   const updateCollectionMut = useUpdateCollection();
@@ -93,6 +96,10 @@ export default function CollectionsExplorer({
   }, [collections, filter]);
 
   const run = (key, fn) => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     setPending(key);
     fn({
       onSettled: () => setPending(null),
@@ -101,6 +108,7 @@ export default function CollectionsExplorer({
   };
 
   const actions = {
+    readOnly: isReadOnly,
     addFolder: (collectionId, payload) => {
       run(`folder:${collectionId}`, (opts) => createFolderMut.mutate({ collectionId, payload }, opts));
     },
@@ -158,6 +166,10 @@ export default function CollectionsExplorer({
       });
     },
     moveRequest: (collectionId, requestId, opts) => {
+      if (isReadOnly) {
+        notifyReadOnly();
+        return;
+      }
       moveRequestLocal(collectionId, requestId, opts);
       moveRequestMut.mutate(
         { collectionId, requestId, folderId: opts.folderId },
@@ -165,6 +177,10 @@ export default function CollectionsExplorer({
       );
     },
     reorderRequest: (collectionId, fromId, toId) => {
+      if (isReadOnly) {
+        notifyReadOnly();
+        return;
+      }
       const collection = collections.find((c) => c.id === collectionId);
       if (!collection) return;
       const moved = collection.requests.find((r) => r.id === fromId);
@@ -179,10 +195,18 @@ export default function CollectionsExplorer({
       }
     },
     patchRequest: (collectionId, requestId, patch) => {
+      if (isReadOnly) {
+        notifyReadOnly();
+        return;
+      }
       applyOptimisticRequestPatch(collectionId, requestId, patch);
       patchRequestMut.mutate({ collectionId, requestId, patch });
     },
     renameRequest: (collectionId, requestId, name) => {
+      if (isReadOnly) {
+        notifyReadOnly();
+        return;
+      }
       const trimmed = (name || "").trim() || "Untitled request";
       applyOptimisticRequestPatch(collectionId, requestId, { name: trimmed });
       renameTab(requestId, trimmed);
@@ -193,6 +217,10 @@ export default function CollectionsExplorer({
       );
     },
     renameCollection: (collectionId, name) => {
+      if (isReadOnly) {
+        notifyReadOnly();
+        return;
+      }
       const trimmed = (name || "").trim();
       if (!trimmed) return;
       useAppStore.getState().updateCollection(collectionId, { name: trimmed });
@@ -253,6 +281,10 @@ export default function CollectionsExplorer({
     },
     canAddExample: (request) => canSaveExampleForRequest(request, drafts[request.id], responses[request.id]),
     renameExample: (collectionId, requestId, exampleId, name) => {
+      if (isReadOnly) {
+        notifyReadOnly();
+        return;
+      }
       const collection = collections.find((c) => c.id === collectionId);
       const request = collection?.requests.find((r) => r.id === requestId);
       if (!request) return;
@@ -264,6 +296,10 @@ export default function CollectionsExplorer({
       );
     },
     setDefaultExample: (collectionId, requestId, exampleId) => {
+      if (isReadOnly) {
+        notifyReadOnly();
+        return;
+      }
       const collection = collections.find((c) => c.id === collectionId);
       const request = collection?.requests.find((r) => r.id === requestId);
       if (!request) return;
@@ -309,12 +345,21 @@ export default function CollectionsExplorer({
 
   return (
     <div className="h-full flex flex-col border-r border-[hsl(var(--border))]">
+      {isReadOnly && (
+        <div className="shrink-0 p-2 border-b border-[hsl(var(--border))]">
+          <ReadOnlyWorkspaceBanner compact />
+        </div>
+      )}
       <div className="h-12 shrink-0 flex items-center px-3 border-b border-[hsl(var(--border))]">
         <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-mono">Collections</div>
         <button
           className="ml-auto h-7 w-7 grid place-items-center rounded-md hover:bg-accent/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
-          disabled={createCollectionMut.isPending}
+          disabled={createCollectionMut.isPending || isReadOnly}
           onClick={() => {
+            if (isReadOnly) {
+              notifyReadOnly();
+              return;
+            }
             createCollectionMut.mutate(
               { name: "New Collection" },
               {

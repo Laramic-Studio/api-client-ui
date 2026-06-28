@@ -40,6 +40,10 @@ export async function cancelInvitation(teamId, code) {
   return apiRequest(`/teams/${teamId}/invitations/${code}`, { method: "DELETE" });
 }
 
+export async function resendInvitation(teamId, code) {
+  return apiRequest(`/teams/${teamId}/invitations/${code}/resend`, { method: "POST" });
+}
+
 export async function acceptInvitation(code) {
   return apiRequest(`/invitations/${code}/accept`, { method: "POST" });
 }

@@ -12,7 +12,7 @@ const ensureSeed = (state) => {
   return {
     ...state,
     ...seedData,
-    history: Array.isArray(state.history) && state.history.length > 0 ? state.history : [],
+    history: [],
     seeded: true,
   };
 };
@@ -49,7 +49,7 @@ export const useAppStore = create(
         ...(collectionsMap ? { collectionsMap } : {}),
         ...(environmentsMap ? { environmentsMap } : {}),
       }),
-      clearAuthSession: () => set({ user: null, currentTeam: null }),
+      clearAuthSession: () => set({ user: null, currentTeam: null, history: [] }),
       finishAuthBootstrap: () => set({ authBootstrapped: true }),
       updateUser: (patch) => set((s) => ({ user: s.user ? { ...s.user, ...patch } : null })),
 
@@ -677,7 +677,7 @@ export const useAppStore = create(
     {
       name: "noidr-web-store",
       storage: createJSONStorage(() => localStorage),
-      version: 6,
+      version: 7,
       migrate: (persisted, version) => {
         const state = persisted ?? {};
         if (version < 5 && state.builderSession) {
@@ -692,6 +692,9 @@ export const useAppStore = create(
             ...state.builderPanels,
             responseLayout: "bottom",
           };
+        }
+        if (version < 7) {
+          delete state.history;
         }
         return state;
       },

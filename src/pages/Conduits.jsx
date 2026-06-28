@@ -21,6 +21,8 @@ import { conduitKeys } from "@/lib/api/query-keys";
 import { useCollections } from "@/hooks/use-collections";
 import { useEnvironments } from "@/hooks/use-environments";
 import { getErrorMessage } from "@/hooks/use-auth";
+import ReadOnlyWorkspaceBanner from "@/components/shared/ReadOnlyWorkspaceBanner";
+import { useWorkspaceWriteAccess } from "@/hooks/use-team-permissions";
 import { Plus, Workflow, Loader2, Lock, Users, UserCheck, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -42,6 +44,7 @@ export default function Conduits() {
   const createConduit = useCreateConduit();
   const deleteConduit = useDeleteConduit();
   const savePatch = useDebouncedConduitUpdate(700);
+  const { isReadOnly, notifyReadOnly } = useWorkspaceWriteAccess();
 
   const collections = useAppStore(selectWorkspaceCollections);
   const envs = useAppStore(selectWorkspaceEnvironments);
@@ -77,6 +80,10 @@ export default function Conduits() {
   setSelectedEnvIdRef.current = setSelectedEnvId;
 
   const patchConduit = (id, patch) => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     let snapshot = null;
     queryClient.setQueryData(conduitKeys.list(teamId), (old) => {
       const next = (old || []).map((c) => {
@@ -187,6 +194,10 @@ export default function Conduits() {
   });
 
   const handleCreate = (payload) => {
+    if (isReadOnly) {
+      notifyReadOnly();
+      return;
+    }
     createConduit.mutate(payload, {
       onSuccess: (created) => {
         toast.success("Conduit created");
@@ -217,12 +228,14 @@ export default function Conduits() {
         selectedEnv={selectedEnv}
         onEnvChange={setSelectedEnvId}
         editorActionsRef={editorActionsRef}
+        workspaceReadOnly={isReadOnly}
       />
     );
   }
 
   return (
     <div className="h-full flex flex-col p-6">
+      <ReadOnlyWorkspaceBanner className="mb-5" />
       <div className="flex items-end justify-between gap-4 flex-wrap mb-6">
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-mono">// chaining</div>
@@ -233,8 +246,14 @@ export default function Conduits() {
         </div>
         <button
           type="button"
-          onClick={() => setShowCreateDialog(true)}
-          disabled={createConduit.isPending}
+          onClick={() => {
+            if (isReadOnly) {
+              notifyReadOnly();
+              return;
+            }
+            setShowCreateDialog(true);
+          }}
+          disabled={createConduit.isPending || isReadOnly}
           className="h-9 px-3 rounded-md bg-[hsl(var(--brand))] hover:bg-[#4F46E5] text-foreground text-[13px] font-medium inline-flex items-center gap-2 disabled:opacity-60"
         >
           {createConduit.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
@@ -248,7 +267,14 @@ export default function Conduits() {
             <p>No conduits yet. Create one to start chaining requests.</p>
             <button
               type="button"
-              onClick={() => setShowCreateDialog(true)}
+              onClick={() => {
+                if (isReadOnly) {
+                  notifyReadOnly();
+                  return;
+                }
+                setShowCreateDialog(true);
+              }}
+              disabled={isReadOnly}
               className="h-8 px-3 rounded-md border border-border hover:bg-accent/50 text-[12px] inline-flex items-center gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" /> New conduit

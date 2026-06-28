@@ -65,6 +65,7 @@ export function CollectionRow({
   pending,
 }) {
   const c = collection;
+  const readOnly = Boolean(actions.readOnly);
   const folders = c.folders || [];
   const folderlessRequests = c.requests.filter((r) => !r.folderId);
   const flatFolders = flattenFolders(folders);
@@ -84,6 +85,7 @@ export function CollectionRow({
   };
 
   const onDropToRoot = (e) => {
+    if (readOnly) return;
     e.preventDefault();
     e.stopPropagation();
     const payload = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
@@ -96,9 +98,9 @@ export function CollectionRow({
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(`col-${c.id}`); }}
-            onDragLeave={() => setDragOver(null)}
-            onDrop={onDropToRoot}
+            onDragOver={readOnly ? undefined : (e) => { e.preventDefault(); setDragOver(`col-${c.id}`); }}
+            onDragLeave={readOnly ? undefined : () => setDragOver(null)}
+            onDrop={readOnly ? undefined : onDropToRoot}
             className={cn(
               "w-full min-w-0 flex items-center gap-1.5 h-7 px-2 rounded text-[12.5px] hover:bg-accent/50 text-foreground/85 overflow-hidden",
               dragOver === `col-${c.id}` && "bg-[hsl(var(--brand))]/10 ring-1 ring-inset ring-[hsl(var(--brand))]/40",
@@ -127,7 +129,7 @@ export function CollectionRow({
             ) : (
               <ExplorerLabel
                 className="font-medium"
-                onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
+                onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); setRenaming(true); }}
                 title={c.name}
               >
                 {c.name}
@@ -137,24 +139,28 @@ export function CollectionRow({
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addFolder(c.id, { name: "New folder" })}>
-            <FolderPlus className="h-3.5 w-3.5" /> New folder
-          </ContextMenuItem>
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addRequest(c.id, { name: "New request" }, onOpenRequest)}>
-            <FilePlus className="h-3.5 w-3.5" /> New request
-          </ContextMenuItem>
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
-            <Edit3 className="h-3.5 w-3.5" /> Rename
-          </ContextMenuItem>
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" disabled={isDuplicating} onClick={() => actions.duplicateCollection(c.id)}>
-            {isDuplicating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
-            {isDuplicating ? "Duplicating…" : "Duplicate"}
-          </ContextMenuItem>
-          <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteCollection(c.id, c.name)} className="text-red-400 cursor-pointer text-xs px-2 gap-2">
-            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            {isDeleting ? "Deleting…" : "Delete"}
-          </ContextMenuItem>
+          {!readOnly && (
+            <>
+              <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addFolder(c.id, { name: "New folder" })}>
+                <FolderPlus className="h-3.5 w-3.5" /> New folder
+              </ContextMenuItem>
+              <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addRequest(c.id, { name: "New request" }, onOpenRequest)}>
+                <FilePlus className="h-3.5 w-3.5" /> New request
+              </ContextMenuItem>
+              <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
+                <Edit3 className="h-3.5 w-3.5" /> Rename
+              </ContextMenuItem>
+              <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" disabled={isDuplicating} onClick={() => actions.duplicateCollection(c.id)}>
+                {isDuplicating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+                {isDuplicating ? "Duplicating…" : "Duplicate"}
+              </ContextMenuItem>
+              <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
+              <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteCollection(c.id, c.name)} className="text-red-400 cursor-pointer text-xs px-2 gap-2">
+                {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {isDeleting ? "Deleting…" : "Delete"}
+              </ContextMenuItem>
+            </>
+          )}
         </ContextMenuContent>
       </ContextMenu>
 
@@ -200,22 +206,24 @@ export function CollectionRow({
               pending={pending}
             />
           ))}
-          <div className="flex gap-1 mt-1">
-            <button
-              onClick={() => actions.addFolder(c.id, { name: "New folder" })}
-              className="h-6 px-2 rounded text-[11px] text-muted-foreground hover:bg-accent/50 inline-flex items-center gap-1"
-              data-testid={`col-${c.id}-new-folder`}
-            >
-              <FolderPlus className="h-3 w-3" /> Folder
-            </button>
-            <button
-              onClick={() => actions.addRequest(c.id, { name: "New request" }, onOpenRequest)}
-              className="h-6 px-2 rounded text-[11px] text-muted-foreground hover:bg-accent/50 inline-flex items-center gap-1"
-              data-testid={COLL.newRequest}
-            >
-              <Plus className="h-3 w-3" /> Request
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="flex gap-1 mt-1">
+              <button
+                onClick={() => actions.addFolder(c.id, { name: "New folder" })}
+                className="h-6 px-2 rounded text-[11px] text-muted-foreground hover:bg-accent/50 inline-flex items-center gap-1"
+                data-testid={`col-${c.id}-new-folder`}
+              >
+                <FolderPlus className="h-3 w-3" /> Folder
+              </button>
+              <button
+                onClick={() => actions.addRequest(c.id, { name: "New request" }, onOpenRequest)}
+                className="h-6 px-2 rounded text-[11px] text-muted-foreground hover:bg-accent/50 inline-flex items-center gap-1"
+                data-testid={COLL.newRequest}
+              >
+                <Plus className="h-3 w-3" /> Request
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -241,6 +249,7 @@ function FolderRow({
 }) {
   const c = collection;
   const f = folder;
+  const readOnly = Boolean(actions.readOnly);
   const isOpen = openFolders[f.id] ?? true;
   const onToggle = () => setOpenFolders((o) => ({ ...o, [f.id]: !(o[f.id] ?? true) }));
   const [renaming, setRenaming] = useState(false);
@@ -249,6 +258,7 @@ function FolderRow({
   const isDeleting = pending === `delete-folder:${f.id}`;
 
   const onDropToFolder = (e) => {
+    if (readOnly) return;
     e.preventDefault();
     e.stopPropagation();
     const payload = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
@@ -261,9 +271,9 @@ function FolderRow({
       <ContextMenu>
         <ContextMenuTrigger asChild >
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(`fld-${f.id}`); }}
-            onDragLeave={() => setDragOver(null)}
-            onDrop={onDropToFolder}
+            onDragOver={readOnly ? undefined : (e) => { e.preventDefault(); setDragOver(`fld-${f.id}`); }}
+            onDragLeave={readOnly ? undefined : () => setDragOver(null)}
+            onDrop={readOnly ? undefined : onDropToFolder}
             className={cn(
               "w-full min-w-0 flex items-center gap-1.5 h-7 px-2 rounded text-[12px] hover:bg-accent/50 text-foreground/80 overflow-hidden",
               dragOver === `fld-${f.id}` && "bg-[hsl(var(--brand))]/10 ring-1 ring-inset ring-[hsl(var(--brand))]/40",
@@ -284,7 +294,7 @@ function FolderRow({
                 className="bg-transparent text-[12px] outline-none flex-1 min-w-0"
               />
             ) : (
-              <ExplorerLabel onDoubleClick={() => setRenaming(true)} title={f.name}>
+              <ExplorerLabel onDoubleClick={readOnly ? undefined : () => setRenaming(true)} title={f.name}>
                 {f.name}
               </ExplorerLabel>
             )}
@@ -292,24 +302,28 @@ function FolderRow({
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent data-side="right" className="bg-[hsl(var(--popover))] border-[hsl(var(--border))]">
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addRequest(c.id, { name: "New request", folderId: f.id }, onOpenRequest)}>
-            <FilePlus className="h-3.5 w-3.5" /> New request
-          </ContextMenuItem>
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addFolder(c.id, { name: "Subfolder", parentId: f.id })}>
-            <FolderPlus className="h-3.5 w-3.5" /> New subfolder
-          </ContextMenuItem>
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
-            <Edit3 className="h-3.5 w-3.5" /> Rename
-          </ContextMenuItem>
-          <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-          <ContextMenuItem
-            disabled={isDeleting}
-            onClick={() => actions.deleteFolder(c.id, f.id, f.name)}
-            className="cursor-pointer text-xs px-2 gap-2 text-red-400"
-          >
-            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            {isDeleting ? "Deleting…" : "Delete folder"}
-          </ContextMenuItem>
+          {!readOnly && (
+            <>
+              <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addRequest(c.id, { name: "New request", folderId: f.id }, onOpenRequest)}>
+                <FilePlus className="h-3.5 w-3.5" /> New request
+              </ContextMenuItem>
+              <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.addFolder(c.id, { name: "Subfolder", parentId: f.id })}>
+                <FolderPlus className="h-3.5 w-3.5" /> New subfolder
+              </ContextMenuItem>
+              <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
+                <Edit3 className="h-3.5 w-3.5" /> Rename
+              </ContextMenuItem>
+              <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
+              <ContextMenuItem
+                disabled={isDeleting}
+                onClick={() => actions.deleteFolder(c.id, f.id, f.name)}
+                className="cursor-pointer text-xs px-2 gap-2 text-red-400"
+              >
+                {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {isDeleting ? "Deleting…" : "Delete folder"}
+              </ContextMenuItem>
+            </>
+          )}
         </ContextMenuContent>
       </ContextMenu>
       {isOpen && requests.map((r) => (
@@ -350,6 +364,7 @@ export function RequestRow({
 }) {
   const r = request;
   const c = collection;
+  const readOnly = Boolean(actions.readOnly);
   const examples = r.examples || [];
   const hasExamples = examples.length > 0;
   const isDeleting = pending === `delete-request:${r.id}`;
@@ -371,10 +386,15 @@ export function RequestRow({
   };
 
   const onDragStart = (e) => {
+    if (readOnly) {
+      e.preventDefault();
+      return;
+    }
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", JSON.stringify({ requestId: r.id, collectionId: c.id }));
   };
   const onDrop = (e) => {
+    if (readOnly) return;
     e.preventDefault();
     e.stopPropagation();
     const payload = JSON.parse(e.dataTransfer.getData("text/plain") || "{}");
@@ -394,11 +414,11 @@ export function RequestRow({
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
-            draggable
+            draggable={!readOnly}
             onDragStart={onDragStart}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(`req-${r.id}`); }}
-            onDragLeave={() => setDragOver(null)}
-            onDrop={onDrop}
+            onDragOver={readOnly ? undefined : (e) => { e.preventDefault(); setDragOver(`req-${r.id}`); }}
+            onDragLeave={readOnly ? undefined : () => setDragOver(null)}
+            onDrop={readOnly ? undefined : onDrop}
             onClick={onClick}
             className={cn(
               "w-full min-w-0 flex items-center gap-1.5 h-7 px-2 rounded text-[12px] hover:bg-accent/50 cursor-pointer overflow-hidden",
@@ -438,7 +458,7 @@ export function RequestRow({
               />
             ) : (
               <ExplorerLabel
-                onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
+                onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); setRenaming(true); }}
                 title={r.name}
               >
                 {r.name}
@@ -453,24 +473,28 @@ export function RequestRow({
           <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={onClick}>
             <ArrowRight className="h-3.5 w-3.5" /> Open
           </ContextMenuItem>
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.patchRequest(c.id, r.id, { starred: !r.starred })}>
-            {r.starred ? <StarIcon className="h-3.5 w-3.5" /> : <StarOffIcon className="h-3.5 w-3.5" />} {r.starred ? "Unstar" : "Star"}
-          </ContextMenuItem>
-          <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
-            <Edit3 className="h-3.5 w-3.5" /> Rename
-          </ContextMenuItem>
-          <ContextMenuItem
-            className="cursor-pointer text-xs px-2 gap-2"
-            disabled={!actions.canAddExample?.(r)}
-            onClick={() => actions.addExample(c.id, r)}
-          >
-            <FileJson className="h-3.5 w-3.5" /> Add example
-          </ContextMenuItem>
-          <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-          <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteRequest(c.id, r.id, r.name)} className="cursor-pointer text-xs px-2 gap-2 text-red-400">
-            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            {isDeleting ? "Deleting…" : "Delete"}
-          </ContextMenuItem>
+          {!readOnly && (
+            <>
+              <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => actions.patchRequest(c.id, r.id, { starred: !r.starred })}>
+                {r.starred ? <StarIcon className="h-3.5 w-3.5" /> : <StarOffIcon className="h-3.5 w-3.5" />} {r.starred ? "Unstar" : "Star"}
+              </ContextMenuItem>
+              <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
+                <Edit3 className="h-3.5 w-3.5" /> Rename
+              </ContextMenuItem>
+              <ContextMenuItem
+                className="cursor-pointer text-xs px-2 gap-2"
+                disabled={!actions.canAddExample?.(r)}
+                onClick={() => actions.addExample(c.id, r)}
+              >
+                <FileJson className="h-3.5 w-3.5" /> Add example
+              </ContextMenuItem>
+              <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
+              <ContextMenuItem disabled={isDeleting} onClick={() => actions.deleteRequest(c.id, r.id, r.name)} className="cursor-pointer text-xs px-2 gap-2 text-red-400">
+                {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {isDeleting ? "Deleting…" : "Delete"}
+              </ContextMenuItem>
+            </>
+          )}
         </ContextMenuContent>
       </ContextMenu>
 
@@ -495,6 +519,7 @@ export function RequestRow({
 }
 
 function ExampleRow({ example, request, collection, active, onOpen, actions, pending }) {
+  const readOnly = Boolean(actions.readOnly);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(example.name);
   const isDeleting = pending === `delete-example:${example.id}`;
@@ -542,7 +567,7 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
             />
           ) : (
             <ExplorerLabel
-              onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
+              onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); setRenaming(true); }}
               title={example.name}
             >
               <span className="inline-flex items-center gap-1 min-w-0">
@@ -559,26 +584,30 @@ function ExampleRow({ example, request, collection, active, onOpen, actions, pen
         <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={onOpen}>
           <ArrowRight className="h-3.5 w-3.5" /> Open
         </ContextMenuItem>
-        <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
-          <Edit3 className="h-3.5 w-3.5" /> Rename
-        </ContextMenuItem>
-        {!example.isDefault && (
-          <ContextMenuItem
-            className="cursor-pointer text-xs px-2 gap-2"
-            onClick={() => actions.setDefaultExample(collection.id, request.id, example.id)}
-          >
-            <Star className="h-3.5 w-3.5" /> Set as default
-          </ContextMenuItem>
+        {!readOnly && (
+          <>
+            <ContextMenuItem className="cursor-pointer text-xs px-2 gap-2" onClick={() => setRenaming(true)}>
+              <Edit3 className="h-3.5 w-3.5" /> Rename
+            </ContextMenuItem>
+            {!example.isDefault && (
+              <ContextMenuItem
+                className="cursor-pointer text-xs px-2 gap-2"
+                onClick={() => actions.setDefaultExample(collection.id, request.id, example.id)}
+              >
+                <Star className="h-3.5 w-3.5" /> Set as default
+              </ContextMenuItem>
+            )}
+            <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
+            <ContextMenuItem
+              disabled={isDeleting}
+              onClick={() => actions.deleteExample(collection.id, request.id, example.id, example.name)}
+              className="text-red-400 cursor-pointer text-xs px-2 gap-2"
+            >
+              {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              {isDeleting ? "Deleting…" : "Delete"}
+            </ContextMenuItem>
+          </>
         )}
-        <ContextMenuSeparator className="bg-[hsl(var(--border))]" />
-        <ContextMenuItem
-          disabled={isDeleting}
-          onClick={() => actions.deleteExample(collection.id, request.id, example.id, example.name)}
-          className="text-red-400 cursor-pointer text-xs px-2 gap-2"
-        >
-          {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-          {isDeleting ? "Deleting…" : "Delete"}
-        </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

@@ -13,10 +13,10 @@ import { useAppStore } from "@/store/useAppStore";
 import { selectWorkspaceCollections } from "@/lib/store/selectors";
 import {
   Send,
-  FolderTree,
+  // FolderTree,
   Boxes,
   Briefcase,
-  LayoutGrid,
+  // LayoutGrid,
   Settings as SettingsIcon,
   Plus,
   ServerCog,
@@ -68,7 +68,7 @@ export default function CommandPalette() {
               onSelect={() => run(() => {
                 const c = createCollection(`Untitled collection ${Math.floor(Math.random() * 999)}`);
                 toast.success(`Collection "${c.name}" created`);
-                navigate("/collections");
+                navigate("/builder");
               })}
             >
               <Plus /> New collection
@@ -95,8 +95,8 @@ export default function CommandPalette() {
 
           <CommandGroup heading="Navigate">
             {[
-              { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-              { to: "/collections", label: "Collections", icon: FolderTree },
+              // { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
+              // { to: "/collections", label: "Collections", icon: FolderTree },
               { to: "/builder", label: "API Builder", icon: Send },
               { to: "/environments", label: "Environments", icon: Boxes },
               { to: "/mock-servers", label: "Mock Servers", icon: ServerCog },

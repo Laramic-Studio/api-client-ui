@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getErrorMessage } from "@/hooks/use-auth";
-import { teamKeys, invitationKeys, envKeys, collectionKeys } from "@/lib/api/query-keys";
+import { teamKeys, invitationKeys, envKeys, collectionKeys, historyKeys, authKeys } from "@/lib/api/query-keys";
 import * as teamsApi from "@/lib/api/teams-api";
 import {
   applyTeamSwitch,
@@ -8,6 +8,9 @@ import {
 } from "@/lib/api/session";
 import { refreshEnvironmentsInStore } from "@/hooks/use-environments";
 import { refreshCollectionsInStore } from "@/hooks/use-collections";
+import { refreshHistoryInStore } from "@/hooks/use-history";
+import { clearPendingInvite } from "@/lib/invite-flow";
+import { mapApiUser } from "@/lib/api/map-user";
 import { useAppStore } from "@/store/useAppStore";
 
 export function useTeams() {
@@ -51,9 +54,11 @@ export function useSwitchTeam() {
       const teamId = String(data.current_team?.id);
       await refreshEnvironmentsInStore(teamId);
       await refreshCollectionsInStore(teamId);
+      await refreshHistoryInStore(teamId);
       invalidateTeamQueries(queryClient, data.current_team?.id);
       queryClient.invalidateQueries({ queryKey: envKeys.list(teamId) });
       queryClient.invalidateQueries({ queryKey: collectionKeys.list(teamId) });
+      queryClient.invalidateQueries({ queryKey: historyKeys.list(teamId) });
     },
   });
 }
@@ -124,14 +129,22 @@ export function useAcceptInvitation() {
   return useMutation({
     mutationFn: (code) => teamsApi.acceptInvitation(code),
     onSuccess: async (data) => {
+      clearPendingInvite();
+      if (data.user) {
+        const user = mapApiUser(data.user, data.current_team);
+        useAppStore.getState().updateUser(user);
+        queryClient.setQueryData(authKeys.session(), user);
+      }
       applyTeamSwitch(data.current_team);
       await refreshTeamsInStore();
       const teamId = String(data.current_team?.id);
       await refreshEnvironmentsInStore(teamId);
       await refreshCollectionsInStore(teamId);
+      await refreshHistoryInStore(teamId);
       invalidateTeamQueries(queryClient, data.current_team?.id);
       queryClient.invalidateQueries({ queryKey: envKeys.list(teamId) });
       queryClient.invalidateQueries({ queryKey: collectionKeys.list(teamId) });
+      queryClient.invalidateQueries({ queryKey: historyKeys.list(teamId) });
     },
   });
 }
@@ -150,6 +163,15 @@ export function useCancelInvitation(teamId) {
 
   return useMutation({
     mutationFn: (code) => teamsApi.cancelInvitation(teamId, code),
+    onSuccess: () => invalidateTeamQueries(queryClient, teamId),
+  });
+}
+
+export function useResendInvitation(teamId) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (code) => teamsApi.resendInvitation(teamId, code),
     onSuccess: () => invalidateTeamQueries(queryClient, teamId),
   });
 }

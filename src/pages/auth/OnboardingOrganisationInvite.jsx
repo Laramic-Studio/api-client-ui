@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import AuthShell from "@/components/auth/AuthShell";
+import AuthShell, { AuthBackLink } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import InviteTeamForm from "@/components/onboarding/InviteTeamForm";
 import OnboardingSteps from "@/components/onboarding/OnboardingSteps";
@@ -56,7 +56,7 @@ export default function OnboardingOrganisationInvite() {
               ? `Welcome to Noidr — ${sent} invite${sent === 1 ? "" : "s"} sent`
               : "All set — welcome to Noidr"
           );
-          navigate("/dashboard", { replace: true });
+          navigate("/builder", { replace: true });
         },
         onError: (err) => {
           const fields = collectFieldErrors(err);
@@ -72,13 +72,17 @@ export default function OnboardingOrganisationInvite() {
   };
 
   return (
-    <AuthShell
-      title="Invite your team"
-      subtitle="Optional — you can invite people later from Team settings."
-      backTo="/onboarding/organisation"
-      backLabel="Organisation details"
-    >
-      <div className="space-y-5 w-full">
+    <AuthShell>
+      <AuthBackLink to="/onboarding/organisation">Organisation details</AuthBackLink>
+
+      <div>
+        <h1 className="text-2xl font-medium tracking-tight">Invite your team</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Optional — you can invite people later from Team settings.
+        </p>
+      </div>
+
+      <div className="mt-8 space-y-5 w-full">
         <OnboardingSteps current={3} total={3} />
 
         <InviteTeamForm

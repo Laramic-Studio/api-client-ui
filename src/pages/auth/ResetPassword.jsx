@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import AuthShell from "@/components/auth/AuthShell";
+import AuthShell, { AuthBackLink } from "@/components/auth/AuthShell";
 import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
@@ -52,13 +52,17 @@ export default function ResetPassword() {
 
   if (!hasToken) {
     return (
-      <AuthShell
-        title="Invalid reset link"
-        subtitle="This link is missing a token or has expired."
-        backTo="/forgot-password"
-        backLabel="Request a new link"
-      >
-        <p className="text-sm text-muted-foreground">
+      <AuthShell>
+        <AuthBackLink to="/forgot-password">Request a new link</AuthBackLink>
+
+        <div>
+          <h1 className="text-2xl font-medium tracking-tight">Invalid reset link</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            This link is missing a token or has expired.
+          </p>
+        </div>
+
+        <p className="mt-8 text-sm text-muted-foreground">
           Open the reset link from your email, or request a new one.
         </p>
       </AuthShell>
@@ -66,13 +70,15 @@ export default function ResetPassword() {
   }
 
   return (
-    <AuthShell
-      title="Set a new password"
-      subtitle={`Resetting for ${email}`}
-      backTo="/login"
-      backLabel="Back to sign in"
-    >
-      <form onSubmit={onSubmit} className="space-y-5">
+    <AuthShell>
+      <AuthBackLink to="/login">Back to sign in</AuthBackLink>
+
+      <div>
+        <h1 className="text-2xl font-medium tracking-tight">Set a new password</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">Resetting for {email}</p>
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-8 space-y-5">
         <AuthField
           label="Password"
           required

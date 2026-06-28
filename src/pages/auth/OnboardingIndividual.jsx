@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AuthShell from "@/components/auth/AuthShell";
+import AuthShell, { AuthBackLink } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,7 @@ export default function OnboardingIndividual() {
         onSuccess: () => {
           clearOnboardingDraft();
           toastAuthSuccess("All set — welcome to Noidr");
-          navigate("/dashboard", { replace: true });
+          navigate("/builder", { replace: true });
         },
         onError: (err) => {
           const fields = collectFieldErrors(err);
@@ -51,13 +51,17 @@ export default function OnboardingIndividual() {
   };
 
   return (
-    <AuthShell
-      title="Name your workspace"
-      subtitle="Optional — you can change this later in settings."
-      backTo="/onboarding"
-      backLabel="Account type"
-    >
-      <div className="space-y-5 w-full">
+    <AuthShell>
+      <AuthBackLink to="/onboarding">Account type</AuthBackLink>
+
+      <div>
+        <h1 className="text-2xl font-medium tracking-tight">Name your workspace</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Optional — you can change this later in settings.
+        </p>
+      </div>
+
+      <div className="mt-8 space-y-5 w-full">
         <OnboardingSteps current={2} total={2} />
 
         <WorkspaceNotice teamName={personalTeamName} />

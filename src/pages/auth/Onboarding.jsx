@@ -26,11 +26,15 @@ export default function Onboarding() {
   };
 
   return (
-    <AuthShell
-      title="Tell us about yourself"
-      subtitle="This personalizes your workspace and branding."
-    >
-      <div className="space-y-5 w-full">
+    <AuthShell>
+      <div>
+        <h1 className="text-2xl font-medium tracking-tight">Tell us about yourself</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          This personalizes your workspace and branding.
+        </p>
+      </div>
+
+      <div className="mt-8 space-y-5 w-full">
         <OnboardingSteps current={1} total={accountType === "organisation" ? 3 : 2} />
 
         <WorkspaceNotice teamName={personalTeamName} />

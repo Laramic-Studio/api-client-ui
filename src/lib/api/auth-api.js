@@ -58,6 +58,20 @@ export async function me() {
   return apiRequest("/auth/me");
 }
 
+export async function updateProfile({ name, email }) {
+  return apiRequest("/auth/me", {
+    method: "PATCH",
+    body: { name, email },
+  });
+}
+
+export async function updatePassword({ current_password, password, password_confirmation }) {
+  return apiRequest("/auth/me/password", {
+    method: "PUT",
+    body: { current_password, password, password_confirmation },
+  });
+}
+
 export async function listTeams() {
   const data = await apiRequest("/teams");
   return data.teams || [];

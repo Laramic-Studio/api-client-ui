@@ -1,3 +1,5 @@
+import { normalizeHistoryFilters } from "@/lib/api/map-history";
+
 export const authKeys = {
   all: ["auth"],
   session: () => [...authKeys.all, "session"],
@@ -28,7 +30,12 @@ export const conduitKeys = {
 
 export const historyKeys = {
   all: ["history"],
-  list: (teamId) => [...historyKeys.all, "list", String(teamId)],
+  lists: () => [...historyKeys.all, "list"],
+  list: (teamId, filters = null) => [
+    ...historyKeys.lists(),
+    String(teamId),
+    filters ? normalizeHistoryFilters(filters) : "all",
+  ],
 };
 
 export const invitationKeys = {

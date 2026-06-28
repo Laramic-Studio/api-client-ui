@@ -19,8 +19,9 @@ import OnboardingOrganisation from "@/pages/auth/OnboardingOrganisation";
 import OnboardingOrganisationInvite from "@/pages/auth/OnboardingOrganisationInvite";
 import PublicDocs from "@/pages/PublicDocs";
 
-import Dashboard from "@/pages/Dashboard";
-import Collections from "@/pages/Collections";
+// Dashboard and Collections pages kept on disk but hidden from nav — builder is the home surface.
+// import Dashboard from "@/pages/Dashboard";
+// import Collections from "@/pages/Collections";
 import ApiBuilder from "@/pages/ApiBuilder";
 import Environments from "@/pages/Environments";
 import MockServers from "@/pages/MockServers";
@@ -47,13 +48,13 @@ export default function AppRoutes() {
       <Route path="/onboarding/individual" element={<OnboardingRoute><OnboardingIndividual /></OnboardingRoute>} />
       <Route path="/onboarding/organisation" element={<OnboardingRoute><OnboardingOrganisation /></OnboardingRoute>} />
       <Route path="/onboarding/organisation/invite" element={<OnboardingRoute><OnboardingOrganisationInvite /></OnboardingRoute>} />
-      <Route path="/accept-invitation/:code" element={<ProtectedRoute><AcceptInvitation /></ProtectedRoute>} />
+      <Route path="/accept-invitation/:code" element={<AcceptInvitation />} />
       <Route path="/p/docs/:shareId" element={<PublicDocs />} />
 
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/collections" element={<Collections />} />
+        <Route path="/" element={<Navigate to="/builder" replace />} />
+        <Route path="/dashboard" element={<Navigate to="/builder" replace />} />
+        <Route path="/collections" element={<Navigate to="/builder" replace />} />
         <Route path="/builder" element={<ApiBuilder />} />
         <Route path="/builder/:requestId" element={<ApiBuilder />} />
         <Route path="/environments" element={<Environments />} />
