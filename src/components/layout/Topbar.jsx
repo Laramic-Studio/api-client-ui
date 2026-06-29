@@ -5,17 +5,14 @@ import {
   Command as CommandIcon,
   Search,
   ChevronDown,
-  LogOut,
-  User as UserIcon,
   Loader2,
   Check,
   Sparkles,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
-import { useLogout } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { getErrorMessage, useSwitchTeam } from "@/hooks/use-teams";
-import { NAV, AUTH, AI } from "@/constants/testIds";
+import { NAV, AI } from "@/constants/testIds";
 import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -33,9 +30,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { StackedLogo } from "@/components/layout/stack-logo";
 
 export default function Topbar() {
-  const user = useAppStore((s) => s.user);
+  const companyLogo = useAppStore((s) => s.user?.company?.logo);
+  const companyName = useAppStore((s) => s.user?.company?.name);
   const setCommandOpen = useAppStore((s) => s.setCommandOpen);
   const aiSidebarOpen = useAppStore((s) => s.aiSidebarOpen);
   const toggleAiSidebar = useAppStore((s) => s.toggleAiSidebar);
@@ -45,7 +44,6 @@ export default function Topbar() {
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId);
   const setActive = useSwitchTeam();
   const navigate = useNavigate();
-  const logout = useLogout();
   const { isDark, toggleTheme } = useTheme();
 
   const unread = notifications.filter((n) => !n.read).length;
@@ -53,69 +51,35 @@ export default function Topbar() {
   const switchingId = setActive.isPending ? String(setActive.variables) : null;
 
   return (
-    <div className="h-14 shrink-0 flex items-center gap-2 px-3 border-b border-border bg-background">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            data-testid={NAV.workspaceSwitcher + "-top"}
-            disabled={setActive.isPending}
-            className="inline-flex items-center gap-2 h-9 px-2.5 rounded-md hover:bg-accent/50 text-foreground/90 disabled:opacity-60"
-          >
-            <div className="h-5 w-5 rounded bg-gradient-to-br from-[#6366F1] to-[#4F46E5] grid place-items-center text-[10px] font-semibold text-foreground">
-              {activeWs?.name?.[0] || "N"}
-            </div>
-            <span className="text-[13px] font-medium">
-              {setActive.isPending ? "Switching…" : (activeWs?.name || "Workspace")}
-            </span>
-            {setActive.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          className="w-64 bg-card border-border text-foreground"
+    <div className="h-14 shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 border-b border-border bg-background">
+      <div className="flex items-center gap-2 min-w-0">
+        <button
+          type="button"
+          className="h-9 w-9 rounded-md bg-gradient-to-br from-[#6366F1] to-[#4F46E5] grid place-items-center shadow-[0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden shrink-0"
+          data-testid="brand-logo"
+          title={companyName || "Noidr Web"}
         >
-          <DropdownMenuLabel className="text-muted-foreground text-[11px] uppercase tracking-wider">
-            Workspaces
-          </DropdownMenuLabel>
-          {workspaces.map((w) => (
-            <DropdownMenuItem
-              key={w.id}
-              disabled={setActive.isPending}
-              onClick={() => {
-                if (w.id === activeWorkspaceId || setActive.isPending) return;
-                setActive.mutate(w.id, {
-                  onError: (err) => toast.error(getErrorMessage(err, "Could not switch workspace.")),
-                });
-              }}
-              className="cursor-pointer focus:bg-accent/50"
-              data-testid={`topbar-ws-${w.id}`}
-            >
-              <div className="h-5 w-5 rounded bg-accent grid place-items-center text-[10px]">
-                {w.name[0]}
-              </div>
-              <span className="flex-1 truncate">{w.name}</span>
-              {switchingId === w.id ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-              ) : w.id === activeWorkspaceId ? (
-                <Check className="h-3.5 w-3.5 text-[hsl(var(--brand))]" />
-              ) : null}
-            </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator className="bg-accent" />
-          <DropdownMenuItem onClick={() => navigate("/workspaces")} className="focus:bg-accent/50">
-            Manage workspaces
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          {companyLogo ? (
+            <img src={companyLogo} alt={companyName || "Company"} className="h-full w-full object-cover" />
+          ) : (
+            <StackedLogo className="h-4 w-4 text-white" />
+          )}
+        </button>
+        <div className="text-[15px] font-medium tracking-tight truncate hidden sm:block">
+          {companyName || (
+            <>
+              <span>noidr</span>
+              <span className="text-[hsl(var(--brand))]">.</span>
+              <span>web</span>
+            </>
+          )}
+        </div>
+      </div>
 
       <button
         onClick={() => setCommandOpen(true)}
         data-testid={NAV.commandKBtn}
-        className="ml-2 flex-1 max-w-md h-9 inline-flex items-center gap-2 px-2.5 rounded-md bg-muted border border-border text-muted-foreground hover:text-foreground/85 hover:border-white/20 transition-colors text-[12.5px]"
+        className="w-full max-w-md h-9 inline-flex items-center gap-2 px-2.5 rounded-md bg-muted border border-border text-muted-foreground hover:text-foreground/85 hover:border-white/20 transition-colors text-[12.5px]"
       >
         <Search className="h-3.5 w-3.5" />
         <span>Search collections, requests, anything…</span>
@@ -125,7 +89,7 @@ export default function Topbar() {
         </span>
       </button>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="flex items-center justify-end gap-1">
         <button
           onClick={toggleAiSidebar}
           data-testid={AI.toggle}
@@ -206,35 +170,62 @@ export default function Topbar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="ml-1 h-9 inline-flex items-center gap-2 px-2 rounded-md hover:bg-accent/50"
-              data-testid="user-menu-trigger"
+              data-testid={NAV.workspaceSwitcher + "-top"}
+              disabled={setActive.isPending}
+              className="ml-1 h-9 inline-flex items-center gap-2 px-2 rounded-md hover:bg-accent/50 text-foreground/90 disabled:opacity-60"
             >
-              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#6366F1] to-[#22C55E] grid place-items-center text-[11px] font-semibold text-foreground">
-                {(user?.name || "U")[0].toUpperCase()}
+              <div className="h-7 w-7 rounded-md bg-gradient-to-br from-[#6366F1] to-[#4F46E5] grid place-items-center text-[11px] font-semibold text-foreground">
+                {activeWs?.name?.[0] || "N"}
               </div>
               <div className="hidden md:block text-left leading-tight">
-                <div className="text-[12.5px] font-medium">{user?.name}</div>
-                <div className="text-[11px] text-muted-foreground truncate max-w-[140px]">{user?.email}</div>
+                <div className="text-[12.5px] font-medium">
+                  {setActive.isPending ? "Switching…" : (activeWs?.name || "Workspace")}
+                </div>
+                <div className="text-[11px] text-muted-foreground truncate max-w-[140px]">
+                  {workspaces.length} workspace{workspaces.length === 1 ? "" : "s"}
+                </div>
               </div>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              {setActive.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-card border-border text-foreground">
-            <DropdownMenuLabel className="text-muted-foreground text-[11px] uppercase tracking-wider">Account</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigate("/settings")} className="focus:bg-accent/50">
-              <UserIcon className="h-3.5 w-3.5" /> Profile & settings
-            </DropdownMenuItem>
+          <DropdownMenuContent
+            align="end"
+            className="w-64 bg-card border-border text-foreground"
+          >
+            <DropdownMenuLabel className="text-muted-foreground text-[11px] uppercase tracking-wider">
+              Workspaces
+            </DropdownMenuLabel>
+            {workspaces.map((w) => (
+              <DropdownMenuItem
+                key={w.id}
+                disabled={setActive.isPending}
+                onClick={() => {
+                  if (w.id === activeWorkspaceId || setActive.isPending) return;
+                  setActive.mutate(w.id, {
+                    onError: (err) => toast.error(getErrorMessage(err, "Could not switch workspace.")),
+                  });
+                }}
+                className="cursor-pointer focus:bg-accent/50"
+                data-testid={`topbar-ws-${w.id}`}
+              >
+                <div className="h-5 w-5 rounded bg-accent grid place-items-center text-[10px]">
+                  {w.name[0]}
+                </div>
+                <span className="flex-1 truncate">{w.name}</span>
+                {switchingId === w.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                ) : w.id === activeWorkspaceId ? (
+                  <Check className="h-3.5 w-3.5 text-[hsl(var(--brand))]" />
+                ) : null}
+              </DropdownMenuItem>
+            ))}
             <DropdownMenuSeparator className="bg-accent" />
-            <DropdownMenuItem
-              onClick={() => {
-                logout.mutate(undefined, {
-                  onSettled: () => navigate("/login"),
-                });
-              }}
-              className="focus:bg-accent/50 text-red-400"
-              data-testid={AUTH.logout}
-            >
-              <LogOut className="h-3.5 w-3.5" /> Sign out
+            <DropdownMenuItem onClick={() => navigate("/workspaces")} className="focus:bg-accent/50">
+              Manage workspaces
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

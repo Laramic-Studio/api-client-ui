@@ -17,6 +17,7 @@ import {
   isHtmlResponse,
 } from "@/lib/builder/response-format";
 import { normalizeTestResults, summarizeTestResults, testsTabLabel } from "@/lib/builder/test-results";
+import { CopySimpleIcon } from "@phosphor-icons/react";
 
 function formatBytes(n) {
   if (!n) return "0 B";
@@ -341,9 +342,19 @@ export default function ResponsePanel({
             data-testid="response-save-example"
             title="Save as example response"
           >
-            <Save className="h-3 w-3" /> Save as example
+            <Save className="h-3 w-3" /> 
           </button>
         )}
+        <button
+        className={cn(
+          "h-7 px-2  text-[11px] hover:bg-accent/50 inline-flex items-center gap-1",
+          layout === "bottom" && "hidden sm:inline-flex",
+        )}
+           >
+
+        <CopySimpleIcon className="h-3 w-3" weight="duotone" />
+           </button>
+
         <LayoutMenu layout={layout} onLayoutChange={onLayoutChange} onClose={onClose} />
       </div>
 

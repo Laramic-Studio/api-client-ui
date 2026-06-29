@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import CommandPalette from "@/components/layout/CommandPalette";
@@ -8,17 +8,14 @@ import TeamPermissionsBootstrap from "@/components/shared/TeamPermissionsBootstr
 import { useConduits } from "@/hooks/use-conduits";
 import { useAppStore } from "@/store/useAppStore";
 
+const SIDEBAR_WIDTH = 56;
+
 export default function AppLayout() {
   useConduits();
   const setCommandOpen = useAppStore((s) => s.setCommandOpen);
-  const collapsed = useAppStore((s) => s.sidebarCollapsed);
-  const toggleSidebar = useAppStore((s) => s.toggleSidebar);
-  const sidebarWidth = useAppStore((s) => s.sidebarWidth);
-  const setSidebarWidth = useAppStore((s) => s.setSidebarWidth);
   const toggleAiSidebar = useAppStore((s) => s.toggleAiSidebar);
   const navigate = useNavigate();
 
-  // global shortcuts
   useEffect(() => {
     const handler = (e) => {
       const isMac = navigator.platform.toUpperCase().includes("MAC");
@@ -26,82 +23,22 @@ export default function AppLayout() {
       if (cmd && e.key.toLowerCase() === "k") { e.preventDefault(); setCommandOpen(true); }
       if (cmd && e.key.toLowerCase() === "j") { e.preventDefault(); toggleAiSidebar(); }
       if (cmd && e.key.toLowerCase() === "/") { e.preventDefault(); navigate("/builder"); }
-      if (cmd && e.key === "b") { e.preventDefault(); toggleSidebar(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [setCommandOpen, navigate, toggleSidebar, toggleAiSidebar]);
-
-  // Auto-collapse on small screens (responsive) AND when entering /builder
-  useEffect(() => {
-    const apply = () => {
-      const w = window.innerWidth;
-      if (w < 900 && !useAppStore.getState().sidebarCollapsed) {
-        useAppStore.setState({ sidebarCollapsed: true });
-      }
-    };
-    apply();
-    window.addEventListener("resize", apply);
-    return () => window.removeEventListener("resize", apply);
-  }, []);
-
-  // Auto-collapse on /builder for max screen real-estate
-  const location = useLocation();
-  useEffect(() => {
-    if (location.pathname.startsWith("/builder") && !useAppStore.getState().sidebarCollapsed) {
-      useAppStore.setState({ sidebarCollapsed: true });
-    }
-  }, [location.pathname]);
-
-  // resize handle
-  useEffect(() => {
-    let resizing = false;
-    const onDown = (e) => {
-      if (e.target?.dataset?.testid === "sidebar-resize-handle") {
-        resizing = true;
-        document.body.style.userSelect = "none";
-        document.body.style.cursor = "col-resize";
-      }
-    };
-    const onMove = (e) => {
-      if (!resizing) return;
-      setSidebarWidth(Math.min(380, Math.max(180, e.clientX)));
-    };
-    const onUp = () => {
-      if (!resizing) return;
-      resizing = false;
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
-    };
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [setSidebarWidth]);
-
-  const effectiveWidth = collapsed ? 56 : sidebarWidth;
+  }, [setCommandOpen, navigate, toggleAiSidebar]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex bg-background text-foreground">
+    <div className="h-screen w-screen overflow-hidden flex flex-col bg-background text-foreground">
       <TeamPermissionsBootstrap />
-      <aside
-        style={{ width: effectiveWidth }}
-        className="shrink-0 border-r border-border bg-background transition-[width] duration-200 relative"
-      >
-        <Sidebar collapsed={collapsed} />
-        {!collapsed && (
-          <div
-            data-testid="sidebar-resize-handle"
-            className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-[hsl(var(--brand))]/40 z-10"
-          />
-        )}
-      </aside>
-      <div className="flex-1 min-w-0 flex flex-col">
-        <Topbar />
+      <Topbar />
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        <aside
+          style={{ width: SIDEBAR_WIDTH }}
+          className="shrink-0 border-r border-border bg-background"
+        >
+          <Sidebar />
+        </aside>
         <div className="flex-1 min-h-0 flex overflow-hidden">
           <main className="flex-1 min-h-0 min-w-0 overflow-hidden bg-background">
             <Outlet />
