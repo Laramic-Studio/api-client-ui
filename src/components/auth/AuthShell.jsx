@@ -2,9 +2,95 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StackedLogo } from "@/components/layout/stack-logo";
+import { Marquee } from "@/components/ui/marquee";
 
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1454789548928-9efd52dc4031?auto=format&fit=crop&w=1400&q=80";
+const REVIEWS = [
+  {
+    name: "Maya Chen",
+    username: "@mayachen",
+    body: "Finally an API client that feels fast. Collections, envs, and Echo in one place.",
+    img: "https://avatar.vercel.sh/maya",
+  },
+  {
+    name: "Jordan Lee",
+    username: "@jordanlee",
+    body: "Switched our team from Postman in a week. Sync just works.",
+    img: "https://avatar.vercel.sh/jordan",
+  },
+  {
+    name: "Priya Nair",
+    username: "@priyan",
+    body: "The request builder is clean. Variables and secrets stopped being a mess.",
+    img: "https://avatar.vercel.sh/priya",
+  },
+  {
+    name: "Alex Rivera",
+    username: "@arivera",
+    body: "Desktop + web in sync is underrated. I ship from either without thinking.",
+    img: "https://avatar.vercel.sh/alex",
+  },
+  {
+    name: "Sam Okonkwo",
+    username: "@samoko",
+    body: "Echo explaining a failing response saved me an hour of digging.",
+    img: "https://avatar.vercel.sh/sam",
+  },
+  {
+    name: "Elena Vogt",
+    username: "@elenav",
+    body: "Team workspaces without the bloat. Exactly what we needed.",
+    img: "https://avatar.vercel.sh/elena",
+  },
+  {
+    name: "Chris Park",
+    username: "@cpark",
+    body: "Import was painless. Our whole collection landed intact.",
+    img: "https://avatar.vercel.sh/chris",
+  },
+  {
+    name: "Nina Solis",
+    username: "@ninas",
+    body: "Feels modern without getting in the way. I open it every day.",
+    img: "https://avatar.vercel.sh/nina",
+  },
+];
+
+const reviewRows = [
+  REVIEWS.slice(0, 3),
+  REVIEWS.slice(3, 6),
+  REVIEWS.slice(5, 8),
+  [...REVIEWS.slice(0, 2), ...REVIEWS.slice(6, 8)],
+];
+
+function ReviewCard({ img, name, username, body }) {
+  return (
+    <figure
+      className={cn(
+        "relative w-64 shrink-0 overflow-hidden rounded-xl border border-border bg-card/80 p-4",
+        "backdrop-blur-sm",
+      )}
+    >
+      <div className="flex items-center gap-2.5">
+        <img
+          className="h-8 w-8 rounded-full"
+          width={32}
+          height={32}
+          alt=""
+          src={img}
+        />
+        <div className="min-w-0 flex-1">
+          <figcaption className="truncate text-sm font-medium text-foreground">
+            {name}
+          </figcaption>
+          <p className="truncate text-xs text-muted-foreground">{username}</p>
+        </div>
+      </div>
+      <blockquote className="mt-3 text-sm leading-relaxed text-muted-foreground">
+        {body}
+      </blockquote>
+    </figure>
+  );
+}
 
 export function AuthLink({ to, children, className, ...props }) {
   return (
@@ -47,12 +133,25 @@ function AuthBrand() {
 
 function HeroPanel() {
   return (
-    <aside className="relative hidden overflow-hidden border-l border-border lg:block">
-      <img
-        src={HERO_IMAGE}
-        alt=""
-        className="absolute inset-0 h-full w-full object-cover grayscale contrast-110"
-      />
+    <aside className="relative hidden overflow-hidden  bg-background lg:block">
+      <div className="absolute inset-0 flex flex-col justify-center gap-2 py-8">
+        {reviewRows.map((row, index) => (
+          <Marquee
+            key={index}
+            pauseOnHover
+            reverse={index % 2 === 1}
+            className="[--duration:45s]"
+          >
+            {row.map((review) => (
+              <ReviewCard key={`${index}-${review.username}`} {...review} />
+            ))}
+          </Marquee>
+        ))}
+      </div>
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-1/5 bg-gradient-to-r from-background to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/5 bg-gradient-to-l from-background to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-background to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
     </aside>
   );
 }
