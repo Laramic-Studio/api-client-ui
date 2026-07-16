@@ -79,7 +79,7 @@ export default function Topbar() {
       <button
         onClick={() => setCommandOpen(true)}
         data-testid={NAV.commandKBtn}
-        className="w-full max-w-md h-9 inline-flex items-center gap-2 px-2.5 rounded-md bg-muted border border-border text-muted-foreground hover:text-foreground/85 hover:border-white/20 transition-colors text-[12.5px]"
+        className="w-full max-w-md h-9 inline-flex items-center gap-2 px-2.5 rounded bg-muted border border-border text-muted-foreground hover:text-foreground/85 hover:border-white/20 transition-colors text-xs"
       >
         <Search className="h-3.5 w-3.5" />
         <span>Search collections, requests, anything…</span>

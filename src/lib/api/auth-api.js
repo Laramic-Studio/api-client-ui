@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api/http";
 import { setAccessToken } from "@/lib/auth/tokens";
+import { API_URL } from "@/lib/config";
 
 export async function register({ name, email, password, password_confirmation, remember = true }) {
   const data = await apiRequest("/auth/register", {
@@ -79,4 +80,35 @@ export async function listTeams() {
 
 export async function switchTeam(teamId) {
   return apiRequest(`/teams/${teamId}/switch`, { method: "POST" });
+}
+
+export async function issueDesktopAuthCode({ code_challenge, state, redirect_uri }) {
+  return apiRequest("/auth/desktop/code", {
+    method: "POST",
+    body: { code_challenge, state, redirect_uri },
+  });
+}
+
+export async function exchangeOAuthCode({ code, state }) {
+  const data = await apiRequest("/auth/oauth/exchange", {
+    method: "POST",
+    body: { code, state },
+  });
+  setAccessToken(data.access_token, { remember: true });
+  return data;
+}
+
+/**
+ * Start Google/GitHub OAuth by navigating to the API redirect endpoint.
+ * @param {'google' | 'github'} provider
+ * @param {{ state?: string, frontendRedirect?: string }} [options]
+ */
+export function startSocialRedirect(provider, options = {}) {
+  const target = new URL(`${API_URL}/auth/${provider}/redirect`);
+  if (options.state) target.searchParams.set("state", options.state);
+  target.searchParams.set(
+    "frontend_redirect",
+    options.frontendRedirect || `${window.location.origin}/auth/oauth/callback`,
+  );
+  window.location.assign(target.toString());
 }

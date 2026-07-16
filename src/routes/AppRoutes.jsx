@@ -13,6 +13,8 @@ import Register from "@/pages/auth/Register";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
 import VerifyEmail from "@/pages/auth/VerifyEmail";
 import ResetPassword from "@/pages/auth/ResetPassword";
+import DesktopReturn from "@/pages/auth/DesktopReturn";
+import OAuthCallback from "@/pages/auth/OAuthCallback";
 import Onboarding from "@/pages/auth/Onboarding";
 import OnboardingIndividual from "@/pages/auth/OnboardingIndividual";
 import OnboardingOrganisation from "@/pages/auth/OnboardingOrganisation";
@@ -44,6 +46,8 @@ export default function AppRoutes() {
       <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
       <Route path="/verify-email" element={<VerifyEmailRoute><VerifyEmail /></VerifyEmailRoute>} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/auth/desktop/return" element={<DesktopReturn />} />
+      <Route path="/auth/oauth/callback" element={<OAuthCallback />} />
       <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
       <Route path="/onboarding/individual" element={<OnboardingRoute><OnboardingIndividual /></OnboardingRoute>} />
       <Route path="/onboarding/organisation" element={<OnboardingRoute><OnboardingOrganisation /></OnboardingRoute>} />

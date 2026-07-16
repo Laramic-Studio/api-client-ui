@@ -1,10 +1,14 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAppStore } from "@/store/useAppStore";
 import { getAccessToken } from "@/lib/auth/tokens";
 import { authDestination } from "@/lib/auth/routes";
 import { authHomePath, userIsOnboarded, userIsVerified } from "@/lib/auth/user-state";
 import { inviteAcceptPath, readPendingInviteCode } from "@/lib/invite-flow";
 import { useAuthBootstrap } from "@/hooks/use-auth";
+import {
+  hasDesktopAuthParams,
+  readDesktopParamsFromSearch,
+} from "@/lib/auth/desktop-flow";
 
 export function AuthBootstrapGate({ children }) {
   useAuthBootstrap();
@@ -40,10 +44,16 @@ export function ProtectedRoute({ children }) {
 
 export function PublicOnlyRoute({ children }) {
   const user = useAppStore((s) => s.user);
+  const [searchParams] = useSearchParams();
+  const desktopPending =
+    Boolean(readDesktopParamsFromSearch(searchParams)) || hasDesktopAuthParams();
 
-  if (!user) return children;
+  // Allow staying on login/register when completing a desktop PKCE handoff.
+  if (user && !desktopPending) {
+    return <Navigate to={authDestination(user)} replace />;
+  }
 
-  return <Navigate to={authDestination(user)} replace />;
+  return children;
 }
 
 export function VerifyEmailRoute({ children }) {

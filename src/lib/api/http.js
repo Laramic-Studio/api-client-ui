@@ -20,6 +20,7 @@ const PUBLIC_AUTH_PATHS = new Set([
   "/auth/register",
   "/auth/forgot-password",
   "/auth/reset-password",
+  "/auth/oauth/exchange",
 ]);
 
 function isPublicAuthRequest(config) {

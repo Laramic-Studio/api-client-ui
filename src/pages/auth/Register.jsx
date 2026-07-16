@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
 import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
@@ -19,6 +19,12 @@ import {
 import { useRegister } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
 import { cn } from "@/lib/utils";
+import {
+  captureDesktopAuthFromSearch,
+  hasDesktopAuthParams,
+} from "@/lib/auth/desktop-flow";
+import { completeDesktopHandoffIfNeeded } from "@/lib/auth/complete-desktop-handoff";
+import { useAppStore } from "@/store/useAppStore";
 
 export default function Register() {
   const register = useRegister();
@@ -26,14 +32,40 @@ export default function Register() {
   const [searchParams] = useSearchParams();
   const inviteCode = searchParams.get("invite_code");
   const inviteQuery = useInvitation(inviteCode);
+  const user = useAppStore((s) => s.user);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const [desktopPending, setDesktopPending] = useState(false);
+  const desktopHandoffStarted = useRef(false);
 
   useEffect(() => {
     if (inviteCode) storePendingInviteCode(inviteCode);
   }, [inviteCode]);
+
+  useEffect(() => {
+    const params = captureDesktopAuthFromSearch(searchParams);
+    setDesktopPending(Boolean(params) || hasDesktopAuthParams());
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!user || !hasDesktopAuthParams() || desktopHandoffStarted.current) return;
+    desktopHandoffStarted.current = true;
+
+    (async () => {
+      try {
+        const path = await completeDesktopHandoffIfNeeded();
+        if (path) {
+          toastAuthSuccess("Signed in — returning to Noidr Desktop");
+          navigate(path, { replace: true });
+        }
+      } catch (err) {
+        desktopHandoffStarted.current = false;
+        toastAuthError(err, "Could not complete desktop sign-in.");
+      }
+    })();
+  }, [user, navigate]);
 
   useEffect(() => {
     const invitedEmail = inviteQuery.data?.invitation?.email;
@@ -59,9 +91,21 @@ export default function Register() {
     register.mutate(
       { name, email, password, password_confirmation: password },
       {
-        onSuccess: (user) => {
+        onSuccess: async (signedInUser) => {
+          try {
+            const desktopPath = await completeDesktopHandoffIfNeeded();
+            if (desktopPath) {
+              toastAuthSuccess("Account created — returning to Noidr Desktop");
+              navigate(desktopPath, { replace: true });
+              return;
+            }
+          } catch (err) {
+            toastAuthError(err, "Could not complete desktop sign-in.");
+            return;
+          }
+
           toastAuthSuccess("Account created — check your email for a verification code");
-          navigate(authDestination(user, inviteAcceptPath(inviteCode)), { replace: true });
+          navigate(authDestination(signedInUser, inviteAcceptPath(inviteCode)), { replace: true });
         },
         onError: (err) => {
           const next = collectFieldErrors(err, ["name", "email", "password"]);
@@ -78,6 +122,12 @@ export default function Register() {
         <h1 className="text-2xl font-medium tracking-tight">Sign up</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">Start building APIs with your team.</p>
       </div>
+
+      {desktopPending ? (
+        <div className="mt-4 rounded-md border border-[hsl(var(--brand))]/30 bg-[hsl(var(--brand))]/10 px-3 py-2 text-sm text-[hsl(var(--brand))]">
+          Signing in to Noidr Desktop
+        </div>
+      ) : null}
 
       <form onSubmit={onSubmit} className="mt-8 space-y-5">
         <AuthField label="Name" required htmlFor="name" error={errors.name}>
@@ -134,12 +184,15 @@ export default function Register() {
       </form>
 
       <div className="mt-6">
-        <SocialButtons variant="stacked" mode="signup" />
+        <SocialButtons variant="stacked" mode="signup" disabled={register.isPending} />
       </div>
 
       <p className="mt-6 text-center text-[13px] text-muted-foreground">
         Already have an account?{" "}
-        <AuthLink to="/login" data-testid={AUTH.registerToLogin}>
+        <AuthLink
+          to={desktopPending && searchParams.toString() ? `/login?${searchParams.toString()}` : "/login"}
+          data-testid={AUTH.registerToLogin}
+        >
           Log in
         </AuthLink>
       </p>

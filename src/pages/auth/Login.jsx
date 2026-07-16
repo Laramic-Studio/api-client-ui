@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import AuthShell, { AuthLink } from "@/components/auth/AuthShell";
 import AuthField, { authButtonClass, authInputClass } from "@/components/auth/AuthField";
@@ -16,6 +16,12 @@ import {
 } from "@/lib/auth/toast";
 import { useLogin } from "@/hooks/use-auth";
 import { AUTH } from "@/constants/testIds";
+import {
+  captureDesktopAuthFromSearch,
+  hasDesktopAuthParams,
+} from "@/lib/auth/desktop-flow";
+import { completeDesktopHandoffIfNeeded } from "@/lib/auth/complete-desktop-handoff";
+import { useAppStore } from "@/store/useAppStore";
 
 export default function Login() {
   const login = useLogin();
@@ -23,13 +29,39 @@ export default function Login() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const inviteCode = searchParams.get("invite_code");
+  const user = useAppStore((s) => s.user);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
+  const [desktopPending, setDesktopPending] = useState(false);
+  const desktopHandoffStarted = useRef(false);
 
   useEffect(() => {
     if (inviteCode) storePendingInviteCode(inviteCode);
   }, [inviteCode]);
+
+  useEffect(() => {
+    const params = captureDesktopAuthFromSearch(searchParams);
+    setDesktopPending(Boolean(params) || hasDesktopAuthParams());
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!user || !hasDesktopAuthParams() || desktopHandoffStarted.current) return;
+    desktopHandoffStarted.current = true;
+
+    (async () => {
+      try {
+        const path = await completeDesktopHandoffIfNeeded();
+        if (path) {
+          toastAuthSuccess("Signed in — returning to Noidr Desktop");
+          navigate(path, { replace: true });
+        }
+      } catch (err) {
+        desktopHandoffStarted.current = false;
+        toastAuthError(err, "Could not complete desktop sign-in.");
+      }
+    })();
+  }, [user, navigate]);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -41,10 +73,22 @@ export default function Login() {
     login.mutate(
       { email, password, remember },
       {
-        onSuccess: (user) => {
+        onSuccess: async (signedInUser) => {
+          try {
+            const desktopPath = await completeDesktopHandoffIfNeeded();
+            if (desktopPath) {
+              toastAuthSuccess("Signed in — returning to Noidr Desktop");
+              navigate(desktopPath, { replace: true });
+              return;
+            }
+          } catch (err) {
+            toastAuthError(err, "Could not complete desktop sign-in.");
+            return;
+          }
+
           toastAuthSuccess("Welcome back to Noidr");
           navigate(
-            authDestination(user, location.state?.from ?? inviteAcceptPath(inviteCode)),
+            authDestination(signedInUser, location.state?.from ?? inviteAcceptPath(inviteCode)),
             { replace: true },
           );
         },
@@ -64,6 +108,12 @@ export default function Login() {
         <h1 className="text-2xl font-medium tracking-tight">Sign in</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">Welcome back.</p>
       </div>
+
+      {desktopPending ? (
+        <div className="mt-4 rounded-md border border-[hsl(var(--brand))]/30 bg-[hsl(var(--brand))]/10 px-3 py-2 text-sm text-[hsl(var(--brand))]">
+          Signing in to Noidr Desktop
+        </div>
+      ) : null}
 
       <form onSubmit={onSubmit} className="mt-8 space-y-5">
         <AuthField label="Email" required htmlFor="email">
@@ -125,12 +175,15 @@ export default function Login() {
       </form>
 
       <div className="mt-6">
-        <SocialButtons variant="stacked" mode="signin" />
+        <SocialButtons variant="stacked" mode="signin" disabled={login.isPending} />
       </div>
 
       <p className="mt-6 text-center text-[13px] text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <AuthLink to="/register" data-testid={AUTH.loginToRegister}>
+        <AuthLink
+          to={desktopPending && searchParams.toString() ? `/register?${searchParams.toString()}` : "/register"}
+          data-testid={AUTH.loginToRegister}
+        >
           Sign up
         </AuthLink>
       </p>
