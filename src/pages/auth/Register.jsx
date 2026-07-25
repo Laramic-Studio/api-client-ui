@@ -67,12 +67,14 @@ export default function Register() {
     })();
   }, [user, navigate]);
 
+  const invitedEmailMasked = inviteQuery.data?.invitation?.email || "";
+  const inviteLocksEmail = Boolean(inviteCode && invitedEmailMasked);
+
   useEffect(() => {
-    const invitedEmail = inviteQuery.data?.invitation?.email;
-    if (invitedEmail && !email) {
-      setEmail(invitedEmail);
+    if (inviteLocksEmail) {
+      setEmail(invitedEmailMasked);
     }
-  }, [inviteQuery.data?.invitation?.email, email]);
+  }, [inviteLocksEmail, invitedEmailMasked]);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -89,7 +91,13 @@ export default function Register() {
     }
 
     register.mutate(
-      { name, email, password, password_confirmation: password },
+      {
+        name,
+        email,
+        password,
+        password_confirmation: password,
+        ...(inviteCode ? { invite_code: inviteCode } : {}),
+      },
       {
         onSuccess: async (signedInUser) => {
           try {
@@ -152,7 +160,14 @@ export default function Register() {
             className={cn(authInputClass, errors.email && "border-red-500 focus-visible:ring-red-200")}
             placeholder="Enter your email"
             autoComplete="email"
+            readOnly={inviteLocksEmail}
+            aria-readonly={inviteLocksEmail || undefined}
           />
+          {inviteLocksEmail ? (
+            <p className="mt-1.5 text-[12.5px] text-muted-foreground">
+              Locked to the email this invitation was sent to.
+            </p>
+          ) : null}
         </AuthField>
 
         <AuthField

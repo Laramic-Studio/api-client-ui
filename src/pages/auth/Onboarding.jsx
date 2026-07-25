@@ -17,11 +17,19 @@ export default function Onboarding() {
   const personalTeamName = currentTeam?.name || currentTeam?.slug;
 
   const continueNext = () => {
-    setOnboardingDraft({ accountType });
     if (accountType === "organisation") {
+      // Start org details empty — do not carry signup / personal-team names.
+      setOnboardingDraft({
+        accountType: "organisation",
+        organisationName: "",
+        teamSize: "",
+        logoFile: null,
+        logoPreview: null,
+      });
       navigate("/onboarding/organisation");
       return;
     }
+    setOnboardingDraft({ accountType });
     navigate("/onboarding/individual");
   };
 

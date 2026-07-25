@@ -42,11 +42,13 @@ export default function InviteTeamForm({ invites, onChange }) {
           <div key={index} className="flex gap-2">
             <Input
               type="email"
+              name={`invite_email_${index}`}
               value={row.email}
               onChange={(e) => updateRow(index, { email: e.target.value })}
               placeholder="colleague@company.com"
               data-testid={`onboarding-invite-email-${index}`}
               className="bg-muted border-[hsl(var(--border))] h-10 font-geom text-[13px] flex-1"
+              autoComplete="off"
             />
             <Select value={row.role} onValueChange={(role) => updateRow(index, { role })}>
               <SelectTrigger className="bg-muted border-[hsl(var(--border))] h-10 text-[13px] w-[130px]">

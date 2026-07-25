@@ -5,7 +5,6 @@ import OrganisationDetailsForm from "@/components/onboarding/OrganisationDetails
 import OnboardingSteps from "@/components/onboarding/OnboardingSteps";
 import { authButtonClass } from "@/components/auth/AuthField";
 import { toastAuthValidation } from "@/lib/auth/toast";
-import { TEAM_SIZES } from "@/components/onboarding/constants";
 import { useAppStore } from "@/store/useAppStore";
 
 export default function OnboardingOrganisation() {
@@ -14,12 +13,17 @@ export default function OnboardingOrganisation() {
   const setOnboardingDraft = useAppStore((s) => s.setOnboardingDraft);
 
   const organisationName = draft.organisationName || "";
-  const size = draft.teamSize || TEAM_SIZES[1];
+  const size = draft.teamSize || "";
   const logoFile = draft.logoFile || null;
 
   const continueNext = () => {
     if (!organisationName.trim()) {
       toastAuthValidation("Add an organisation name");
+      return;
+    }
+
+    if (!size) {
+      toastAuthValidation("Select a team size");
       return;
     }
 

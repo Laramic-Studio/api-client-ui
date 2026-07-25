@@ -30,8 +30,15 @@ export { applySession, fetchSession, clearSession };
 export const fetchClient = {
   ...mockClient,
 
-  async register({ name, email, password, password_confirmation, remember = true }) {
-    const data = await authApi.register({ name, email, password, password_confirmation, remember });
+  async register({ name, email, password, password_confirmation, invite_code, remember = true }) {
+    const data = await authApi.register({
+      name,
+      email,
+      password,
+      password_confirmation,
+      invite_code,
+      remember,
+    });
     const teams = await authApi.listTeams().catch(() => []);
     return applySession({ ...data, teams });
   },

@@ -40,5 +40,9 @@ export const historyKeys = {
 
 export const invitationKeys = {
   all: ["invitations"],
-  detail: (code) => [...invitationKeys.all, String(code)],
+  detail: (code, viewerKey = "guest") => [
+    ...invitationKeys.all,
+    String(code),
+    viewerKey == null ? "guest" : String(viewerKey),
+  ],
 };

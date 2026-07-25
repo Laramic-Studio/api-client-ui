@@ -41,15 +41,24 @@ export const useAppStore = create(
         set({ user: u });
         return u;
       },
-      setAuthSession: ({ user, currentTeam, workspaces, activeWorkspaceId, collectionsMap, environmentsMap }) => set({
+      setAuthSession: ({ user, currentTeam, workspaces, activeWorkspaceId, collectionsMap, environmentsMap }) => set((s) => ({
         user,
         currentTeam: currentTeam || null,
         workspaces: workspaces || [],
         activeWorkspaceId: activeWorkspaceId || null,
         ...(collectionsMap ? { collectionsMap } : {}),
         ...(environmentsMap ? { environmentsMap } : {}),
+        // New account / session must not inherit another user's onboarding draft.
+        onboardingDraft: s.user?.id && user?.id && String(s.user.id) === String(user.id)
+          ? s.onboardingDraft
+          : {},
+      })),
+      clearAuthSession: () => set({
+        user: null,
+        currentTeam: null,
+        history: [],
+        onboardingDraft: {},
       }),
-      clearAuthSession: () => set({ user: null, currentTeam: null, history: [] }),
       finishAuthBootstrap: () => set({ authBootstrapped: true }),
       updateUser: (patch) => set((s) => ({ user: s.user ? { ...s.user, ...patch } : null })),
 
@@ -59,7 +68,7 @@ export const useAppStore = create(
       })),
       clearOnboardingDraft: () => set({ onboardingDraft: {} }),
 
-      logout: () => set({ user: null, currentTeam: null }),
+      logout: () => set({ user: null, currentTeam: null, onboardingDraft: {} }),
 
       // ===== AI settings =====
       aiSettings: {

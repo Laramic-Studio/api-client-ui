@@ -133,7 +133,7 @@ function AuthBrand() {
 
 function HeroPanel() {
   return (
-    <aside className="relative hidden overflow-hidden  bg-background lg:block">
+    <aside className="relative hidden overflow-hidden bg-background lg:block">
       <div className="absolute inset-0 flex flex-col justify-center gap-2 py-8">
         {reviewRows.map((row, index) => (
           <Marquee
@@ -148,10 +148,15 @@ function HeroPanel() {
           </Marquee>
         ))}
       </div>
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-1/5 bg-gradient-to-r from-background to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/5 bg-gradient-to-l from-background to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-background to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
+      {/* Circular vignette — soft oval fade so the marquee reads as covered by the background */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 48% 42% at 50% 50%, transparent 0%, transparent 42%, hsl(var(--background) / 0.55) 68%, hsl(var(--background)) 100%)",
+        }}
+      />
     </aside>
   );
 }

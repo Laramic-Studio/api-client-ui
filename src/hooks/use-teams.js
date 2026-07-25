@@ -115,8 +115,10 @@ export function useDuplicateTeam() {
 }
 
 export function useInvitation(code) {
+  const viewerKey = useAppStore((s) => s.user?.id ?? "guest");
+
   return useQuery({
-    queryKey: invitationKeys.detail(code),
+    queryKey: invitationKeys.detail(code, viewerKey),
     queryFn: () => teamsApi.getInvitation(code),
     enabled: Boolean(code),
     retry: false,

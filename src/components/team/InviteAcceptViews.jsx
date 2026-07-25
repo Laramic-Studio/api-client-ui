@@ -4,6 +4,7 @@ import AuthShell from "@/components/auth/AuthShell";
 import { authButtonClass } from "@/components/auth/AuthField";
 import { Button } from "@/components/ui/button";
 import { loginPathForInvite, registerPathForInvite } from "@/lib/invite-flow";
+import { cn } from "@/lib/utils";
 
 function teamInitials(name) {
   return String(name || "T")
@@ -13,6 +14,48 @@ function teamInitials(name) {
     .join("") || "T";
 }
 
+function teamLogoUrl(team) {
+  return team?.logoUrl || team?.logo_url || null;
+}
+
+function TeamMark({ team, size = "lg", className }) {
+  const logo = teamLogoUrl(team);
+  const sizeClass = size === "sm" ? "h-8 w-8 text-[11px]" : "h-12 w-12 text-sm";
+
+  if (logo) {
+    return (
+      <div
+        className={cn(
+          "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted",
+          sizeClass,
+          className,
+        )}
+      >
+        <img
+          src={logo}
+          alt={team?.name ? `${team.name} logo` : "Workspace logo"}
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-md font-geom",
+        size === "sm"
+          ? "border border-[hsl(var(--brand)/0.3)] bg-[hsl(var(--brand)/0.15)] text-foreground"
+          : "bg-[hsl(var(--brand))] text-white",
+        sizeClass,
+        className,
+      )}
+    >
+      {teamInitials(team?.name)}
+    </div>
+  );
+}
+
 function InvitationSummary({ team, roleLabel }) {
   return (
     <div className="mt-6 rounded-md border border-border bg-card p-4 text-left">
@@ -20,9 +63,7 @@ function InvitationSummary({ team, roleLabel }) {
         Workspace
       </div>
       <div className="mt-1.5 flex items-center gap-2.5">
-        <div className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[hsl(var(--brand)/0.3)] bg-[hsl(var(--brand)/0.15)] font-geom text-[11px]">
-          {teamInitials(team.name)}
-        </div>
+        <TeamMark team={team} size="sm" />
         <div>
           <div className="text-sm font-medium">{team.name}</div>
           {team.slug && (
@@ -83,8 +124,8 @@ export function InviteAcceptGuest({
   return (
     <AuthShell>
       <div className="text-center">
-        <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-md bg-[hsl(var(--brand))] font-geom text-sm text-white">
-          {teamInitials(team.name)}
+        <div className="mx-auto">
+          <TeamMark team={team} />
         </div>
         <h1 className="mt-4 text-2xl font-medium tracking-tight">Join {team.name}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -176,8 +217,8 @@ export function InviteAcceptAuthenticated({
   return (
     <AuthShell>
       <div className="text-center">
-        <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-md bg-[hsl(var(--brand))] font-geom text-sm text-white">
-          {teamInitials(team.name)}
+        <div className="mx-auto">
+          <TeamMark team={team} />
         </div>
         <h1 className="mt-4 text-2xl font-medium tracking-tight">You&apos;ve been invited</h1>
         <p className="mt-2 text-sm text-muted-foreground">

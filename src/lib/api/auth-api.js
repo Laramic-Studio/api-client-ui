@@ -2,10 +2,23 @@ import { apiRequest } from "@/lib/api/http";
 import { setAccessToken } from "@/lib/auth/tokens";
 import { API_URL } from "@/lib/config";
 
-export async function register({ name, email, password, password_confirmation, remember = true }) {
+export async function register({
+  name,
+  email,
+  password,
+  password_confirmation,
+  invite_code,
+  remember = true,
+}) {
   const data = await apiRequest("/auth/register", {
     method: "POST",
-    body: { name, email, password, password_confirmation },
+    body: {
+      name,
+      email,
+      password,
+      password_confirmation,
+      ...(invite_code ? { invite_code } : {}),
+    },
   });
 
   setAccessToken(data.access_token, { remember });

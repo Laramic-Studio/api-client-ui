@@ -61,7 +61,8 @@ export default function AcceptInvitation() {
     );
   }
 
-  if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+  // Public preview masks email — compare via server-provided emailMatches only.
+  if (invitation.emailMatches === false) {
     return (
       <InviteAcceptWrongAccount
         invitation={invitation}

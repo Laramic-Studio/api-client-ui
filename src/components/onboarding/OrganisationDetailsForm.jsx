@@ -36,26 +36,44 @@ export default function OrganisationDetailsForm({
   };
 
   return (
-    <div className="space-y-3">
+    <form
+      className="space-y-3"
+      autoComplete="off"
+      onSubmit={(e) => e.preventDefault()}
+    >
       <div>
-        <Label className="text-[11px] uppercase  text-muted-foreground">Organisation name</Label>
+        <Label
+          htmlFor="onboarding-organisation-name"
+          className="text-[11px] uppercase text-muted-foreground"
+        >
+          Organisation name
+        </Label>
         <Input
+          id="onboarding-organisation-name"
+          name="organisation_name"
+          type="text"
           value={organisationName}
           onChange={(e) => onChange({ organisationName: e.target.value })}
           data-testid="onboarding-organisation-name"
-          className="bg-muted border-[hsl(var(--border))] h-10  text-[13px] mt-1"
+          className="bg-muted border-[hsl(var(--border))] h-10 text-[13px] mt-1"
           placeholder="Acme Corp"
+          autoComplete="organization"
+          autoCorrect="off"
+          spellCheck={false}
         />
       </div>
 
       <div>
-        <Label className="text-[11px] uppercase  text-muted-foreground">Team size</Label>
-        <Select value={size} onValueChange={(next) => onChange({ size: next })}>
+        <Label className="text-[11px] uppercase text-muted-foreground">Team size</Label>
+        <Select
+          value={size || undefined}
+          onValueChange={(next) => onChange({ size: next })}
+        >
           <SelectTrigger
             className="bg-muted border-[hsl(var(--border))] h-10 text-[13px] mt-1"
             data-testid="onboarding-organisation-size"
           >
-            <SelectValue />
+            <SelectValue placeholder="Select team size" />
           </SelectTrigger>
           <SelectContent className="bg-popover border-[hsl(var(--border))]">
             {TEAM_SIZES.map((option) => (
@@ -66,7 +84,7 @@ export default function OrganisationDetailsForm({
       </div>
 
       <div>
-        <Label className="text-[11px] uppercase  text-muted-foreground">
+        <Label className="text-[11px] uppercase text-muted-foreground">
           Logo (optional — shown in sidebar)
         </Label>
         <div className="mt-1 flex items-center gap-3">
@@ -101,6 +119,6 @@ export default function OrganisationDetailsForm({
           )}
         </div>
       </div>
-    </div>
+    </form>
   );
 }
